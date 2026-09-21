@@ -1,0 +1,1 @@
+This document covers shared rules for every agent working on the project.
