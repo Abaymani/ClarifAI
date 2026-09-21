@@ -6,3 +6,5 @@
 - What decision was made?
 - what risks/consequences can be expected?
 - Who made the decision, was there human approval?
+
+## Log
