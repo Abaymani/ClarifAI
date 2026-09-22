@@ -7,6 +7,7 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR-|The system shall accept a registered participant code consisting of one to three digits before starting a session | High | Missing, incorrectly formatted, and unknown codes produce an explanatory error. Valid codes allow the student to continue |
+|FR-|The system shall let a student choose a 4-digit PIN at their first session and require their participant code and PIN for all later sessions | High | The PIN is stored in clear text so researchers can tell a student who forgets it. A wrong PIN produces an explanatory error. Repeated failed attempts are temporarily blocked |
 |FR-|The system shall allow students to select lesson 1–4 and associate the session with their participant code and selected lesson| High | Every session record contains a participant code, lesson number, and unique session identifier ||
 |FR-|The system shall apply the workflow assigned to the selected lesson | High | Lessons 1 and 4 collect and preserve transcripts only. Lessons 2 and 3 additionally provide analysis and scaffolded reflection |
 
@@ -14,7 +15,8 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR-|The system shall accept a supported Gemini conversation link and detect invalid, inaccessible, or empty submissions| High | A usable link proceeds to retrieval. An unsuccessful submission displays an explanation and allows the student to enter another link|
-|FR-|The system shall allow students to explicitly replace an incorrectly submitted transcript within their current session | High | A successfully retrieved and saved replacement resets the previous analysis, questions, responses, and completion status. An unsuccessful replacement leaves the existing saved record intact |
+|FR-|The system shall allow students to explicitly replace an incorrectly submitted transcript within their current session, until the session is completed | High | A successfully retrieved and saved replacement resets the previous analysis, questions, and responses. An unsuccessful replacement leaves the existing saved record intact. Completed sessions cannot be changed |
+|FR-|The system shall show the student a preview of the retrieved transcript and ask them to confirm that it is their conversation before the session continues | High | The preview shows enough of the conversation for the student to recognise it. Confirming continues the session; rejecting lets the student submit another link. Lessons 1 and 4 are only completed after confirmation |
 
 ## Transcript retrieval
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
@@ -43,7 +45,7 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR-|The system shall associate coded observations with supporting messages and validate analysis results before displaying them | | Assigned codes exist in the framework and evidence references point to actual messages. Results containing invalid codes or nonexistent references are withheld and handled as processing errors |
-|FR-| The system shall present up to three supported transcript examples with short explanations and reflection questions | |Each example includes an actual excerpt and one question about reasoning, decision-making, understanding, or deliberate delegation to AI. Fewer examples are shown when fewer are supported|
+|FR-| The system shall present up to the configured maximum number (default: three) of supported transcript examples with short explanations and reflection questions | |Each example includes an actual excerpt and one question about reasoning, decision-making, understanding, or deliberate delegation to AI. Fewer examples are shown when fewer are supported|
 
 ## Reflection question generation
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
@@ -62,14 +64,14 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR- | The system shall allow students to enter and submit a text response to each displayed reflection question | | Students can edit responses before submission. Each saved response is linked to its question and session. Empty responses prevent final submission and identify the unanswered questions |
-|FR-|The system shall present no more than a configured number of examples and reflection questions per session, so the activity fits within the allocated lesson time|
+|FR-|The system shall present no more than a configured number of examples and reflection questions per session (default: 3), so the activity fits within the allocated lesson time|
 
 ## Session progress and recovery
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
-|FR- | The system shall record session progress and mark a session complete only after transcript preservation and, for lessons 2 and 3, completion of the required reflection steps |
-|FR-| The system shall display progress and record whether a session is processing, awaiting reflection, completed, or failed | | Students can distinguish ongoing work from required action and completion. Researchers can identify sessions that have not been completed |
-|FR-| The system shall mark sessions complete only after all required records have been saved | |Lessons 1 and 4 complete after transcript storage. Lessons 2 and 3 complete after transcript, analysis, questions, and submitted reflection responses have been stored|
+|FR- | The system shall record session progress and mark a session complete only after transcript preservation and student confirmation and, for lessons 2 and 3, completion of the required reflection steps |
+|FR-| The system shall display progress and record whether a session is processing, awaiting confirmation, awaiting reflection, completed, or failed | | Students can distinguish ongoing work from required action and completion. Researchers can identify sessions that have not been completed |
+|FR-| The system shall mark sessions complete only after all required records have been saved | |Lessons 1 and 4 complete after the transcript has been stored and confirmed by the student. Lessons 2 and 3 complete after transcript, analysis, questions, and submitted reflection responses have been stored|
 |FR- |The system shall preserve a coherent research record for each session, including incomplete sessions | | Records contain the participant code, lesson, timestamps, status, redacted transcript, and any available analysis, displayed examples, questions, submitted responses, and error codes. Transcript preservation does not depend on reflection completion |
 
 ## Error handling
