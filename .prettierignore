@@ -1,0 +1,5 @@
+# Human-written docs and research material keep their authors' formatting.
+*.md
+docs/
+framework/
+pnpm-lock.yaml
