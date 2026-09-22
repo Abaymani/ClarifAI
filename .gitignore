@@ -1,0 +1,64 @@
+# Secrets must never reach git (see AGENTS.md). Only the placeholder template is committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+# Firebase/GCP service account keys
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+credentials.json
+
+# Real student data (transcripts, exports) stays out of git history, even in a private repo.
+/private-data/
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# next.js / build output
+/.next/
+/out/
+/build
+*.tsbuildinfo
+next-env.d.ts
+
+# testing
+/coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+database-debug.log*
+pubsub-debug.log*
+/emulator-data/
+
+# vercel
+.vercel
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# personal agent/editor settings
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+*.swp
