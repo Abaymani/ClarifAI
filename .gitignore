@@ -1,6 +1,5 @@
 # Secrets must never reach git (see AGENTS.md). Only the placeholder template is committed.
-.env
-.env.*
+.env*
 !.env.example
 *.pem
 *.key
