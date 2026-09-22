@@ -169,3 +169,9 @@
 - **Decision:** Previews share the production database for now, and the choice is revisited before S0.
 - **Risks/consequences:** Preview deployments hold working credentials for the research database. Nothing writes to it yet, but once features do, testing a preview would write test data among the research data. Previews are behind Vercel's login.
 - **Decided by:** Armin Baymani (human), 2026-09-22. A separate project was proposed by Claude (agent).
+
+### DL-028: Windows and Linux development parity
+- **Options:** Support the original Linux setup only; document Windows as an unsupported workaround; maintain and test both Windows and Linux development environments.
+- **Decision:** The project supports both Windows and Linux. Text files use repository-controlled line endings, setup instructions cover both platforms, and the main CI checks run on Ubuntu and Windows. Package scripts and emulator safeguards remain shared across platforms.
+- **Risks/consequences:** CI takes longer because the full check suite runs twice. Windows PowerShell can block npm-generated `.ps1` launchers under a restrictive execution policy, so the Windows instructions document the equivalent `.cmd` launchers without weakening that policy.
+- **Decided by:** Requested and approved by Armin Baymani (human), 2026-09-22. Implemented by Codex (agent).
