@@ -1,0 +1,6 @@
+# Keep source and configuration files consistent across Windows and Linux.
+* text=auto eol=lf
+
+# Windows command files are only executed on Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf

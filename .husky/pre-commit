@@ -1,7 +1,7 @@
 # AGENTS.md forbids committing secrets, so commits are blocked when the scanner is missing.
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "gitleaks is not installed, so this commit can't be checked for secrets." >&2
-  echo "Install it (Arch: sudo pacman -S gitleaks) and commit again." >&2
+  echo "Install it using the instructions in README.md and commit again." >&2
   exit 1
 fi
 

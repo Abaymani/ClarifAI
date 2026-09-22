@@ -139,3 +139,9 @@
 - **Decision:** Accept for now (`pnpm audit`, 2026-09-22: 4 moderate, no high or critical). The one runtime advisory is `uuid` < 11.1.1 inside `firebase-admin`'s Cloud Storage client. It affects uuid v3/v5/v6 called with a buffer, but the code only calls `v4()`, and we don't use Cloud Storage. The other three (`@opentelemetry/core`, `stream-json`, `csv-parse`) come from `firebase-tools`, a development-only CLI.
 - **Risks/consequences:** Forcing new major versions under Google's libraries could break them. Re-run `pnpm audit` when updating dependencies.
 - **Decided by:** Claude (agent), 2026-09-22. Not yet reviewed by a human.
+
+### DL-023: Windows and Linux development parity
+- **Options:** Support the original Linux setup only; document Windows as an unsupported workaround; maintain and test both Windows and Linux development environments.
+- **Decision:** The project supports both Windows and Linux. Text files use repository-controlled line endings, setup instructions cover both platforms, and the main CI checks run on Ubuntu and Windows. Package scripts and emulator safeguards remain shared across platforms.
+- **Risks/consequences:** CI takes longer because the full check suite runs twice. Windows PowerShell can block npm-generated `.ps1` launchers under a restrictive execution policy, so the Windows instructions document the equivalent `.cmd` launchers without weakening that policy.
+- **Decided by:** Requested and approved by Armin Baymani (human), 2026-09-22. Implemented by Codex (agent).

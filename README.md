@@ -13,23 +13,55 @@ Next.js 16 (App Router, TypeScript) with Tailwind CSS and shadcn/ui, Cloud Fires
 ## Getting started
 Prerequisites:
 - Node.js 24 (see `.nvmrc`)
-- pnpm 11
+- pnpm 11.26.0 (pinned in `package.json`)
 - Java 21, for the Firestore emulator
 - gitleaks, which the pre-commit hook needs
 - GitHub CLI (`gh`), for the issue workflow
 
-On Arch Linux:
+### Linux (Arch)
 
 ```bash
 sudo pacman -S --needed nodejs-lts-krypton npm pnpm jdk21-openjdk github-cli gitleaks
 ```
 
-Then:
+### Windows
+
+Run these commands in PowerShell. The first four use official WinGet packages:
+
+```powershell
+winget install --exact --id OpenJS.NodeJS.LTS
+winget install --exact --id EclipseAdoptium.Temurin.21.JDK
+winget install --exact --id GitHub.cli
+winget install --exact --id Gitleaks.Gitleaks
+npm.cmd install --global pnpm@11.26.0
+```
+
+Restart the terminal after installing the prerequisites. Verify the versions before continuing:
+
+```powershell
+node --version       # v24.x
+pnpm.cmd --version   # 11.26.0
+java -version        # 21.x
+gitleaks version
+gh --version
+```
+
+PowerShell may prefer the generated `pnpm.ps1` file when script execution is restricted. `pnpm.cmd` is the same pnpm installation and does not require changing the execution policy. A machine-wide installation can expose the shorter `pnpm` command, but the documented Windows commands use `pnpm.cmd` so they work with the default restrictive policy.
+
+### Install and run
+
+On Linux, use `pnpm`. On Windows PowerShell, use `pnpm.cmd` if `pnpm` is blocked by the execution policy:
 
 ```bash
 pnpm install                              # also activates the git hooks
 pnpm exec playwright install chromium     # browser for the end-to-end tests
 pnpm dev                                  # app on :3000, Firestore emulator UI on :4000
+```
+
+```powershell
+pnpm.cmd install
+pnpm.cmd exec playwright install chromium
+pnpm.cmd dev
 ```
 
 `pnpm dev` runs the app against a local Firestore emulator, so local work never touches the research database. Emulator data is discarded when it stops.
@@ -57,6 +89,7 @@ Copy `.env.example` to `.env.local` and fill in values there. **Never commit rea
 - In the Vercel project settings, set `ENABLE_EXPERIMENTAL_COREPACK=1`. Vercel only detects pnpm up to version 10 on its own; with this set, it uses the pnpm version from `package.json`.
 - Add the variables from `.env.example` as Vercel environment variables.
 - Once the real Firebase project exists, deploy the Firestore rules: `pnpm exec firebase login`, then `pnpm exec firebase deploy --only firestore:rules --project <project-id>`.
+  On Windows PowerShell, use `pnpm.cmd` for these commands if the shorter command is unavailable.
 
 ## Workflow
 - Work on a branch per feature and claim the matching GitHub issue. Unclaimed issues are up for grabs, and anyone, human or agent, may open new ones.
