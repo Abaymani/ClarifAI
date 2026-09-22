@@ -91,7 +91,7 @@
 - **Options:** Base UI (shadcn's default), Radix, React Aria.
 - **Decision:** Base UI, through shadcn's default `base-nova` preset. It also brings shadcn's new `cn` package, a replacement for `clsx` and `tailwind-merge`.
 - **Risks/consequences:** `cn` is a new pre-1.0 package (August 2026). It is published by shadcn, from the official `shadcn-ui` GitHub organisation, and has no dependencies or install scripts. Changing the base library later means re-adding components.
-- **Decided by:** Claude (agent), 2026-09-22. Not yet reviewed by a human.
+- **Decided by:** Claude (agent), 2026-09-22; approved by Armin Baymani (human), 2026-09-22.
 
 ### DL-015: Node.js version
 - **Options:** Node 22, 24 or 26.
@@ -133,14 +133,44 @@
 - **Options:** ESLint 9 (no longer supported); ESLint 10.
 - **Decision:** ESLint 9, because the React plugin in `eslint-config-next` 16.3 crashes on ESLint 10.
 - **Risks/consequences:** A development-only tool without security updates. Revisit when `eslint-config-next` supports ESLint 10.
-- **Decided by:** Claude (agent), 2026-09-22. Not yet reviewed by a human.
+- **Decided by:** Claude (agent), 2026-09-22; approved by Armin Baymani (human), 2026-09-22.
 ### DL-022: Known moderate advisories in dependencies
 - **Options:** Force patched versions through pnpm overrides; accept until upstream updates.
 - **Decision:** Accept for now (`pnpm audit`, 2026-09-22: 4 moderate, no high or critical). The one runtime advisory is `uuid` < 11.1.1 inside `firebase-admin`'s Cloud Storage client. It affects uuid v3/v5/v6 called with a buffer, but the code only calls `v4()`, and we don't use Cloud Storage. The other three (`@opentelemetry/core`, `stream-json`, `csv-parse`) come from `firebase-tools`, a development-only CLI.
 - **Risks/consequences:** Forcing new major versions under Google's libraries could break them. Re-run `pnpm audit` when updating dependencies.
+- **Decided by:** Claude (agent), 2026-09-22; approved by Armin Baymani (human), 2026-09-22.
+
+### DL-023: How transcripts are retrieved from share links
+- **Options:** (a) Fetch the share page's HTML; (b) render the page in a headless browser and read what is displayed; (c) call the internal endpoint the share page itself uses (`batchexecute`, RPC `ujx1Bf`) with one plain HTTP request.
+- **Decision:** (c). A short link (`share.gemini.google/…` or `g.co/gemini/share/…`) is first resolved by following its redirect by hand, allowing only Gemini hosts. Tested 2026-09-22 on a real chat: (a) doesn't work, because the chat isn't in the HTML. (b) works, but takes about 4.5 s and would need Chromium on Vercel. (c) returns the whole chat in about 0.5 s without cookies, login or consent screens. It gives the prompts exactly as shown on the page, the answers as their original Markdown, a timestamp per prompt, the model, the title and regenerated drafts.
+- **Risks/consequences:** The endpoint is undocumented, so Google can change it without notice. The parser checks every field it uses and fails with `UNEXPECTED_FORMAT` rather than storing partial data, and the submitted link is always kept as the researchers' fallback. (b) remains a fallback if the endpoint closes. It works the same from Vercel's servers (tested 2026-09-22 from `iad1` and `arn1`, issue #3). Uploaded images and files have not been seen yet, so they are flagged as unsupported instead of being guessed.
+- **Decided by:** Proposed by Claude (agent), 2026-09-22 (issue #3); approved by Armin Baymani (human), 2026-09-22.
+
+### DL-024: Transcript format
+- **Options:** Store the page text; store structured messages.
+- **Decision:** One JSON record per chat, the canonical format, plus a Markdown rendering for human encoders. Messages are numbered from 1 so the analysis can refer to them. Each message has a role (`student`/`gemini`) and text. Student messages also carry the time they were sent, and Gemini messages any other drafts. The record also holds the submitted link, share URL, title, model, share time, retrieval time, parser version and warnings. Images become `[PICTURE]`; anything unrecognised becomes a visible marker plus a warning.
+- **Risks/consequences:** Keeping other drafts and timestamps stores more than the page shows. Both are useful for research (regenerating is itself a behaviour), and Armin decided to keep both.
+- **Decided by:** Proposed by Claude (agent), 2026-09-22 (issue #3); approved by Armin Baymani (human), 2026-09-22.
+
+### DL-025: Running TypeScript scripts
+- **Options:** Node's built-in type stripping; `tsx`.
+- **Decision:** `tsx` (development only), because Node cannot resolve the `@/` import alias. Its `esbuild` install script stays blocked; the binary comes from esbuild's platform package.
+- **Risks/consequences:** One more development dependency.
 - **Decided by:** Claude (agent), 2026-09-22. Not yet reviewed by a human.
 
-### DL-023: Windows and Linux development parity
+### DL-026: Hosting regions
+- **Options:** Vercel's default function region (`iad1`, Washington, D.C.) or an EU region; pin the region in `vercel.json` or set it only in the Vercel dashboard.
+- **Decision:** Firestore `(default)` runs in `europe-north2` (Stockholm), Standard edition. Vercel functions run in `arn1` (Stockholm), set in the dashboard only (no `vercel.json`). Follows up DL-010.
+- **Risks/consequences:** Anyone with access to the Vercel project can change the region without code review, and the default would move student data processing to the US. Keep it in the EU. A database call took 744 ms from `iad1` and 305 ms from `arn1`.
+- **Decided by:** Armin Baymani (human), 2026-09-22. Region check run by Claude (agent).
+
+### DL-027: Preview deployments and the research database
+- **Options:** A separate Firebase project for previews; a second database in the same project; previews share the production database for now.
+- **Decision:** Previews share the production database for now, and the choice is revisited before S0.
+- **Risks/consequences:** Preview deployments hold working credentials for the research database. Nothing writes to it yet, but once features do, testing a preview would write test data among the research data. Previews are behind Vercel's login.
+- **Decided by:** Armin Baymani (human), 2026-09-22. A separate project was proposed by Claude (agent).
+
+### DL-028: Windows and Linux development parity
 - **Options:** Support the original Linux setup only; document Windows as an unsupported workaround; maintain and test both Windows and Linux development environments.
 - **Decision:** The project supports both Windows and Linux. Text files use repository-controlled line endings, setup instructions cover both platforms, and the main CI checks run on Ubuntu and Windows. Package scripts and emulator safeguards remain shared across platforms.
 - **Risks/consequences:** CI takes longer because the full check suite runs twice. Windows PowerShell can block npm-generated `.ps1` launchers under a restrictive execution policy, so the Windows instructions document the equivalent `.cmd` launchers without weakening that policy.

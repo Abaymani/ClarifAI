@@ -14,6 +14,7 @@
     "test:watch": "vitest --project unit",
     "test:emulator": "firebase emulators:exec --only firestore --project demo-clarifai \"vitest run --project emulator\"",
     "test:e2e": "firebase emulators:exec --only firestore --project demo-clarifai \"playwright test\"",
+    "scrape": "tsx scripts/scrape.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm test:emulator",
     "prepare": "husky"
   },
@@ -51,6 +52,7 @@
     "prettier": "^3.9.8",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.1"
   },

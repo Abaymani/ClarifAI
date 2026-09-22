@@ -76,6 +76,7 @@ pnpm.cmd dev
 | `pnpm test` | Unit tests (Vitest, next to the code as `*.test.ts(x)`) |
 | `pnpm test:emulator` | Firestore security-rule and Admin SDK tests (`tests/emulator/`) |
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`) |
+| `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
 | `pnpm build` | Production build |
 
 ## Environment variables
@@ -86,9 +87,11 @@ Copy `.env.example` to `.env.local` and fill in values there. **Never commit rea
 - Never put real student data (transcripts, exports) in the repository. Use the git-ignored `private-data/` folder if you need it locally.
 
 ## Deployment (Vercel)
-- In the Vercel project settings, set `ENABLE_EXPERIMENTAL_COREPACK=1`. Vercel only detects pnpm up to version 10 on its own; with this set, it uses the pnpm version from `package.json`.
-- Add the variables from `.env.example` as Vercel environment variables.
-- Once the real Firebase project exists, deploy the Firestore rules: `pnpm exec firebase login`, then `pnpm exec firebase deploy --only firestore:rules --project <project-id>`.
+- Build settings are Vercel's Next.js defaults. Don't override the Install Command: an overridden `pnpm install` runs with the oldest pnpm Vercel has.
+- `ENABLE_EXPERIMENTAL_COREPACK=1` is set in the Vercel project. Vercel only detects pnpm up to version 10 on its own; with this set, it uses the pnpm version from `package.json`.
+- Functions run in Stockholm (`arn1`, under Settings → Functions), next to Firestore in `europe-north2`. Keep both in the EU (DL-026).
+- The variables from `.env.example` are set in Vercel. Previews currently use the same Firebase project as production, so preview code must not write test data (DL-027).
+- Firebase project: `clarifai-19445`. To deploy the Firestore rules, run `pnpm exec firebase login`, then `pnpm exec firebase deploy --only firestore:rules --project clarifai-19445`.
   On Windows PowerShell, use `pnpm.cmd` for these commands if the shorter command is unavailable.
 
 ## Workflow
