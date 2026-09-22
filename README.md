@@ -44,6 +44,7 @@ pnpm dev                                  # app on :3000, Firestore emulator UI 
 | `pnpm test` | Unit tests (Vitest, next to the code as `*.test.ts(x)`) |
 | `pnpm test:emulator` | Firestore security-rule and Admin SDK tests (`tests/emulator/`) |
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`) |
+| `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
 | `pnpm build` | Production build |
 
 ## Environment variables
