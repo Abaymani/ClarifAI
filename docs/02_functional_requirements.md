@@ -40,6 +40,10 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR - | The analysis should be grounded in observational concrete examples of the behaviours in the framework|
+|FR - | For reflection sessions, the system shall analyse individual student prompts and interaction sequences using the supplied coding frameworks and analysis guidelines |
+|FR - | The system shall communicate uncertainty where the transcript does not provide sufficient context and shall not invent evidence or force an unsupported classification |
+|FR - | The system shall not treat requesting AI-generated code alone as evidence of inappropriate AI use or reduced cognitive engagement |
+
 
 
 ## Selection of transcript examples
@@ -49,18 +53,24 @@
 ## Reflection question generation
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
+|FR- | The system shall accompany each selected example with a question addressing the student's reasoning, decision-making, understanding, or deliberate choice to delegate work to AI |
+
 
 ## Boundaries on feedback 
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
+|FR- | The system shall not grade students, classify their AI use as good or bad, or make conclusions about their overall cognitive state |
+|FR- |The system shall not assess the technical correctness of the student's code, circuit, or project solution |
 
 ## Student reflection interaction
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
+|FR - | The system shall allow students to submit reflection responses and associate each saved response with its session and reflection question|
 
 ## Session progress and recovery
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
+|FR - | The system shall record session progress and mark a session complete only after transcript preservation and, for lessons 2 and 3, completion of the required reflection steps |
 
 ## Research records and access
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
