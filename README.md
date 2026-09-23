@@ -77,7 +77,7 @@ pnpm.cmd dev
 | `pnpm test:emulator` | Firestore security-rule and Admin SDK tests (`tests/emulator/`) |
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`) |
 | `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
-| `pnpm codes:generate [count]` | Create participant codes with PINs and write the hand-out list to `private-data/` |
+| `pnpm codes:generate [count]` | Create participant codes with PINs and write the hand-out list to `private-data/` (named after the target database) |
 | `pnpm build` | Production build |
 
 ## Participant codes
@@ -103,7 +103,7 @@ Against the real project, put the Firebase service-account values in `.env.local
 pnpm codes:generate
 ```
 
-The list lands in `private-data/participant-codes.csv`, which is git-ignored. It pairs every code with its PIN, so treat it like a password list: hand it out on paper and keep it off shared drives.
+The list lands in `private-data/participant-codes-<project>.csv`, which is git-ignored. The file is named after the database it was written to, so a preview list is never mistaken for the real one. It pairs every code with its PIN, so treat it like a password list: hand it out on paper and keep it off shared drives.
 
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
