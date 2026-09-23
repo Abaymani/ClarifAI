@@ -70,7 +70,6 @@ export function LoginForm() {
           {sv.login.lessonLegend}
         </legend>
         <RadioGroup
-          name="lesson"
           className="grid grid-cols-2 gap-3"
           value={lesson}
           onValueChange={(value) => setLesson(String(value ?? ""))}
@@ -88,6 +87,9 @@ export function LoginForm() {
             </Label>
           ))}
         </RadioGroup>
+        {/* The chosen lesson is submitted from React state: the radio group's own
+            hidden input is cleared when React resets the form after an attempt. */}
+        <input type="hidden" name="lesson" value={lesson} />
       </fieldset>
 
       {state.error ? (

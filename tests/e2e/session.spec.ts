@@ -100,10 +100,29 @@ test("keeps what the student typed after a failed attempt", async ({
   // Only the PIN should need correcting; the code and lesson must survive.
   await expect(page.getByLabel("Deltagarkod")).toHaveValue("905");
   await expect(page.getByRole("radio", { name: "Lektion 2" })).toBeChecked();
+  // The value that is actually submitted, not just what the radio looks like.
+  await expect(page.locator('input[name="lesson"]')).toHaveValue("2");
 
   await page.getByLabel("PIN-kod").fill("4321");
   await page.getByRole("button", { name: "Starta" }).click();
   await expect(
     page.getByRole("heading", { name: "Sessionen är igång" }),
   ).toBeVisible();
+});
+
+test("can retry straight after a wrong PIN without touching the form", async ({
+  page,
+}) => {
+  await seedParticipant("906", "4321");
+
+  await logIn(page, "906", "0000", 2);
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "Fel PIN-kod",
+  );
+
+  // Pressing the button again must complain about the PIN, not the lesson.
+  await page.getByRole("button", { name: "Starta" }).click();
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "Fel PIN-kod",
+  );
 });

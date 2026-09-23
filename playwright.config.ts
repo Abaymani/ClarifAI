@@ -11,7 +11,11 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Students use whatever the school hands them, so both engines are covered.
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+  ],
   webServer: {
     // CI tests the production build, as Next.js recommends; locally the dev server
     // saves a rebuild on every run.
