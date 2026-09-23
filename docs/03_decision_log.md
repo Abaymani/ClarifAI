@@ -44,6 +44,7 @@
 - **Decision:** The student chooses a 4-digit PIN at their first session. From then on, the code and the PIN are needed for all of their sessions (the PIN belongs to the student, not to a session). It is stored in clear text, so researchers can tell a student who forgets it. Repeated failed attempts are temporarily blocked.
 - **Risks/consequences:** Students must remember the PIN for several weeks. Anyone with database access can read the PINs, which is acceptable because codes are pseudonymous. Students may pick birthdays; the UI should advise against it. A classmate who uses a code before its owner's first session can set the PIN, and researchers then have to reset it. Architecture and FRs updated.
 - **Decided by:** Armin Baymani (human), 2026-09-22. Attempt limit and birthday advice proposed by Claude (agent); attempt limit approved by Armin.
+- **Status:** Superseded by DL-029 (2026-09-23).
 
 ### DL-007: What is redacted
 - **Options:** All identifying information; names only.
@@ -182,3 +183,9 @@
 - **Decision:** Previews use their own project, `clarifai-preview`: Firestore `(default)`, Standard edition, `europe-north2`, with the repository's rules deployed to it. In Vercel the `FIREBASE_*` variables are set per environment, so Production uses `clarifai-19445` and Preview uses `clarifai-preview`. Supersedes DL-027.
 - **Risks/consequences:** Preview deployments hold no credentials for the research database, so testing a preview cannot reach student data, and no pre-study wipe is needed. Two projects must be kept in step: deploy `firestore.rules` to both after changing them. Preview data is disposable; delete protection is on for production and off for preview.
 - **Decided by:** Proposed by Claude (agent); decided by Armin Baymani (human), 2026-09-23.
+
+### DL-029: PINs are generated with the participant codes
+- **Options:** Students choose their own PIN at the first session (DL-006); PINs are generated together with the codes and handed out by the teacher.
+- **Decision:** Codes 1–64 are generated, each with a random 4-digit PIN, written to Firestore and exported to a CSV for the teacher to hand out. Students enter code, PIN and lesson on one screen. Three wrong PINs in a row block that code for 30 minutes. Supersedes DL-006.
+- **Risks/consequences:** No student can pick a birthday as a PIN, and nobody can claim another student's code before its owner first logs in. Students must keep the slip they are given; a forgotten PIN means asking a researcher, who can read it. The CSV pairs every code with its PIN, so it is written to the git-ignored `private-data/` folder and must never be committed.
+- **Decided by:** Armin Baymani (human), 2026-09-23. Mockup reviewed and approved by Armin.

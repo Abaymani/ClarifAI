@@ -13,7 +13,7 @@ For the use-case description, see [[00_product_brief]]
 |LLM Provider|OpenAI ChatGPT|Analysis will be done through API calls to ChatGPT. The scraped transcript, with names redacted, will be submitted together with the coding schemes and instructions. The transcript link is only stored as a fallback for researchers.|
 |Database|Google Firebase|Cloud Firestore is a document (NoSQL) database. There will be at most 60 users, with a maximum of 4 sessions each. Each session is self-contained. A document based system for storage is therefore likely more than enough for our purposes.|
 |Hosting|Vercel|Vercel makes it trivial to host NextJS projects and has a generous free hosting tier.|
-|Auth|N/A (Participant code + PIN)|Each student recieves a `participant_code` (pseudonym) from their teacher, and chooses a 4-digit PIN at their first session. No names, emails or any other identifiable information should be stored under any circumstance due to ethical concerns.|
+|Auth|N/A (Participant code + PIN)|Each student recieves a `participant_code` (pseudonym) and a 4-digit PIN from their teacher; both are generated together. No names, emails or any other identifiable information should be stored under any circumstance due to ethical concerns.|
 
 ## Session Lifecycle
 Every submission and completed reflection is counted as one **session**.
@@ -56,7 +56,7 @@ Session completed
 **`Session creation (S0)`**
 Students must sumbit their `participant_code` to start a session. Since the research projects aims to look for session-to-session changes in prompting tendencies **within** each student, it is imperitive that this is saved in the database.
 
-At their first session, students also choose a 4-digit PIN. From then on, they need both their code and their PIN to start or resume any of their sessions. The PIN is stored in clear text so researchers can tell a student who forgets it. Since 4 digits are quick to guess, repeated failed attempts are temporarily blocked.
+Each `participant_code` is handed out together with a 4-digit PIN that is generated with it. Students need both their code and their PIN to start or resume any of their sessions. The PIN is stored in clear text so researchers can tell a student who forgets it. Since 4 digits are quick to guess, repeated failed attempts are temporarily blocked.
 
 **`Submission & Scraping (S1)`**
 Students submit a link to their Gemini transcript. One important thing to note is that while the chat is static once the link is created, it will cease to function if the underlying chat is deleted. Since the transcript is **important research data**, it must be scraped and saved to the database. This should be done in a format readable to both an LLM and a human encoder.
