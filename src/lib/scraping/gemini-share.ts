@@ -1,4 +1,9 @@
-import { parseShareLink, resolveShareId, shareUrl } from "./gemini-link";
+import {
+  parseShareLink,
+  resolveShareId,
+  shareLinkForStorage,
+  shareUrl,
+} from "./gemini-link";
 import { ScrapeError } from "./scrape-error";
 import {
   replaceMedia,
@@ -29,10 +34,11 @@ export async function scrapeGeminiShare(
   options: ScrapeOptions = {},
 ): Promise<Transcript> {
   const fetchImpl = options.fetch ?? fetch;
-  const shareId = await resolveShareId(parseShareLink(link), fetchImpl);
+  const parsedLink = parseShareLink(link);
+  const shareId = await resolveShareId(parsedLink, fetchImpl);
   const payload = await fetchSharePayload(shareId, fetchImpl);
   return buildTranscript(payload, {
-    submittedLink: link.trim(),
+    submittedLink: shareLinkForStorage(parsedLink),
     shareId,
     retrievedAt: (options.now?.() ?? new Date()).toISOString(),
   });

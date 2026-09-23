@@ -54,13 +54,13 @@ On Linux, use `pnpm`. On Windows PowerShell, use `pnpm.cmd` if `pnpm` is blocked
 
 ```bash
 pnpm install                              # also activates the git hooks
-pnpm exec playwright install chromium     # browser for the end-to-end tests
+pnpm exec playwright install chromium firefox # browsers for the end-to-end tests
 pnpm dev                                  # app on :3000, Firestore emulator UI on :4000
 ```
 
 ```powershell
 pnpm.cmd install
-pnpm.cmd exec playwright install chromium
+pnpm.cmd exec playwright install chromium firefox
 pnpm.cmd dev
 ```
 
@@ -115,6 +115,7 @@ Copy `.env.example` to `.env.local` and fill in values there. **Never commit rea
 
 ## Data safety
 - Browsers never talk to Firestore. The security rules deny all client access, and every read and write goes through route handlers that use the Admin SDK (`src/lib/firebase/admin.ts`).
+- Gemini links are allow-listed and resolved only through supported Gemini hosts. Transcript text is redacted locally before it is saved or shown in the confirmation preview; raw transcript content and submitted links are never written to application logs.
 - Never put real student data (transcripts, exports) in the repository. Use the git-ignored `private-data/` folder if you need it locally.
 
 ## Deployment (Vercel)

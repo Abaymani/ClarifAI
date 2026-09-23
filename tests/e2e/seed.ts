@@ -40,3 +40,48 @@ export async function seedCompletedSession(
     errorCode: null,
   });
 }
+
+export async function seedTranscriptForConfirmation(
+  code: string,
+  lesson: number,
+  title = "Lysdiod och Arduino",
+): Promise<void> {
+  await db
+    .collection("sessions")
+    .doc(`${code}_${lesson}`)
+    .set({
+      participantCode: code,
+      lesson,
+      status: "awaiting_confirmation",
+      sessionTokenHash: "replaced-at-login",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      errorCode: null,
+      transcriptConfirmedAt: null,
+      transcript: {
+        source: {
+          submittedLink: "https://gemini.google.com/share/abc123def456",
+          shareUrl: "https://gemini.google.com/share/abc123def456",
+          title,
+          model: "Gemini",
+          sharedAt: null,
+        },
+        retrievedAt: new Date().toISOString(),
+        parserVersion: 1,
+        messages: [
+          {
+            index: 1,
+            role: "student",
+            text: "Hur kopplar jag en lysdiod?",
+          },
+          {
+            index: 2,
+            role: "gemini",
+            text: "Använd ett seriemotstånd och kontrollera polariteten.",
+          },
+        ],
+        warnings: [],
+      },
+    });
+}

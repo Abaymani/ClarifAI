@@ -32,6 +32,28 @@ export const sv = {
       `Lektion ${lesson} är redan inlämnad och kan inte öppnas igen.`,
     unexpected: (errorCode: string) =>
       `Något gick fel. Försök igen om en stund. Felkod: ${errorCode}.`,
+    transcriptLinkMissing: "Klistra in länken till din Gemini-chatt.",
+    transcriptInvalidLink: (errorCode: string) =>
+      `Länken är inte en giltig Gemini-delning. Kopiera delningslänken från Gemini och försök igen. Felkod: ${errorCode}.`,
+    transcriptNotFound: (errorCode: string) =>
+      `Chatten kunde inte hittas. Kontrollera länken och att chatten inte har tagits bort. Felkod: ${errorCode}.`,
+    transcriptNotAccessible: (errorCode: string) =>
+      `Chatten går inte att öppna. Kontrollera att länken är offentligt delad och försök igen. Felkod: ${errorCode}.`,
+    transcriptEmpty: (errorCode: string) =>
+      `Chatten innehåller inga meddelanden att lämna in. Felkod: ${errorCode}.`,
+    transcriptTooLarge: (errorCode: string) =>
+      `Chatten är för stor för att lämnas in. Be din lärare om hjälp. Felkod: ${errorCode}.`,
+    transcriptFetchFailed: (errorCode: string) =>
+      `Gemini kunde inte nås just nu. Vänta en stund och försök igen. Felkod: ${errorCode}.`,
+    transcriptUnexpectedFormat: (errorCode: string) =>
+      `Gemini-chatten kunde inte läsas. Be din lärare om hjälp. Felkod: ${errorCode}.`,
+    transcriptSuperseded:
+      "En nyare inlämning har redan startats. Sidan visar det senaste resultatet.",
+    transcriptNotReady:
+      "Transkriptet är inte redo för detta steg. Ladda om sidan och försök igen.",
+    sessionExpired: "Sessionen har gått ut. Logga in igen.",
+    transcriptRetry: (errorCode: string) =>
+      `Det förra försöket misslyckades. Kontrollera länken och försök igen. Felkod: ${errorCode}.`,
   },
   session: {
     heading: "Sessionen är igång",
@@ -40,12 +62,32 @@ export const sv = {
     intro:
       "Nästa steg är att lämna in länken till din Gemini-chatt. Du kan stänga fönstret och fortsätta senare med samma deltagarkod och PIN-kod.",
     statusAwaitingTranscript: "Väntar på transkript",
+    statusProcessing: "Hämtar transkript",
+    statusAwaitingConfirmation: "Väntar på bekräftelse",
+    statusTranscriptConfirmed: "Transkript bekräftat",
     transcriptHeading: "Lämna in transkript",
     transcriptLabel: "Länk till din Gemini-chatt",
     transcriptPlaceholder: "https://share.gemini.google/...",
+    transcriptHelp:
+      "Öppna chatten i Gemini, välj Dela och kopiera den offentliga länken.",
     transcriptSubmit: "Lämna in",
-    transcriptComingSoon:
-      "Det här steget byggs i nästa del och är avstängt än så länge.",
+    transcriptSubmitting: "Hämtar …",
+    previewHeading: "Är det här ditt transkript?",
+    previewIntro:
+      "Kontrollera att meddelandena kommer från rätt Gemini-chatt innan du fortsätter.",
+    previewStudent: "Du",
+    previewGemini: "Gemini",
+    previewMessages: (count: number) =>
+      `${count} meddelande${count === 1 ? "" : "n"}`,
+    previewWarnings: "En del innehåll kunde inte visas i transkriptet.",
+    confirm: "Ja, fortsätt",
+    confirming: "Bekräftar …",
+    reject: "Nej, välj en annan länk",
+    rejecting: "Öppnar formuläret …",
+    confirmedHeading: "Transkriptet är bekräftat",
+    confirmedIntro:
+      "Transkriptet är sparat. Analys- och reflektionssteget byggs härnäst.",
+    submittedSuccess: "Tack! Ditt transkript har lämnats in.",
     logout: "Logga ut",
   },
 } as const;

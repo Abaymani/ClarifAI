@@ -12,9 +12,13 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   // Students use whatever the school hands them, so both engines are covered.
+  // CI runs Firefox on Linux; its current Windows binary has a broken mozglue
+  // side-by-side manifest, while Chromium still verifies the Windows app path.
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    ...(process.env.PLAYWRIGHT_SKIP_FIREFOX === "1"
+      ? []
+      : [{ name: "firefox", use: { ...devices["Desktop Firefox"] } }]),
   ],
   webServer: {
     // CI tests the production build, as Next.js recommends; locally the dev server

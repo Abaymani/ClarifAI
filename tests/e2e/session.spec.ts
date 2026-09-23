@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { seedCompletedSession, seedParticipant } from "./seed";
+import {
+  seedCompletedSession,
+  seedParticipant,
+  seedTranscriptForConfirmation,
+} from "./seed";
 
 async function logIn(
   page: import("@playwright/test").Page,
@@ -24,8 +28,7 @@ test("starts a session with the right code and PIN", async ({ page }) => {
     page.getByRole("heading", { name: "Sessionen är igång" }),
   ).toBeVisible();
   await expect(page.getByText("Deltagare 901 · Lektion 2")).toBeVisible();
-  // The transcript step belongs to S1 and must not accept anything yet.
-  await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeDisabled();
+  await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
 });
 
 test("keeps the student out with a wrong PIN and counts the attempt", async ({
@@ -125,4 +128,68 @@ test("can retry straight after a wrong PIN without touching the form", async ({
   await expect(page.locator('[data-slot="alert"]')).toContainText(
     "Fel PIN-kod",
   );
+});
+
+test("rejects a non-Gemini link and keeps it available to correct", async ({
+  page,
+}) => {
+  await seedParticipant("907", "4321");
+  await logIn(page, "907", "4321", 2);
+
+  const link = page.getByLabel("Länk till din Gemini-chatt");
+  await link.fill("https://example.com/not-a-chat");
+  await page.getByRole("button", { name: "Lämna in" }).click();
+
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "inte en giltig Gemini-delning",
+  );
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "S1-INVALID-LINK",
+  );
+  await expect(link).toHaveValue("https://example.com/not-a-chat");
+});
+
+test("shows the transcript preview and lets the student reject it", async ({
+  page,
+}) => {
+  await seedParticipant("908", "4321");
+  await seedTranscriptForConfirmation("908", 2);
+  await logIn(page, "908", "4321", 2);
+
+  await expect(
+    page.getByRole("heading", { name: "Är det här ditt transkript?" }),
+  ).toBeVisible();
+  await expect(page.getByText("Hur kopplar jag en lysdiod?")).toBeVisible();
+  await expect(page.getByText("Använd ett seriemotstånd")).toBeVisible();
+
+  await page.getByRole("button", { name: "Nej, välj en annan länk" }).click();
+  await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
+});
+
+test("confirmation completes lesson 1 and returns a receipt", async ({
+  page,
+}) => {
+  await seedParticipant("909", "4321");
+  await seedTranscriptForConfirmation("909", 1);
+  await logIn(page, "909", "4321", 1);
+
+  await page.getByRole("button", { name: "Ja, fortsätt" }).click();
+  await expect(
+    page.getByText("Tack! Ditt transkript har lämnats in."),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Logga in" })).toBeVisible();
+});
+
+test("confirmation advances lesson 3 to the upcoming analysis step", async ({
+  page,
+}) => {
+  await seedParticipant("910", "4321");
+  await seedTranscriptForConfirmation("910", 3);
+  await logIn(page, "910", "4321", 3);
+
+  await page.getByRole("button", { name: "Ja, fortsätt" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Transkriptet är bekräftat" }),
+  ).toBeVisible();
+  await expect(page.getByText("Analys- och reflektionssteget")).toBeVisible();
 });

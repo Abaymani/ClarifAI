@@ -201,3 +201,15 @@
 - **Decision:** The form keeps code, PIN and lesson in React state, and the chosen lesson is submitted from a hidden field bound to that state.
 - **Risks/consequences:** React clears a form once its action returns. That emptied the fields after a wrong PIN, and later left the radio group looking selected while the form submitted no lesson at all, so students were told to choose a lesson they had already chosen. Forms built from S1 onwards need the same treatment, and browser tests should assert the value that is submitted rather than what is displayed.
 - **Decided by:** Claude (agent), 2026-09-23, after Armin Baymani reported both faults from the preview.
+
+### DL-032: Transcript replacement is atomic
+- **Options:** Remove the existing transcript as soon as a student rejects it; keep it until a replacement has been retrieved and saved successfully.
+- **Decision:** Keep the existing transcript until its replacement is safely stored. Each scrape has a random attempt ID, and only the newest attempt may update the session. Rejecting a preview returns the session to transcript submission, but does not delete the rejected record. A successful replacement clears any analysis, questions and responses derived from the earlier transcript.
+- **Risks/consequences:** A rejected transcript remains in the incomplete research record until it is replaced. This preserves data during recoverable failures and prevents a slow older request from overwriting a newer link. Stored transcripts are limited to 850,000 UTF-8 JSON bytes so the complete session stays below Firestore's 1 MiB document limit.
+- **Decided by:** Codex (agent), 2026-09-23. Implements the approved replacement and retry requirements; not yet separately reviewed by a human.
+
+### DL-033: First-stage transcript redaction is local and deterministic
+- **Options:** Store the scraped transcript unchanged; send it to an external model for redaction; apply deterministic redaction locally before storage.
+- **Decision:** Before Firestore storage or preview, locally redact email addresses, Swedish personal identity numbers, Swedish-format phone numbers, `user@host` terminal identifiers, usernames in common home-directory paths, and names introduced with phrases such as “jag heter” or “my name is”. Query strings and fragments are removed from submitted share links before storage. No transcript content or link is written to diagnostic logs.
+- **Risks/consequences:** Deterministic patterns are auditable and keep raw content away from another service, but they cannot reliably find every personal name or contextual identifier, especially in Swedish. This is a first implementation of DL-007 and must be revisited with representative transcripts before S0.
+- **Decided by:** Codex (agent), 2026-09-23. Not yet reviewed by a human.

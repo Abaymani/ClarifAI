@@ -103,6 +103,13 @@ export function shareUrl(shareId: string): string {
   return `https://${CANONICAL_HOST}/share/${shareId}`;
 }
 
+// Query strings and fragments are not needed to retrieve a share. Dropping them
+// avoids persisting arbitrary text appended to an otherwise valid URL.
+export function shareLinkForStorage(link: ShareLink): string {
+  if (link.kind === "canonical") return shareUrl(link.shareId);
+  return `https://${link.url.hostname}${link.url.pathname}`;
+}
+
 function canonicalShareId(url: URL): string | null {
   if (url.hostname !== CANONICAL_HOST) return null;
   const id = /^\/share\/([^/]+)\/?$/.exec(url.pathname)?.[1];
