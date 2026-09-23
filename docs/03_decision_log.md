@@ -44,6 +44,7 @@
 - **Decision:** The student chooses a 4-digit PIN at their first session. From then on, the code and the PIN are needed for all of their sessions (the PIN belongs to the student, not to a session). It is stored in clear text, so researchers can tell a student who forgets it. Repeated failed attempts are temporarily blocked.
 - **Risks/consequences:** Students must remember the PIN for several weeks. Anyone with database access can read the PINs, which is acceptable because codes are pseudonymous. Students may pick birthdays; the UI should advise against it. A classmate who uses a code before its owner's first session can set the PIN, and researchers then have to reset it. Architecture and FRs updated.
 - **Decided by:** Armin Baymani (human), 2026-09-22. Attempt limit and birthday advice proposed by Claude (agent); attempt limit approved by Armin.
+- **Status:** Superseded by DL-029 (2026-09-23).
 
 ### DL-007: What is redacted
 - **Options:** All identifying information; names only.
@@ -114,7 +115,7 @@
 ### DL-018: Testing stack
 - **Options:** Jest or Vitest for unit tests; Playwright or Cypress for end-to-end tests.
 - **Decision:** Vitest (unit), Vitest plus the Firebase emulator (security rules and Admin SDK), and Playwright (end-to-end, Chromium).
-- **Risks/consequences:** Vitest cannot render `async` Server Components; those need end-to-end tests.
+- **Risks/consequences:** Vitest cannot render `async` Server Components; those need end-to-end tests. Updated 2026-09-23: the browser tests run in both Chromium and Firefox.
 - **Decided by:** Proposed by Claude (agent); approved by Armin Baymani (human), 2026-09-22.
 
 ### DL-019: Keeping secrets out of git
@@ -182,3 +183,21 @@
 - **Decision:** Previews use their own project, `clarifai-preview`: Firestore `(default)`, Standard edition, `europe-north2`, with the repository's rules deployed to it. In Vercel the `FIREBASE_*` variables are set per environment, so Production uses `clarifai-19445` and Preview uses `clarifai-preview`. Supersedes DL-027.
 - **Risks/consequences:** Preview deployments hold no credentials for the research database, so testing a preview cannot reach student data, and no pre-study wipe is needed. Two projects must be kept in step: deploy `firestore.rules` to both after changing them. Preview data is disposable; delete protection is on for production and off for preview.
 - **Decided by:** Proposed by Claude (agent); decided by Armin Baymani (human), 2026-09-23.
+
+### DL-029: PINs are generated with the participant codes
+- **Options:** Students choose their own PIN at the first session (DL-006); PINs are generated together with the codes and handed out by the teacher.
+- **Decision:** Codes 1–64 are generated, each with a random 4-digit PIN, written to Firestore and exported to a CSV for the teacher to hand out. Students enter code, PIN and lesson on one screen. Three wrong PINs in a row block that code for 30 minutes. Supersedes DL-006.
+- **Risks/consequences:** No student can pick a birthday as a PIN, and nobody can claim another student's code before its owner first logs in. Students must keep the slip they are given; a forgotten PIN means asking a researcher, who can read it. The CSV pairs every code with its PIN, so it is written to the git-ignored `private-data/` folder and must never be committed. The file is named after the database it was written to, so a preview list cannot be mistaken for the one handed to students.
+- **Decided by:** Armin Baymani (human), 2026-09-23. Mockup reviewed and approved by Armin.
+
+### DL-030: How a session is identified and resumed
+- **Options:** A random session identifier found by searching for participant and lesson; an identifier built from the participant code and the lesson.
+- **Decision:** A session document is named `<participant_code>_<lesson>`. Logging in again with the same code and lesson resumes that session, and a completed lesson cannot be reopened. The browser holds a random token in an httpOnly cookie for twelve hours, and only a hash of that token is stored. Logging in again replaces the token, so a previous cookie stops working. A new session starts in the state `awaiting_transcript`.
+- **Risks/consequences:** Duplicate sessions for one lesson are impossible by construction, which is what the requirements ask for. Reading the database does not let anyone resume a student's session. A student is signed in on one device at a time; logging in elsewhere ends the earlier browser's access. `awaiting_transcript` extends the list of states named in the requirements.
+- **Decided by:** Claude (agent), 2026-09-23. Behaviour reviewed and accepted by Armin Baymani (human) on a preview deployment.
+
+### DL-031: The login form keeps its values in React state
+- **Options:** Let the browser hold the form values; keep them in React state.
+- **Decision:** The form keeps code, PIN and lesson in React state, and the chosen lesson is submitted from a hidden field bound to that state.
+- **Risks/consequences:** React clears a form once its action returns. That emptied the fields after a wrong PIN, and later left the radio group looking selected while the form submitted no lesson at all, so students were told to choose a lesson they had already chosen. Forms built from S1 onwards need the same treatment, and browser tests should assert the value that is submitted rather than what is displayed.
+- **Decided by:** Claude (agent), 2026-09-23, after Armin Baymani reported both faults from the preview.

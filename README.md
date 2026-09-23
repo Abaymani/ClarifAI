@@ -77,7 +77,38 @@ pnpm.cmd dev
 | `pnpm test:emulator` | Firestore security-rule and Admin SDK tests (`tests/emulator/`) |
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`) |
 | `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
+| `pnpm codes:generate [count]` | Create participant codes with PINs and write the hand-out list to `private-data/` (named after the target database) |
 | `pnpm build` | Production build |
+
+## Participant codes
+Codes and their PINs are generated together and handed out by the teacher (DL-029). Re-running the generator keeps the PINs of codes that already exist, so slips already handed out stay valid.
+
+Against the local emulator:
+
+```bash
+pnpm exec firebase emulators:exec --only firestore --project demo-clarifai "pnpm codes:generate 5"
+```
+
+To try the login while `pnpm dev` is running, seed that emulator from a second terminal:
+
+```bash
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 pnpm codes:generate 5
+```
+
+The emulator forgets everything when it stops, so this is repeated per session.
+
+Against the real project, put the Firebase service-account values in `.env.local` first, then:
+
+```bash
+pnpm codes:generate
+```
+
+The list lands in `private-data/participant-codes-<project>.csv`, which is git-ignored. The file is named after the database it was written to, so a preview list is never mistaken for the real one. It pairs every code with its PIN, so treat it like a password list: hand it out on paper and keep it off shared drives.
+
+### If a student is locked out
+Three wrong PINs block that code for 30 minutes, and a correct PIN is refused until the block expires. To let a student in sooner, open their document under `participants` in the Firebase console and set `lockedUntil` to null and `failedAttempts` to 0. Clearing only `lockedUntil` blocks them again on the next wrong attempt.
+
+The same document holds the student's `pin`, which is what to read out when someone forgets theirs.
 
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.

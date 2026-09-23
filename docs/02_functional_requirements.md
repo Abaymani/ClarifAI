@@ -7,7 +7,7 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR-|The system shall accept a registered participant code consisting of one to three digits before starting a session | High | Missing, incorrectly formatted, and unknown codes produce an explanatory error. Valid codes allow the student to continue |
-|FR-|The system shall let a student choose a 4-digit PIN at their first session and require their participant code and PIN for all later sessions | High | The PIN is stored in clear text so researchers can tell a student who forgets it. A wrong PIN produces an explanatory error. Repeated failed attempts are temporarily blocked |
+|FR-|The system shall require a participant code and its 4-digit PIN, which are generated and handed out together, before a session is started or resumed | High | The PIN is stored in clear text so researchers can tell a student who forgets it. A wrong PIN produces an explanatory error. Three wrong attempts in a row block that code for 30 minutes |
 |FR-|The system shall allow students to select lesson 1–4 and associate the session with their participant code and selected lesson| High | Every session record contains a participant code, lesson number, and unique session identifier ||
 |FR-|The system shall apply the workflow assigned to the selected lesson | High | Lessons 1 and 4 collect and preserve transcripts only. Lessons 2 and 3 additionally provide analysis and scaffolded reflection |
 
