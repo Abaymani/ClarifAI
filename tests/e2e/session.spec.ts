@@ -86,3 +86,24 @@ test("sends visitors without a session back to the login page", async ({
 
   await expect(page.getByRole("heading", { name: "Logga in" })).toBeVisible();
 });
+
+test("keeps what the student typed after a failed attempt", async ({
+  page,
+}) => {
+  await seedParticipant("905", "4321");
+
+  await logIn(page, "905", "0000", 2);
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "Fel PIN-kod",
+  );
+
+  // Only the PIN should need correcting; the code and lesson must survive.
+  await expect(page.getByLabel("Deltagarkod")).toHaveValue("905");
+  await expect(page.getByRole("radio", { name: "Lektion 2" })).toBeChecked();
+
+  await page.getByLabel("PIN-kod").fill("4321");
+  await page.getByRole("button", { name: "Starta" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Sessionen är igång" }),
+  ).toBeVisible();
+});

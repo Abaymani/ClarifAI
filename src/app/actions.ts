@@ -20,7 +20,9 @@ import {
 import { startSession } from "@/lib/session/store";
 import { sv } from "@/lib/sv";
 
-export type LoginState = { error: string | null };
+export type LoginField = "code" | "pin" | "lesson";
+// `field` says which input the message belongs to, so the form can mark it.
+export type LoginState = { error: string | null; field: LoginField | null };
 
 export async function startSessionAction(
   _previous: LoginState,
@@ -34,9 +36,7 @@ export async function startSessionAction(
       lesson: parseLesson(formData.get("lesson") as string | null),
     };
   } catch (error) {
-    if (error instanceof CredentialError) {
-      return { error: messageForProblem(error.problem) };
-    }
+    if (error instanceof CredentialError) return problemState(error.problem);
     throw error;
   }
 
@@ -47,19 +47,22 @@ export async function startSessionAction(
   } catch (error) {
     // Never log the code, the PIN or anything else the student typed.
     console.error("S0-DB", error instanceof Error ? error.name : "unknown");
-    return { error: sv.errors.unexpected("S0-DB") };
+    return { error: sv.errors.unexpected("S0-DB"), field: null };
   }
 
   if (!result.ok) {
     switch (result.reason) {
       case "UNKNOWN_CODE":
-        return { error: sv.errors.codeUnknown };
+        return { error: sv.errors.codeUnknown, field: "code" };
       case "WRONG_PIN":
-        return { error: sv.errors.pinWrong(result.attemptsLeft) };
+        return { error: sv.errors.pinWrong(result.attemptsLeft), field: "pin" };
       case "LOCKED":
-        return { error: sv.errors.locked(result.minutesLeft) };
+        return { error: sv.errors.locked(result.minutesLeft), field: "pin" };
       case "ALREADY_COMPLETED":
-        return { error: sv.errors.lessonCompleted(credentials.lesson) };
+        return {
+          error: sv.errors.lessonCompleted(credentials.lesson),
+          field: "lesson",
+        };
     }
   }
 
@@ -80,17 +83,17 @@ export async function logoutAction(): Promise<void> {
   redirect("/");
 }
 
-function messageForProblem(problem: CredentialProblem): string {
+function problemState(problem: CredentialProblem): LoginState {
   switch (problem) {
     case "CODE_MISSING":
-      return sv.errors.codeMissing;
+      return { error: sv.errors.codeMissing, field: "code" };
     case "CODE_FORMAT":
-      return sv.errors.codeFormat;
+      return { error: sv.errors.codeFormat, field: "code" };
     case "PIN_MISSING":
-      return sv.errors.pinMissing;
+      return { error: sv.errors.pinMissing, field: "pin" };
     case "PIN_FORMAT":
-      return sv.errors.pinFormat;
+      return { error: sv.errors.pinFormat, field: "pin" };
     case "LESSON_MISSING":
-      return sv.errors.lessonMissing;
+      return { error: sv.errors.lessonMissing, field: "lesson" };
   }
 }
