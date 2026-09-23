@@ -89,6 +89,14 @@ Against the local emulator:
 pnpm exec firebase emulators:exec --only firestore --project demo-clarifai "pnpm codes:generate 5"
 ```
 
+To try the login while `pnpm dev` is running, seed that emulator from a second terminal:
+
+```bash
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 pnpm codes:generate 5
+```
+
+The emulator forgets everything when it stops, so this is repeated per session.
+
 Against the real project, put the Firebase service-account values in `.env.local` first, then:
 
 ```bash
