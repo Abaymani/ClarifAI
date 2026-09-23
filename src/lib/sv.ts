@@ -15,8 +15,6 @@ export const sv = {
     lesson: (lesson: number) => `Lektion ${lesson}`,
     submit: "Starta",
     submitting: "Startar …",
-    privacy:
-      "Vi sparar din kod och dina svar för forskningen. Ditt namn sparas inte.",
   },
   errors: {
     codeMissing: "Skriv din deltagarkod.",
