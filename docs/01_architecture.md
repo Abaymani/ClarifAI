@@ -58,6 +58,8 @@ Students must sumbit their `participant_code` to start a session. Since the rese
 
 Each `participant_code` is handed out together with a 4-digit PIN that is generated with it. Students need both their code and their PIN to start or resume any of their sessions. The PIN is stored in clear text so researchers can tell a student who forgets it. Since 4 digits are quick to guess, repeated failed attempts are temporarily blocked.
 
+A session is identified by the participant code together with the lesson, so a student has at most one session per lesson. Logging in again with the same code and lesson resumes that session, and a completed lesson cannot be reopened. The browser keeps the session in a cookie holding a random token; only a hash of the token is stored, so access to the database alone does not let anyone resume a student's session. A session starts in the state `awaiting_transcript`, waiting for the link that `S1` collects.
+
 **`Submission & Scraping (S1)`**
 Students submit a link to their Gemini transcript. One important thing to note is that while the chat is static once the link is created, it will cease to function if the underlying chat is deleted. Since the transcript is **important research data**, it must be scraped and saved to the database. This should be done in a format readable to both an LLM and a human encoder.
 

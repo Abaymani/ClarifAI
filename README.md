@@ -105,6 +105,11 @@ pnpm codes:generate
 
 The list lands in `private-data/participant-codes-<project>.csv`, which is git-ignored. The file is named after the database it was written to, so a preview list is never mistaken for the real one. It pairs every code with its PIN, so treat it like a password list: hand it out on paper and keep it off shared drives.
 
+### If a student is locked out
+Three wrong PINs block that code for 30 minutes, and a correct PIN is refused until the block expires. To let a student in sooner, open their document under `participants` in the Firebase console and set `lockedUntil` to null and `failedAttempts` to 0. Clearing only `lockedUntil` blocks them again on the next wrong attempt.
+
+The same document holds the student's `pin`, which is what to read out when someone forgets theirs.
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 
