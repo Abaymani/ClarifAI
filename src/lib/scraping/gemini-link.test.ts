@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { describe, expect, test, vi } from "vitest";
 
-import { parseShareLink, resolveShareId } from "./gemini-link";
+import {
+  parseShareLink,
+  resolveShareId,
+  shareLinkForStorage,
+} from "./gemini-link";
 import { ScrapeError } from "./scrape-error";
 
 async function errorCode(run: () => unknown): Promise<string | undefined> {
@@ -54,6 +58,17 @@ describe("parseShareLink", () => {
     "https://share.gemini.google/a/b",
   ])("rejects %j", async (input) => {
     expect(await errorCode(() => parseShareLink(input))).toBe("INVALID_LINK");
+  });
+});
+
+describe("shareLinkForStorage", () => {
+  test("keeps only the part of a supported URL needed for retrieval", () => {
+    const parsed = parseShareLink(
+      "https://gemini.google.com/share/abc123def456?name=Ada#private",
+    );
+    expect(shareLinkForStorage(parsed)).toBe(
+      "https://gemini.google.com/share/abc123def456",
+    );
   });
 });
 

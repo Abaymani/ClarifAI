@@ -1,0 +1,211 @@
+"use server";
+
+import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import {
+  parseShareLink,
+  shareLinkForStorage,
+  type ShareLink,
+} from "@/lib/scraping/gemini-link";
+import { scrapeGeminiShare } from "@/lib/scraping/gemini-share";
+import { redactTranscript } from "@/lib/scraping/redact-transcript";
+import { ScrapeError, type ScrapeErrorCode } from "@/lib/scraping/scrape-error";
+import { SESSION_COOKIE } from "@/lib/session/session-token";
+import {
+  beginTranscriptSubmission,
+  confirmTranscript,
+  failTranscriptSubmission,
+  rejectTranscript,
+  saveTranscriptSubmission,
+  TranscriptTooLargeError,
+} from "@/lib/session/store";
+import { sv } from "@/lib/sv";
+
+export type TranscriptFormState = {
+  error: string | null;
+  field: "link" | null;
+};
+
+export type ConfirmationState = { error: string | null };
+
+export async function submitTranscriptAction(
+  _previous: TranscriptFormState,
+  formData: FormData,
+): Promise<TranscriptFormState> {
+  void _previous;
+  const link = String(formData.get("transcript-link") ?? "").trim();
+  if (!link) {
+    return { error: sv.errors.transcriptLinkMissing, field: "link" };
+  }
+
+  let parsedLink: ShareLink;
+  try {
+    parsedLink = parseShareLink(link);
+  } catch {
+    return {
+      error: sv.errors.transcriptInvalidLink("S1-INVALID-LINK"),
+      field: "link",
+    };
+  }
+
+  const token = await requireSessionToken();
+  const attemptId = randomUUID();
+  let sessionId: string;
+  try {
+    const started = await beginTranscriptSubmission(
+      token,
+      attemptId,
+      shareLinkForStorage(parsedLink),
+    );
+    if (!started.ok) return handleMutationProblem(started.reason);
+    sessionId = started.session.id;
+  } catch (error) {
+    logSafeError("S1-BEGIN-DB", error);
+    return { error: sv.errors.unexpected("S1-BEGIN-DB"), field: null };
+  }
+
+  try {
+    const transcript = redactTranscript(await scrapeGeminiShare(link));
+    const saved = await saveTranscriptSubmission(
+      sessionId,
+      token,
+      attemptId,
+      transcript,
+    );
+    if (!saved.ok) return handleMutationProblem(saved.reason);
+  } catch (error) {
+    const failure = failureFor(error);
+    try {
+      const failed = await failTranscriptSubmission(
+        sessionId,
+        token,
+        attemptId,
+        failure.code,
+      );
+      if (!failed.ok && failed.reason === "STALE") {
+        return { error: sv.errors.transcriptSuperseded, field: null };
+      }
+    } catch (storeError) {
+      logSafeError("S1-FAIL-DB", storeError);
+    }
+    logSafeError(failure.code, error);
+    return { error: failure.message, field: failure.field };
+  }
+
+  revalidatePath("/session");
+  return { error: null, field: null };
+}
+
+export async function confirmTranscriptAction(
+  _previous: ConfirmationState,
+): Promise<ConfirmationState> {
+  void _previous;
+  const token = await requireSessionToken();
+  let completed = false;
+  try {
+    const result = await confirmTranscript(token);
+    if (!result.ok) return { error: mutationProblemMessage(result.reason) };
+    completed = result.session.status === "completed";
+  } catch (error) {
+    logSafeError("S1-CONFIRM-DB", error);
+    return { error: sv.errors.unexpected("S1-CONFIRM-DB") };
+  }
+
+  if (completed) {
+    (await cookies()).delete(SESSION_COOKIE);
+    redirect("/?submitted=1");
+  }
+  revalidatePath("/session");
+  return { error: null };
+}
+
+export async function rejectTranscriptAction(
+  _previous: ConfirmationState,
+): Promise<ConfirmationState> {
+  void _previous;
+  const token = await requireSessionToken();
+  try {
+    const result = await rejectTranscript(token);
+    if (!result.ok) return { error: mutationProblemMessage(result.reason) };
+  } catch (error) {
+    logSafeError("S1-REJECT-DB", error);
+    return { error: sv.errors.unexpected("S1-REJECT-DB") };
+  }
+
+  revalidatePath("/session");
+  return { error: null };
+}
+
+async function requireSessionToken(): Promise<string> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) redirect("/");
+  return token;
+}
+
+function handleMutationProblem(
+  reason: "UNAUTHENTICATED" | "ALREADY_COMPLETED" | "NOT_READY" | "STALE",
+): TranscriptFormState {
+  return { error: mutationProblemMessage(reason), field: null };
+}
+
+function mutationProblemMessage(
+  reason: "UNAUTHENTICATED" | "ALREADY_COMPLETED" | "NOT_READY" | "STALE",
+): string {
+  if (reason === "STALE") return sv.errors.transcriptSuperseded;
+  if (reason === "NOT_READY") return sv.errors.transcriptNotReady;
+  return sv.errors.sessionExpired;
+}
+
+function failureFor(error: unknown): {
+  code: string;
+  message: string;
+  field: "link" | null;
+} {
+  if (error instanceof ScrapeError) {
+    const code = `S1-${error.code}`;
+    return {
+      code,
+      message: scrapeErrorMessage(error.code, code),
+      field: error.code === "INVALID_LINK" ? "link" : null,
+    };
+  }
+  if (error instanceof TranscriptTooLargeError) {
+    return {
+      code: "S1-TOO-LARGE",
+      message: sv.errors.transcriptTooLarge("S1-TOO-LARGE"),
+      field: null,
+    };
+  }
+  return {
+    code: "S1-DB",
+    message: sv.errors.unexpected("S1-DB"),
+    field: null,
+  };
+}
+
+function scrapeErrorMessage(code: ScrapeErrorCode, diagnostic: string): string {
+  switch (code) {
+    case "INVALID_LINK":
+      return sv.errors.transcriptInvalidLink(diagnostic);
+    case "NOT_FOUND":
+      return sv.errors.transcriptNotFound(diagnostic);
+    case "NOT_ACCESSIBLE":
+      return sv.errors.transcriptNotAccessible(diagnostic);
+    case "EMPTY_TRANSCRIPT":
+      return sv.errors.transcriptEmpty(diagnostic);
+    case "TOO_LARGE":
+      return sv.errors.transcriptTooLarge(diagnostic);
+    case "FETCH_FAILED":
+      return sv.errors.transcriptFetchFailed(diagnostic);
+    case "UNEXPECTED_FORMAT":
+      return sv.errors.transcriptUnexpectedFormat(diagnostic);
+  }
+}
+
+function logSafeError(code: string, error: unknown): void {
+  // Never log a submitted link or any transcript content.
+  console.error(code, error instanceof Error ? error.name : "unknown");
+}

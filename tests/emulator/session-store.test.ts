@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { getDb } from "@/lib/firebase/admin";
+import type { Transcript } from "@/lib/scraping/transcript";
 import { LOCKOUT_MINUTES } from "@/lib/session/credentials";
 import {
   createSessionToken,
@@ -8,9 +9,34 @@ import {
 } from "@/lib/session/session-token";
 import {
   ensureParticipants,
+  beginTranscriptSubmission,
+  confirmTranscript,
+  failTranscriptSubmission,
   getSessionByToken,
+  rejectTranscript,
+  saveTranscriptSubmission,
   startSession,
+  TranscriptTooLargeError,
 } from "@/lib/session/store";
+
+function transcript(title: string): Transcript {
+  return {
+    source: {
+      submittedLink: "https://gemini.google.com/share/abc123def456",
+      shareUrl: "https://gemini.google.com/share/abc123def456",
+      title,
+      model: "Gemini",
+      sharedAt: null,
+    },
+    retrievedAt: "2026-09-23T10:00:00.000Z",
+    parserVersion: 1,
+    messages: [
+      { index: 1, role: "student", text: "Hur kopplar jag lysdioden?" },
+      { index: 2, role: "gemini", text: "Använd ett motstånd i serie." },
+    ],
+    warnings: [],
+  };
+}
 
 // Each test uses its own code, because the emulator keeps data for the whole run.
 async function seed(code: string, pin: string): Promise<void> {
@@ -133,5 +159,162 @@ describe("startSession", () => {
 describe("getSessionByToken", () => {
   test("gives nothing for a token that is not in use", async () => {
     expect(await getSessionByToken(createSessionToken())).toBeNull();
+  });
+});
+
+describe("transcript lifecycle", () => {
+  async function startedSession(code: string, lesson: 1 | 2 | 3 | 4) {
+    await seed(code, "4321");
+    const token = createSessionToken();
+    const result = await startSession(
+      { code, pin: "4321", lesson },
+      hashSessionToken(token),
+    );
+    if (!result.ok)
+      throw new Error(`Could not start session: ${result.reason}`);
+    return { token, sessionId: result.session.id };
+  }
+
+  test("stores a scraped transcript for confirmation", async () => {
+    const { token, sessionId } = await startedSession("807", 2);
+    await beginTranscriptSubmission(
+      token,
+      "attempt-a",
+      "https://gemini.google.com/share/abc123def456",
+    );
+    const saved = await saveTranscriptSubmission(
+      sessionId,
+      token,
+      "attempt-a",
+      transcript("LED chat"),
+    );
+
+    expect(saved).toMatchObject({
+      ok: true,
+      session: {
+        status: "awaiting_confirmation",
+        transcript: { source: { title: "LED chat" } },
+      },
+    });
+    expect(await getSessionByToken(token)).toMatchObject({
+      status: "awaiting_confirmation",
+      transcript: { messages: [{ role: "student" }, { role: "gemini" }] },
+    });
+  });
+
+  test("keeps the saved transcript when a replacement fails", async () => {
+    const { token, sessionId } = await startedSession("808", 3);
+    await beginTranscriptSubmission(token, "attempt-a", "first-link");
+    await saveTranscriptSubmission(
+      sessionId,
+      token,
+      "attempt-a",
+      transcript("Original"),
+    );
+    await rejectTranscript(token);
+    await beginTranscriptSubmission(token, "attempt-b", "replacement-link");
+    await failTranscriptSubmission(
+      sessionId,
+      token,
+      "attempt-b",
+      "S1-NOT_FOUND",
+    );
+
+    expect(await getSessionByToken(token)).toMatchObject({
+      status: "failed",
+      errorCode: "S1-NOT_FOUND",
+      transcript: { source: { title: "Original" } },
+    });
+  });
+
+  test("does not let an older scrape overwrite a newer attempt", async () => {
+    const { token, sessionId } = await startedSession("809", 2);
+    await beginTranscriptSubmission(token, "slow", "slow-link");
+    await beginTranscriptSubmission(token, "new", "new-link");
+
+    expect(
+      await saveTranscriptSubmission(
+        sessionId,
+        token,
+        "slow",
+        transcript("Stale"),
+      ),
+    ).toEqual({ ok: false, reason: "STALE" });
+    await saveTranscriptSubmission(
+      sessionId,
+      token,
+      "new",
+      transcript("Current"),
+    );
+    expect(await getSessionByToken(token)).toMatchObject({
+      transcript: { source: { title: "Current" } },
+    });
+  });
+
+  test("rejects a transcript that cannot fit in the session document", async () => {
+    const { token, sessionId } = await startedSession("813", 2);
+    await beginTranscriptSubmission(token, "attempt-a", "large-link");
+    const tooLarge = transcript("Large chat");
+    tooLarge.messages[0].text = "x".repeat(850_000);
+
+    await expect(
+      saveTranscriptSubmission(sessionId, token, "attempt-a", tooLarge),
+    ).rejects.toBeInstanceOf(TranscriptTooLargeError);
+  });
+
+  test("rejects a preview without deleting the saved transcript", async () => {
+    const { token, sessionId } = await startedSession("810", 2);
+    await beginTranscriptSubmission(token, "attempt-a", "first-link");
+    await saveTranscriptSubmission(
+      sessionId,
+      token,
+      "attempt-a",
+      transcript("Wrong chat"),
+    );
+
+    expect(await rejectTranscript(token)).toMatchObject({
+      ok: true,
+      session: {
+        status: "awaiting_transcript",
+        transcript: { source: { title: "Wrong chat" } },
+      },
+    });
+  });
+
+  test("confirmation completes lessons 1 and 4", async () => {
+    const { token, sessionId } = await startedSession("811", 1);
+    await beginTranscriptSubmission(token, "attempt-a", "first-link");
+    await saveTranscriptSubmission(
+      sessionId,
+      token,
+      "attempt-a",
+      transcript("Lesson one"),
+    );
+
+    const confirmed = await confirmTranscript(token);
+    expect(confirmed).toMatchObject({
+      ok: true,
+      session: { status: "completed" },
+    });
+    if (confirmed.ok) {
+      expect(confirmed.session.transcriptConfirmedAt).toBeInstanceOf(Date);
+      expect(confirmed.session.completedAt).toBeInstanceOf(Date);
+    }
+  });
+
+  test("confirmation advances lessons 2 and 3 to analysis", async () => {
+    const { token, sessionId } = await startedSession("812", 3);
+    await beginTranscriptSubmission(token, "attempt-a", "first-link");
+    await saveTranscriptSubmission(
+      sessionId,
+      token,
+      "attempt-a",
+      transcript("Lesson three"),
+    );
+
+    expect(await confirmTranscript(token)).toMatchObject({
+      ok: true,
+      session: { status: "processing", completedAt: null },
+    });
   });
 });

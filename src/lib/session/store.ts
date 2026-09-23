@@ -1,6 +1,12 @@
-import { Timestamp } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  Timestamp,
+  type DocumentReference,
+  type Transaction,
+} from "firebase-admin/firestore";
 
 import { getDb } from "@/lib/firebase/admin";
+import type { Transcript } from "@/lib/scraping/transcript";
 
 import {
   afterWrongPin,
@@ -15,6 +21,16 @@ import { sessionId, type Session, type SessionStatus } from "./types";
 
 const PARTICIPANTS = "participants";
 const SESSIONS = "sessions";
+// Firestore documents are limited to 1 MiB. Leave room for the session fields,
+// indexes, and later analysis data instead of relying on Firestore's rejection.
+export const MAX_STORED_TRANSCRIPT_BYTES = 850_000;
+
+export class TranscriptTooLargeError extends Error {
+  constructor() {
+    super("The transcript is too large for a session document");
+    this.name = "TranscriptTooLargeError";
+  }
+}
 
 export type StartSessionResult =
   | { ok: true; session: Session }
@@ -22,6 +38,13 @@ export type StartSessionResult =
   | { ok: false; reason: "WRONG_PIN"; attemptsLeft: number }
   | { ok: false; reason: "LOCKED"; minutesLeft: number }
   | { ok: false; reason: "ALREADY_COMPLETED" };
+
+export type TranscriptMutationResult =
+  | { ok: true; session: Session }
+  | {
+      ok: false;
+      reason: "UNAUTHENTICATED" | "ALREADY_COMPLETED" | "NOT_READY" | "STALE";
+    };
 
 // Everything happens in one transaction so that repeated clicks cannot create a
 // second session or skip an attempt count.
@@ -100,6 +123,8 @@ export async function startSession(
       updatedAt: Timestamp.fromDate(now),
       completedAt: null,
       errorCode: null,
+      transcript: null,
+      transcriptConfirmedAt: null,
     });
     return {
       ok: true,
@@ -112,6 +137,8 @@ export async function startSession(
         updatedAt: now,
         completedAt: null,
         errorCode: null,
+        transcript: null,
+        transcriptConfirmedAt: null,
       },
     };
   });
@@ -128,6 +155,210 @@ export async function getSessionByToken(
 
   const doc = snapshot.docs[0];
   return doc ? toSession(doc.id, doc.data()) : null;
+}
+
+export async function beginTranscriptSubmission(
+  token: string,
+  attemptId: string,
+  submittedLink: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  const session = await getSessionByToken(token);
+  if (!session) return { ok: false, reason: "UNAUTHENTICATED" };
+
+  const db = getDb();
+  const ref = db.collection(SESSIONS).doc(session.id);
+  return db.runTransaction<TranscriptMutationResult>(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (
+      !snapshot.exists ||
+      data?.sessionTokenHash !== hashSessionToken(token)
+    ) {
+      return { ok: false, reason: "UNAUTHENTICATED" };
+    }
+    if (data.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+
+    tx.update(ref, {
+      status: "processing" satisfies SessionStatus,
+      activeTranscriptAttemptId: attemptId,
+      lastSubmittedLink: submittedLink,
+      errorCode: null,
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...toSession(snapshot.id, data),
+        status: "processing",
+        errorCode: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function saveTranscriptSubmission(
+  sessionIdValue: string,
+  token: string,
+  attemptId: string,
+  transcript: Transcript,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  if (transcriptSizeBytes(transcript) > MAX_STORED_TRANSCRIPT_BYTES) {
+    throw new TranscriptTooLargeError();
+  }
+
+  const db = getDb();
+  const ref = db.collection(SESSIONS).doc(sessionIdValue);
+  return db.runTransaction<TranscriptMutationResult>(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (
+      !snapshot.exists ||
+      data?.sessionTokenHash !== hashSessionToken(token)
+    ) {
+      return { ok: false, reason: "UNAUTHENTICATED" };
+    }
+    if (data.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    if (data.activeTranscriptAttemptId !== attemptId) {
+      return { ok: false, reason: "STALE" };
+    }
+
+    tx.update(ref, {
+      transcript,
+      transcriptConfirmedAt: null,
+      status: "awaiting_confirmation" satisfies SessionStatus,
+      activeTranscriptAttemptId: FieldValue.delete(),
+      errorCode: null,
+      analysis: FieldValue.delete(),
+      reflectionQuestions: FieldValue.delete(),
+      reflectionResponses: FieldValue.delete(),
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...toSession(snapshot.id, data),
+        transcript,
+        transcriptConfirmedAt: null,
+        status: "awaiting_confirmation",
+        errorCode: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function failTranscriptSubmission(
+  sessionIdValue: string,
+  token: string,
+  attemptId: string,
+  errorCode: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  const db = getDb();
+  const ref = db.collection(SESSIONS).doc(sessionIdValue);
+  return db.runTransaction<TranscriptMutationResult>(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (
+      !snapshot.exists ||
+      data?.sessionTokenHash !== hashSessionToken(token)
+    ) {
+      return { ok: false, reason: "UNAUTHENTICATED" };
+    }
+    if (data.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    if (data.activeTranscriptAttemptId !== attemptId) {
+      return { ok: false, reason: "STALE" };
+    }
+
+    tx.update(ref, {
+      status: "failed" satisfies SessionStatus,
+      activeTranscriptAttemptId: FieldValue.delete(),
+      errorCode,
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...toSession(snapshot.id, data),
+        status: "failed",
+        errorCode,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function rejectTranscript(
+  token: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  return updateAuthenticatedSession(token, (current, tx, ref) => {
+    if (current.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    if (current.status !== "awaiting_confirmation" || !current.transcript) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    tx.update(ref, {
+      status: "awaiting_transcript" satisfies SessionStatus,
+      errorCode: null,
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        status: "awaiting_transcript",
+        errorCode: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function confirmTranscript(
+  token: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  return updateAuthenticatedSession(token, (current, tx, ref) => {
+    if (current.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    if (current.status !== "awaiting_confirmation" || !current.transcript) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    const completed = current.lesson === 1 || current.lesson === 4;
+    const status = completed ? "completed" : "processing";
+    tx.update(ref, {
+      status: status satisfies SessionStatus,
+      transcriptConfirmedAt: Timestamp.fromDate(now),
+      completedAt: completed ? Timestamp.fromDate(now) : null,
+      errorCode: null,
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        status,
+        transcriptConfirmedAt: now,
+        completedAt: completed ? now : null,
+        errorCode: null,
+        updatedAt: now,
+      },
+    };
+  });
 }
 
 // Existing codes keep the PIN the student was given, so re-running the generator
@@ -177,5 +408,53 @@ function toSession(id: string, data: Record<string, unknown>): Session {
     updatedAt: toDate(data.updatedAt) ?? new Date(0),
     completedAt: toDate(data.completedAt),
     errorCode: typeof data.errorCode === "string" ? data.errorCode : null,
+    transcript: toTranscript(data.transcript),
+    transcriptConfirmedAt: toDate(data.transcriptConfirmedAt),
   };
+}
+
+function transcriptSizeBytes(transcript: Transcript): number {
+  return Buffer.byteLength(JSON.stringify(transcript), "utf8");
+}
+
+function toTranscript(value: unknown): Transcript | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<Transcript>;
+  if (
+    !candidate.source ||
+    typeof candidate.source !== "object" ||
+    !Array.isArray(candidate.messages) ||
+    !Array.isArray(candidate.warnings) ||
+    typeof candidate.retrievedAt !== "string" ||
+    typeof candidate.parserVersion !== "number"
+  ) {
+    return null;
+  }
+  return value as Transcript;
+}
+
+async function updateAuthenticatedSession(
+  token: string,
+  update: (
+    current: Session,
+    tx: Transaction,
+    ref: DocumentReference,
+  ) => TranscriptMutationResult,
+): Promise<TranscriptMutationResult> {
+  const session = await getSessionByToken(token);
+  if (!session) return { ok: false, reason: "UNAUTHENTICATED" };
+
+  const db = getDb();
+  const ref = db.collection(SESSIONS).doc(session.id);
+  return db.runTransaction<TranscriptMutationResult>(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (
+      !snapshot.exists ||
+      data?.sessionTokenHash !== hashSessionToken(token)
+    ) {
+      return { ok: false, reason: "UNAUTHENTICATED" };
+    }
+    return update(toSession(snapshot.id, data), tx, ref);
+  });
 }

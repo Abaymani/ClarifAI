@@ -1,4 +1,5 @@
 import type { Lesson } from "./credentials";
+import type { Transcript } from "../scraping/transcript";
 
 // `awaiting_transcript` is the state a session starts in, before S1 has a link.
 // The rest follow the requirements' list of session states.
@@ -21,6 +22,8 @@ export type Session = {
   updatedAt: Date;
   completedAt: Date | null;
   errorCode: string | null;
+  transcript: Transcript | null;
+  transcriptConfirmedAt: Date | null;
 };
 
 export function sessionId(participantCode: string, lesson: Lesson): string {
