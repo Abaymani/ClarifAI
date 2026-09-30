@@ -273,3 +273,9 @@
 - **Decision:** The note was removed from `sequence_coding.JSON`, which now differs from the sheet on this point. The framework version is `2026-09-30.2`, so results made before and after the change can be told apart.
 - **Risks/consequences:** The sheet still carries the note, so copying it again would bring it back. The version is kept by hand and has to be raised whenever the framework files change.
 - **Decided by:** Armin Baymani (human), 2026-09-30; version by Claude (agent).
+
+### DL-044: The researchers' first-draft guidelines are in the repository
+- **Options:** Keep the three-line stub until the guidelines are final; commit the first draft now.
+- **Decision:** `framework/analysis_guidelines.md` and the new `framework/reflection_guidelines.md` hold the researchers' first draft, converted word for word from the two tabs of their Google Doc on 2026-09-30. The coding step gets only the analysis guidelines; the reflection step also gets the reflection guidelines (DL-035). The analysis guidelines give the first priority rule between codes (DL-039): a passive code takes precedence when a prompt also has active or constructive elements.
+- **Risks/consequences:** It is a draft and will change. The framework version (`2026-09-30.2`) is not raised automatically when a guideline file changes, so it has to be raised by hand for results to stay traceable to the guidelines that produced them. No order is defined yet between active and constructive codes, or for the NA codes.
+- **Decided by:** Armin Baymani (human), 2026-09-30.
