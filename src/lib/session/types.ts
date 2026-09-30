@@ -26,6 +26,7 @@ export type StoredReflectionResponses = {
 // The rest follow the requirements' list of session states.
 export type SessionStatus =
   | "awaiting_transcript"
+  | "awaiting_no_gemini_confirmation"
   | "processing"
   | "awaiting_confirmation"
   | "awaiting_reflection"

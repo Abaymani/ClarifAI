@@ -19,7 +19,7 @@ For the use-case description, see [[00_product_brief]]
 Every submission and completed reflection is counted as one **session**.
 
 There are two lesson workflows. In either one, the student can instead state that they did not use Gemini during the lesson.
-1. The student submits their transcript but there is no reflection **(lessons 1 & 4)**. If there is no transcript, that fact is recorded and the session completes.
+1. The student submits their transcript but there is no reflection **(lessons 1 & 4)**. If there is no transcript, that fact is recorded and shown for confirmation before the session completes.
 2. The student submits their transcript, which is analysed, coded and used as the reflection object for the scaffolded reflection **(lessons 2 & 3)**. If there is no transcript, scraping and analysis are skipped and the student receives the researchers' R01 reflection.
 
 **State overview: Case #1**
@@ -34,7 +34,10 @@ Submission choice (S1)
         |                         v
         |                  Session completed
         |
-        `-- Gemini not used --> record no transcript --> Session completed
+        `-- Gemini not used --> confirm no transcript --change--> back to S1
+                                      |
+                                      v
+                               Session completed
 ```
 
 **State overview: Case #2**
@@ -52,7 +55,7 @@ Submission choice (S1)
         |                         v
         |                  Scaffolded reflection (S3)
         |
-        `-- Gemini not used --> R01 reflection (S3)
+        `-- Gemini not used --> R01 reflection (S3) --change--> back to S1
                                   |
                                   v
                          save reflection --error--> FAILURE --retry--> back to S3
@@ -72,7 +75,7 @@ A session is identified by the participant code together with the lesson, so a s
 **`Submission & Scraping (S1)`**
 Students submit a link to their Gemini transcript. One important thing to note is that while the chat is static once the link is created, it will cease to function if the underlying chat is deleted. Since the transcript is **important research data**, it must be scraped and saved to the database. This should be done in a format readable to both an LLM and a human encoder.
 
-On the same screen, a student can instead state that they did not use Gemini during the lesson. The session record then sets the transcript submission to `no_gemini` and stores no transcript or link. Any unconfirmed scrape attempt is superseded so that it cannot later overwrite this choice. Lessons **1** and **4** complete after this choice. Lessons **2** and **3** skip scraping and analysis and continue directly to the R01 reflection, whose intro, questions and tip are shown exactly as the researchers wrote them.
+On the same screen, a student can instead state that they did not use Gemini during the lesson. The session record then sets the transcript submission to `no_gemini` and stores no transcript or link. Any unconfirmed scrape attempt is superseded so that it cannot later overwrite this choice. Lessons **1** and **4** enter `awaiting_no_gemini_confirmation` and complete only when the student confirms that choice. Lessons **2** and **3** skip scraping and analysis and continue directly to the R01 reflection, whose intro, questions and tip are shown exactly as the researchers wrote them. Before either path completes, the student can return to transcript submission; the no-Gemini choice and any R01 questions are then cleared atomically.
 
 Transcripts may include multimedia, mostly images. Images are not saved: each one is replaced with the placeholder `[PICTURE]` in the stored transcript, so no identifiable image content is kept and no image recognition is needed. As a fallback in case of faliures, the transcript link should always be saved aswell. 
 
@@ -93,12 +96,12 @@ The coding is done without the reflection texts, so that it is not influenced by
 **`Scaffolded reflection (S3)`**
 The reflection points from `S2` are shown to the student as examples from their own transcript: the prompt in question together with the messages right before and after it, the intro, and the questions. Examples that reinforce a behaviour and examples that ask the student to reflect on one are told apart by a light colour (green and pink).
 
-The student writes one free-text answer per example. The questions are suggestions to get the thinking started, not a list to be answered one by one. For every concrete transcript analysis, the student must also say whether they recognise themselves in it (`yes`, `partly`, or `no`). The analysis is presented as a possible interpretation that may lack context. Choosing `partly` or `no` displays a prompt to explain why in the same free-text answer; it does not add a second answer field or change the researchers' questions. General reflection (R0) and no-transcript reflection (R01) contain no analysis to agree with and therefore omit this choice.
+The student writes one free-text answer per example. The questions are suggestions to get the thinking started, not a list to be answered one by one. The group's tip is the answer field's placeholder, so it disappears visually when the student starts writing and is never mistaken for their answer. For every concrete transcript analysis, the student must also say whether they recognise themselves in it (`yes`, `partly`, or `no`). The analysis is presented as a possible interpretation that may lack context. Choosing `partly` or `no` displays a prompt immediately below that choice to explain why in the same free-text answer; it does not add a second answer field or change the researchers' questions. General reflection (R0) and no-transcript reflection (R01) contain no analysis to agree with and therefore omit this choice.
 
 The student's answers and any agreement choices are redacted and stored together, linked to the displayed reflection item. All required answers and agreement choices are saved atomically before the session completes.
 
 **`Session completed`**
-Once the student has answered all reflection questions and submitted the reflection (`case #2`), or once the data has been successfully scraped and the student has confirmed the transcript (`case #1`), the session is considered completed. A no-Gemini session completes immediately in lessons 1 and 4, and after the saved R01 response in lessons 2 and 3.
+Once the student has answered all reflection questions and submitted the reflection (`case #2`), or once the data has been successfully scraped and the student has confirmed the transcript (`case #1`), the session is considered completed. A no-Gemini session completes after its reversible confirmation in lessons 1 and 4, and after the saved R01 response in lessons 2 and 3. A submitted reflection redirects to its own receipt page after the session cookie has been removed.
 
 ### Disconnection or unexpected faliures
 If a session has not been marked as completed but the user dissconnects, the session should be able to be resumed. A completed session cannot be resumed or viewed by the user again.

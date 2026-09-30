@@ -17,7 +17,8 @@
 |FR-|The system shall accept a supported Gemini conversation link and detect invalid, inaccessible, or empty submissions| High | A usable link proceeds to retrieval. An unsuccessful submission displays an explanation and allows the student to enter another link|
 |FR-|The system shall allow students to explicitly replace an incorrectly submitted transcript within their current session, until the session is completed | High | A successfully retrieved and saved replacement resets the previous analysis, questions, and responses. An unsuccessful replacement leaves the existing saved record intact. Completed sessions cannot be changed |
 |FR-|The system shall show the student a preview of the retrieved transcript and ask them to confirm that it is their conversation before the session continues | High | The preview shows enough of the conversation for the student to recognise it. Confirming continues the session; rejecting lets the student submit another link. Lessons 1 and 4 are only completed after confirmation |
-|FR-|The system shall allow students in every lesson to state that they did not use Gemini instead of submitting a link | High | The session records `no_gemini` and stores no transcript or link. Any unfinished retrieval is superseded. Lessons 1 and 4 complete; lessons 2 and 3 skip retrieval and analysis and continue to R01 reflection |
+|FR-|The system shall allow students in every lesson to state that they did not use Gemini instead of submitting a link | High | The session records `no_gemini` and stores no transcript or link. Any unfinished retrieval is superseded. Lessons 1 and 4 continue to a reversible confirmation; lessons 2 and 3 skip retrieval and analysis and continue to R01 reflection |
+|FR-|The system shall let a student undo a no-Gemini choice before final completion | High | From the lesson 1/4 confirmation or the lesson 2/3 R01 screen, the student can return to transcript submission. The no-Gemini marker and generated R01 questions are cleared, and the lesson is not locked as completed |
 
 ## Transcript retrieval
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
@@ -69,13 +70,15 @@
 |FR-|For every concrete analysed example, the system shall ask whether the student recognises themselves in the analysis | High | The student must choose yes, partly, or no. The choice is stored with that example's free-text response. General reflection and R01 omit the choice because they contain no concrete analysis |
 |FR-|The system shall present analysis as a possible interpretation and invite the student's contextual knowledge | High | The interface states that analysis can miss thoughts or work outside Gemini. Choosing partly or no prompts the student to explain why in the existing free-text response without changing the researchers' questions |
 |FR-|When a lesson 2 or 3 student reports no Gemini use, the system shall show the R01 intro, questions, and tip exactly as written | High | No transcript is scraped or analysed. The R01 response is required and stored before the session completes |
+|FR-|The system shall use each reflection tip only as initial writing support in the answer field | High | The tip is the field placeholder, is not stored as an answer, and disappears visually when the student starts writing |
+|FR-|The system shall show a dedicated confirmation page after a reflection is submitted | High | The page clearly says that the reflection is saved, uses a positive visual treatment, and offers a route back to the start page |
 
 ## Session progress and recovery
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR- | The system shall record session progress and mark a session complete only after the required submission path and, for lessons 2 and 3, completion of the required reflection steps |
-|FR-| The system shall display progress and record whether a session is processing, awaiting confirmation, awaiting reflection, completed, or failed | | Students can distinguish ongoing work from required action and completion. Researchers can identify sessions that have not been completed |
-|FR-| The system shall mark sessions complete only after all required records have been saved | |Lessons 1 and 4 complete after either a transcript has been stored and confirmed or `no_gemini` has been recorded. Lessons 2 and 3 complete after either the analysed-transcript reflection or the R01 reflection has been submitted and stored|
+|FR-| The system shall display progress and record whether a session is processing, awaiting transcript confirmation, awaiting no-Gemini confirmation, awaiting reflection, completed, or failed | | Students can distinguish ongoing work from required action and completion. Researchers can identify sessions that have not been completed |
+|FR-| The system shall mark sessions complete only after all required records have been saved | |Lessons 1 and 4 complete after either a transcript has been stored and confirmed or the no-Gemini confirmation has been finalized. Lessons 2 and 3 complete after either the analysed-transcript reflection or the R01 reflection has been submitted and stored|
 |FR- |The system shall preserve a coherent research record for each session, including incomplete sessions | | Records contain the participant code, lesson, timestamps, status, transcript submission kind, any redacted transcript and analysis, displayed examples and questions, submitted responses and agreement choices, and error codes. Transcript preservation does not depend on reflection completion |
 
 ## Error handling
@@ -93,7 +96,6 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR-|The system shall present student-facing instructions, errors, generated explanations, and reflection questions in Swedish| | Generated interface content is Swedish. Quoted transcript excerpts retain their original language, subject to redaction |
-
 
 
 

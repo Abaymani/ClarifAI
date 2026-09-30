@@ -13,12 +13,14 @@ import {
 import {
   ensureParticipants,
   beginTranscriptSubmission,
+  completeNoGeminiUse,
   completeReflection,
   confirmTranscript,
   declareNoGeminiUse,
   failTranscriptSubmission,
   getSessionByToken,
   rejectTranscript,
+  reopenNoGeminiUse,
   saveTranscriptSubmission,
   startSession,
   TranscriptTooLargeError,
@@ -338,22 +340,56 @@ describe("transcript lifecycle", () => {
     });
   });
 
-  test("records no Gemini and completes lessons 1 and 4", async () => {
+  test("confirms no Gemini before completing lessons 1 and 4", async () => {
     const { token, sessionId } = await startedSession("814", 4);
 
     const result = await declareNoGeminiUse(token, null);
     expect(result).toMatchObject({
       ok: true,
       session: {
-        status: "completed",
+        status: "awaiting_no_gemini_confirmation",
         transcriptSubmission: "no_gemini",
         transcript: null,
         reflectionQuestions: null,
+        completedAt: null,
       },
+    });
+    expect(await completeNoGeminiUse(token)).toMatchObject({
+      ok: true,
+      session: { status: "completed", completedAt: expect.any(Date) },
     });
     expect(
       (await getDb().collection("sessions").doc(sessionId).get()).data(),
     ).toMatchObject({ status: "completed", transcriptSubmission: "no_gemini" });
+  });
+
+  test("returns from the lesson 1 and 4 no-Gemini confirmation to transcript submission", async () => {
+    const { token } = await startedSession("818", 1);
+    await declareNoGeminiUse(token, null);
+
+    expect(await reopenNoGeminiUse(token)).toMatchObject({
+      ok: true,
+      session: {
+        status: "awaiting_transcript",
+        transcriptSubmission: null,
+        completedAt: null,
+      },
+    });
+  });
+
+  test("returns from R01 to transcript submission and clears the generated questions", async () => {
+    const { token } = await startedSession("819", 2);
+    await declareNoGeminiUse(token, r01Questions());
+
+    expect(await reopenNoGeminiUse(token)).toMatchObject({
+      ok: true,
+      session: {
+        status: "awaiting_transcript",
+        transcriptSubmission: null,
+        reflectionQuestions: null,
+        reflectionResponses: null,
+      },
+    });
   });
 
   test("goes directly to R01 in lessons 2 and 3 and invalidates a pending scrape", async () => {

@@ -36,7 +36,7 @@ test("starts a session with the right code and PIN", async ({ page }) => {
   await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
 });
 
-test("records no Gemini and completes lesson 1 without a reflection", async ({
+test("lets lesson 1 review, undo and complete a no-Gemini choice", async ({
   page,
 }) => {
   await seedParticipant("912", "4321");
@@ -50,9 +50,31 @@ test("records no Gemini and completes lesson 1 without a reflection", async ({
     page.getByText("Tack! Din inlämning har registrerats."),
   ).toBeVisible();
   expect(await getSessionData("912", 1)).toMatchObject({
-    status: "completed",
+    status: "awaiting_no_gemini_confirmation",
     transcriptSubmission: "no_gemini",
     transcript: null,
+    completedAt: null,
+  });
+
+  await page
+    .getByRole("button", {
+      name: "Ändra svar och lämna in en Gemini-chatt",
+    })
+    .click();
+  await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
+  expect(await getSessionData("912", 1)).toMatchObject({
+    status: "awaiting_transcript",
+    transcriptSubmission: null,
+    completedAt: null,
+  });
+
+  await page.getByRole("radio", { name: /Jag använde inte Gemini/ }).click();
+  await page.getByRole("button", { name: "Fortsätt" }).click();
+  await page.getByRole("button", { name: "Klar – till startsidan" }).click();
+  await expect(page.getByRole("heading", { name: "Logga in" })).toBeVisible();
+  expect(await getSessionData("912", 1)).toMatchObject({
+    status: "completed",
+    transcriptSubmission: "no_gemini",
   });
 });
 
@@ -78,13 +100,39 @@ test("shows R01 and saves a reflection when Gemini was not used in lesson 2", as
   ).toBeVisible();
   await expect(page.getByText("Känner du igen dig i analysen?")).toHaveCount(0);
 
+  const answer = page.getByLabel("Ditt svar");
+  await expect(answer).toHaveAttribute(
+    "placeholder",
+    "Jag använde det inte för att… men jag funderade på att använda det för… I vanliga fall använder jag det för…",
+  );
+  await expect(page.getByText(/^Tips:/)).toHaveCount(0);
+
+  await page
+    .getByRole("button", {
+      name: "Ändra svar och lämna in en Gemini-chatt",
+    })
+    .click();
+  await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
+  const reopenedSession = await getSessionData("913", 2);
+  expect(reopenedSession).toMatchObject({
+    status: "awaiting_transcript",
+    transcriptSubmission: null,
+  });
+  expect(reopenedSession?.reflectionQuestions).toBeUndefined();
+
+  await page.getByRole("radio", { name: /Jag använde inte Gemini/ }).click();
+  await page.getByRole("button", { name: "Fortsätt" }).click();
+
   await page
     .getByLabel("Ditt svar")
     .fill("Jag heter Ada Lovelace och ville prova själv.");
   await page.getByRole("button", { name: "Lämna in reflektionen" }).click();
   await expect(
-    page.getByText("Tack! Din reflektion har lämnats in."),
+    page.getByRole("heading", {
+      name: "Tack, din reflektion har lämnats in!",
+    }),
   ).toBeVisible();
+  await expect(page).toHaveURL(/\/reflection-complete$/);
 
   expect(await getSessionData("913", 2)).toMatchObject({
     status: "completed",
@@ -301,6 +349,11 @@ test("confirmation analyses lesson 3 and shows the reflection questions", async 
   await expect(example).toContainText(
     "Förklara i fritextrutan vad som stämmer",
   );
+  const orderedReflectionParts = example.locator(
+    "[data-explanation], [data-reflection-questions]",
+  );
+  await expect(orderedReflectionParts).toHaveCount(2);
+  await expect(orderedReflectionParts.first()).toContainText("Du valde Delvis");
   await example.getByRole("radio", { name: "Ja", exact: true }).click();
   await expect(example).not.toContainText(
     "Förklara i fritextrutan vad som stämmer",
@@ -345,7 +398,9 @@ test("stores agreement and every free-text reflection answer", async ({
 
   await page.getByRole("button", { name: "Lämna in reflektionen" }).click();
   await expect(
-    page.getByText("Tack! Din reflektion har lämnats in."),
+    page.getByRole("heading", {
+      name: "Tack, din reflektion har lämnats in!",
+    }),
   ).toBeVisible();
 
   const session = await getSessionData("914", 3);

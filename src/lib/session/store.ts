@@ -371,7 +371,7 @@ export async function rejectTranscript(
 
 // Declaring no Gemini use supersedes any unconfirmed scrape atomically. For
 // lessons 2 and 3 the prebuilt R01 reflection becomes the next step; lessons 1
-// and 4 have no reflection and complete immediately.
+// and 4 pause on a reversible confirmation before completion.
 export async function declareNoGeminiUse(
   token: string,
   questions: StoredReflectionQuestions | null,
@@ -395,13 +395,15 @@ export async function declareNoGeminiUse(
       return { ok: false, reason: "NOT_READY" };
     }
 
-    const status = reflects ? "awaiting_reflection" : "completed";
+    const status = reflects
+      ? "awaiting_reflection"
+      : "awaiting_no_gemini_confirmation";
     tx.update(ref, {
       transcriptSubmission: "no_gemini",
       transcript: null,
       transcriptConfirmedAt: null,
       status: status satisfies SessionStatus,
-      completedAt: reflects ? null : Timestamp.fromDate(now),
+      completedAt: null,
       errorCode: null,
       activeTranscriptAttemptId: FieldValue.delete(),
       lastSubmittedLink: FieldValue.delete(),
@@ -421,12 +423,88 @@ export async function declareNoGeminiUse(
         transcript: null,
         transcriptConfirmedAt: null,
         status,
-        completedAt: reflects ? null : now,
+        completedAt: null,
         errorCode: null,
         analysisStartedAt: null,
         analysis: null,
         reflectionQuestions: reflects ? questions : null,
         reflectionResponses: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function reopenNoGeminiUse(
+  token: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  return updateAuthenticatedSession(token, (current, tx, ref) => {
+    const r01Pending =
+      current.status === "awaiting_reflection" &&
+      current.reflectionQuestions?.outcome === "no_transcript";
+    const completionPending =
+      current.status === "awaiting_no_gemini_confirmation" &&
+      (current.lesson === 1 || current.lesson === 4);
+    if (
+      current.transcriptSubmission !== "no_gemini" ||
+      (!r01Pending && !completionPending)
+    ) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    tx.update(ref, {
+      transcriptSubmission: null,
+      status: "awaiting_transcript" satisfies SessionStatus,
+      completedAt: null,
+      errorCode: null,
+      reflectionQuestions: FieldValue.delete(),
+      reflectionResponses: FieldValue.delete(),
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        transcriptSubmission: null,
+        status: "awaiting_transcript",
+        completedAt: null,
+        errorCode: null,
+        reflectionQuestions: null,
+        reflectionResponses: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function completeNoGeminiUse(
+  token: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  return updateAuthenticatedSession(token, (current, tx, ref) => {
+    if (current.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    if (
+      current.status !== "awaiting_no_gemini_confirmation" ||
+      current.transcriptSubmission !== "no_gemini" ||
+      (current.lesson !== 1 && current.lesson !== 4)
+    ) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    tx.update(ref, {
+      status: "completed" satisfies SessionStatus,
+      completedAt: Timestamp.fromDate(now),
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        status: "completed",
+        completedAt: now,
         updatedAt: now,
       },
     };
