@@ -28,7 +28,7 @@ Session creation (S0)
         |
         v
 Submission choice (S1)
-        |-- Gemini used --> Scraping --error--> FAILURE --retry--> back to S1
+        |-- Gemini used --> Scraping --error--> FAILURE (with error code!) --retry--> back to S1
         |                         |
         |                         | student confirms the transcript
         |                         v
@@ -46,19 +46,25 @@ Session creation (S0)
         |
         v
 Submission choice (S1)
-        |-- Gemini used --> Scraping --error--> FAILURE --retry--> back to S1
+        |-- Gemini used --> Scraping --error--> FAILURE (with error code!) --retry--> back to S1
         |                         |
         |                         | student confirms the transcript
         |                         v
-        |                  Analysis (S2) --error--> FAILURE --retry--> back to S2
+        |                  Analysis (S2) --error--> FAILURE (with error code!) --retry--> back to S2
         |                         |
         |                         v
         |                  Scaffolded reflection (S3)
+        |                         |
+        |                         v
+        |                  save reflection --error--> FAILURE (with error code!) --retry--> back to S3
+        |                         |
+        |                         v
+        |                  Session completed
         |
         `-- Gemini not used --> R01 reflection (S3) --change--> back to S1
                                   |
                                   v
-                         save reflection --error--> FAILURE --retry--> back to S3
+                         save reflection --error--> FAILURE (with error code!) --retry--> back to S3
                                   |
                                   v
                          Session completed
