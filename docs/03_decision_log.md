@@ -297,3 +297,21 @@
 - **Decision:** Lessons 1 and 4 enter `awaiting_no_gemini_confirmation` after a no-Gemini choice and complete only when the student chooses “Klar”. Lessons 2 and 3 can return from R01 before its response is submitted. Returning clears `no_gemini`, R01 questions and responses and restores transcript submission. Reflection tips move into the answer fields as placeholders; partly/no guidance appears directly after the agreement choice; and a submitted reflection gets its own positive receipt page.
 - **Risks/consequences:** DL-045's “complete immediately” wording for lessons 1 and 4 is superseded. One more explicit action is required, but a mistaken no-Gemini choice no longer locks the lesson. Placeholder tips are no longer visible after typing begins, by design.
 - **Decided by:** Proposed by Codex (agent) in reviewed mockups; approved by Armin Baymani (human), 2026-09-30.
+
+### DL-048: A "no Gemini" choice also removes the link from a failed attempt
+- **Options:** Keep the submitted link and its error code as the researchers' fallback when "no Gemini" follows a failed retrieval; remove them, as for any other "no Gemini" choice.
+- **Decision:** They are removed. The student's statement that there is no transcript is taken at face value, so nothing from an earlier attempt in that session is kept: not the link, not its error code.
+- **Risks/consequences:** A record cannot tell a student who used no Gemini from one who gave up on a link that failed. If retrieval breaks for many students at once, their links are not there to fall back on.
+- **Decided by:** Armin Baymani (human), 2026-09-30, when a review of DL-045 raised it.
+
+### DL-049: Unsent reflection answers are kept in the browser tab
+- **Options:** Leave the answers only in the page, where a reload empties them; have the browser warn before the page is left; also keep a copy in the tab and fill it in again; save drafts on the server.
+- **Decision:** Both the warning and the copy. While an answer has text, the browser asks before a reload, a closed tab or a move to another site. Answers and Ja/Delvis/Nej choices are also written to the tab's `sessionStorage` on every change, and filled in again when the same questions are shown in that tab. The copy is removed once the reflection is handed in, and disappears with the tab. Drafts are not saved on the server, because that would store text the student never handed in.
+- **Risks/consequences:** The copy is what the student typed, before redaction. It stays in that tab until hand-in or until the tab is closed, also after logging out, but it is only filled in again for the same participant, lesson and set of questions. A closed tab, a crash or another computer still loses unsent text. The browser words the warning itself; handing in and logging out do not trigger it.
+- **Decided by:** Armin Baymani (human), 2026-09-30; design by Claude (agent).
+
+### DL-050: The browser tests run one at a time
+- **Options:** Give each browser its own participant codes; run Firefox after Chromium; run every browser test one at a time.
+- **Decision:** One at a time (`workers: 1` in `playwright.config.ts`). Chromium and Firefox run the same tests with the same participant codes against one emulator, and each test starts by deleting its participant's sessions. Run together, one browser removed the session the other was using: two or three of the 34 tests failed on every local run, while CI passed thanks to different timing and its retries.
+- **Risks/consequences:** A run takes about half a minute longer. The browsers still share participant codes, so the tests have to keep running one after the other unless each browser gets codes of its own.
+- **Decided by:** Proposed by Claude (agent); approved by Armin Baymani (human), 2026-09-30.

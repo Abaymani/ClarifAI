@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Check, Sparkles } from "lucide-react";
 
+import { ClearReflectionDrafts } from "@/app/reflection-complete/clear-reflection-drafts";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { sv } from "@/lib/sv";
@@ -9,6 +10,7 @@ import { cn } from "cn";
 export default function ReflectionCompletePage() {
   return (
     <main className="relative mx-auto flex w-full max-w-lg flex-1 items-center justify-center overflow-hidden p-6">
+      <ClearReflectionDrafts />
       <span
         aria-hidden="true"
         className="absolute top-[18%] left-[8%] text-xl text-emerald-500/60"

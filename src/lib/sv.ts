@@ -77,6 +77,8 @@ export const sv = {
       `Deltagare ${code} · Lektion ${lesson}`,
     intro:
       "Välj hur du arbetade under lektionen. Du kan stänga fönstret och fortsätta senare med samma deltagarkod och PIN-kod.",
+    introConfirmation:
+      "Nästa steg är att bekräfta att transkriptet är ditt. Du kan stänga fönstret och fortsätta senare med samma deltagarkod och PIN-kod.",
     statusAwaitingTranscript: "Väntar på transkript",
     statusProcessing: "Hämtar transkript",
     statusAwaitingConfirmation: "Väntar på bekräftelse",

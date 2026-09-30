@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { INTERRUPTED_ANALYSIS, UNREADABLE_RESULT } from "@/lib/analysis/errors";
 import type { StoredReflectionQuestions } from "@/lib/analysis/types";
+import { reflectionDraftKey } from "@/lib/session/reflection-drafts";
 import { SESSION_COOKIE } from "@/lib/session/session-token";
 import { getSessionByToken } from "@/lib/session/store";
 import {
@@ -35,7 +36,11 @@ type View =
   | { kind: "preview" }
   | { kind: "analysing" }
   | { kind: "analysisFailed"; errorCode: string }
-  | { kind: "reflection"; questions: StoredReflectionQuestions }
+  | {
+      kind: "reflection";
+      questions: StoredReflectionQuestions;
+      draftKey: string;
+    }
   | { kind: "noGeminiConfirmation" }
   | { kind: "confirmed" };
 
@@ -44,7 +49,14 @@ function viewFor(session: Session, now: Date): View {
     return { kind: "noGeminiConfirmation" };
   }
   if (session.status === "awaiting_reflection" && session.reflectionQuestions) {
-    return { kind: "reflection", questions: session.reflectionQuestions };
+    return {
+      kind: "reflection",
+      questions: session.reflectionQuestions,
+      draftKey: reflectionDraftKey(
+        session.id,
+        session.reflectionQuestions.createdAt,
+      ),
+    };
   }
   if (!session.transcriptConfirmedAt) {
     return session.status === "awaiting_confirmation" && session.transcript
@@ -100,7 +112,7 @@ export default async function SessionPage() {
     preview: {
       status: sv.session.statusAwaitingConfirmation,
       heading: sv.session.heading,
-      intro: sv.session.intro,
+      intro: sv.session.introConfirmation,
     },
     analysing: {
       status: sv.session.statusAnalysing,
@@ -182,6 +194,9 @@ export default async function SessionPage() {
             <AnalysisRetry failure={analysisFailureMessage(view.errorCode)} />
           ) : view.kind === "reflection" ? (
             <ReflectionQuestions
+              // New questions start from an empty form, also without a reload.
+              key={view.draftKey}
+              draftKey={view.draftKey}
               questions={view.questions}
               messages={session.transcript?.messages ?? []}
             />

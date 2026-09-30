@@ -4,6 +4,9 @@ const port = 3000;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // One at a time: the tests share one emulator and the same participant codes
+  // in both browsers, so tests running together wipe each other's sessions.
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",

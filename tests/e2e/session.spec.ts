@@ -283,9 +283,16 @@ test("shows the transcript preview and lets the student reject it", async ({
   ).toBeVisible();
   await expect(page.getByText("Hur kopplar jag en lysdiod?")).toBeVisible();
   await expect(page.getByText("Använd ett seriemotstånd")).toBeVisible();
+  // The line under the page heading describes this step, not the hand-in.
+  const handInIntro = page.getByText("Välj hur du arbetade under lektionen.");
+  await expect(
+    page.getByText("Nästa steg är att bekräfta att transkriptet är ditt."),
+  ).toBeVisible();
+  await expect(handInIntro).toHaveCount(0);
 
   await page.getByRole("button", { name: "Nej, välj en annan länk" }).click();
   await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
+  await expect(handInIntro).toBeVisible();
 });
 
 test("confirmation completes lesson 1 and returns a receipt", async ({
@@ -426,4 +433,73 @@ test("lets the student restart a failed analysis", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Dags att reflektera" }),
   ).toBeVisible({ timeout: 15_000 });
+});
+
+test("keeps unsent answers through a reload and asks before leaving", async ({
+  page,
+}) => {
+  await seedParticipant("915", "4321");
+  await seedTranscriptForConfirmation("915", 3);
+  await logIn(page, "915", "4321", 3);
+  await page.getByRole("button", { name: "Ja, fortsätt" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Dags att reflektera" }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  const examples = page.locator("section[data-tone]");
+  const first = examples.first();
+  const answer = first.getByLabel("Hur ser du själv på exemplet?");
+  const partly = first.getByRole("radio", { name: "Delvis", exact: true });
+  await partly.click();
+  await answer.fill("Jag hann inte skriva klart.");
+
+  // The browser asks before a page with unsent text is left.
+  const asked: string[] = [];
+  page.on("dialog", (dialog) => {
+    asked.push(dialog.type());
+    void dialog.accept();
+  });
+  await page.reload();
+  expect(asked).toEqual(["beforeunload"]);
+
+  await expect(answer).toHaveValue("Jag hann inte skriva klart.");
+  await expect(partly).toBeChecked();
+  // The value that is actually submitted, not just what the radio looks like.
+  await expect(first.locator('input[name$=":agreement"]')).toHaveValue(
+    "partly",
+  );
+
+  const count = await examples.count();
+  for (let i = 1; i < count; i += 1) {
+    const example = examples.nth(i);
+    await example.getByRole("radio", { name: "Ja", exact: true }).click();
+    await example
+      .getByLabel("Hur ser du själv på exemplet?")
+      .fill(`Mitt svar på exempel ${i + 1}.`);
+  }
+
+  // Handing in is not leaving: nothing is asked, and the tab's copy is removed.
+  await page.getByRole("button", { name: "Lämna in reflektionen" }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Tack, din reflektion har lämnats in!",
+    }),
+  ).toBeVisible();
+  expect(asked).toHaveLength(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys(sessionStorage).filter((key) =>
+          key.startsWith("clarifai:reflection-draft:"),
+        ),
+      ),
+    )
+    .toEqual([]);
+
+  const session = await getSessionData("915", 3);
+  expect(session).toMatchObject({ status: "completed" });
+  expect(session?.reflectionResponses.items[0]).toMatchObject({
+    agreement: "partly",
+    answer: "Jag hann inte skriva klart.",
+  });
 });
