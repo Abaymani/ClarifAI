@@ -70,14 +70,21 @@ After scraping, the student is shown a preview of the retrieved transcript and a
 In case of lesson **1** or lesson **4**, the session is considered completed as soon as the transcript has successfully been scraped and the student has confirmed it.
 
 **`Analysis (S2)`**
-Student transcripts are fed to the AI encoding agent through the API. The AI should be prepared with the [[analysis_guidelines]] and the two coding schemas (prompt_coding.JSON, sequence_coding.JSON).
+As soon as a student in lesson **2** or **3** has confirmed their transcript, it is fed to the AI encoding agent through the API. The analysis runs in the background: the student sees that it is in progress and gets the result when it is done, also after closing the page and logging in again.
 
-The analysis is done according to the guidelines, and saved to the database. It should be in a format where it's apparent what prompt/sequence-level behaviour was observed, as well as what part of the transcript the observation was made.
+The analysis is done in two steps.
+
+1. **Coding.** The AI is prepared with the [[analysis_guidelines]] and the two coding schemas (prompt_coding.JSON, sequence_coding.JSON). It codes every student prompt and identifies sequences. A prompt can get several codes, in the priority order the guidelines define. The coding is **research data**: it is saved to the database in a format where it's apparent what prompt/sequence-level behaviour was observed, as well as what part of the transcript the observation was made. It is only saved if every code exists in the schemas and every quoted part really is in the transcript.
+2. **Reflection points.** The AI then chooses which observations the student reflects on, guided by general guidelines rather than fixed rules. The number of reflection points is capped by a configurable maximum (default: 3) so that reflection doesn't take too much time. Every observation belongs to a behaviour group (behaviour_grouping.JSON) with human-authored texts: an intro, questions and a tip. The texts are used as written, and only their marked parts (in square brackets) are filled in to fit the specific situation. If nothing in the transcript is suitable, the student gets the general questions instead.
+
+The coding is done without the reflection texts, so that it is not influenced by them. If the analysis fails, the student can start it again and it continues from the step that failed.
 
 **`Scaffolded reflection (S3)`**
-The completed analysis of the transcript should then be used as a foundation in `S3` to build a scaffolded reflection. The relevant reflection human-authored template depending on the observed behaviour should be chosen as a base and adapted to the specific situation. The number of reflection points is capped by a configurable maximum (default: 3) so that reflection doesn't take too much time.
+The reflection points from `S2` are shown to the student as examples from their own transcript: the prompt in question together with the messages right before and after it, the intro, and the questions. Examples that reinforce a behaviour and examples that ask the student to reflect on one are told apart by a light colour (green and pink).
 
-The student's answers to the reflection questions/prompts must also be logged to the database. 
+The student writes one free-text answer per example. The questions are suggestions to get the thinking started, not a list to be answered one by one.
+
+The student's answers must also be logged to the database. 
 
 **`Session completed`**
 Once the student has answered all reflection questions and marked the reflection as completed (`case #2`), or once the data has been successfully scraped and the student has confirmed the transcript (`case #1`), the session is considered completed. 
