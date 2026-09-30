@@ -75,7 +75,7 @@ pnpm.cmd dev
 | `pnpm format` / `pnpm format:check` | Prettier (code only; Markdown docs keep their authors' formatting) |
 | `pnpm test` | Unit tests (Vitest, next to the code as `*.test.ts(x)`) |
 | `pnpm test:emulator` | Firestore security-rule and Admin SDK tests (`tests/emulator/`) |
-| `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`) |
+| `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`), in Chromium and Firefox, one test at a time (DL-050) |
 | `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
 | `pnpm codes:generate [count]` | Create participant codes with PINs and write the hand-out list to `private-data/` (named after the target database) |
 | `pnpm build` | Production build |

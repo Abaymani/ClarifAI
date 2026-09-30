@@ -309,3 +309,9 @@
 - **Decision:** Both the warning and the copy. While an answer has text, the browser asks before a reload, a closed tab or a move to another site. Answers and Ja/Delvis/Nej choices are also written to the tab's `sessionStorage` on every change, and filled in again when the same questions are shown in that tab. The copy is removed once the reflection is handed in, and disappears with the tab. Drafts are not saved on the server, because that would store text the student never handed in.
 - **Risks/consequences:** The copy is what the student typed, before redaction. It stays in that tab until hand-in or until the tab is closed, also after logging out, but it is only filled in again for the same participant, lesson and set of questions. A closed tab, a crash or another computer still loses unsent text. The browser words the warning itself; handing in and logging out do not trigger it.
 - **Decided by:** Armin Baymani (human), 2026-09-30; design by Claude (agent).
+
+### DL-050: The browser tests run one at a time
+- **Options:** Give each browser its own participant codes; run Firefox after Chromium; run every browser test one at a time.
+- **Decision:** One at a time (`workers: 1` in `playwright.config.ts`). Chromium and Firefox run the same tests with the same participant codes against one emulator, and each test starts by deleting its participant's sessions. Run together, one browser removed the session the other was using: two or three of the 34 tests failed on every local run, while CI passed thanks to different timing and its retries.
+- **Risks/consequences:** A run takes about half a minute longer. The browsers still share participant codes, so the tests have to keep running one after the other unless each browser gets codes of its own.
+- **Decided by:** Proposed by Claude (agent); approved by Armin Baymani (human), 2026-09-30.
