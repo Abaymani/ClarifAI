@@ -205,7 +205,9 @@ test("confirmation analyses lesson 3 and shows the reflection questions", async 
   await expect(example).toContainText("Hur kopplar jag en lysdiod?");
   await expect(example).toContainText("2. Gemini");
   await expect(example).toContainText("Använd ett seriemotstånd");
-  await expect(example).toContainText("[FAKE] Förklaringen skrivs av AI");
+  // The intro and the questions come from the behaviour group's texts.
+  await expect(example).toContainText("FAKE:");
+  await expect(example.getByRole("listitem").first()).toBeVisible();
   await expect(page.locator('[data-slot="alert"]')).toContainText(
     "Testanalys utan AI",
   );

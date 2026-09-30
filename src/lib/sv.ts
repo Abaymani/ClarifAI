@@ -112,18 +112,17 @@ export const sv = {
     analysisRetrying: "Startar …",
     reflectionHeading: "Dags att reflektera",
     reflectionIntro:
-      "Här är några exempel från din chatt, med en fråga till varje. Svara med egna ord.",
-    reflectionIntroGeneral:
-      "Chatten gav inte tillräckligt underlag för att peka ut enskilda exempel. Fundera i stället på frågan nedan.",
+      "Här är några exempel från din chatt, med frågor till varje. Svara med egna ord.",
+    reflectionIntroGeneral: "Svara med egna ord på frågorna nedan.",
     reflectionExample: (position: number) => `Exempel ${position}`,
-    reflectionGeneral: "Fråga",
+    reflectionGeneral: "Frågor",
+    reflectionTip: (tip: string) => `Tips: ${tip}`,
     contextShowMore: "Visa mer",
     contextShowLess: "Visa mindre",
     reflectionAnswerLabel: "Ditt svar",
     reflectionAnswerSoon:
       "Här skriver du ditt svar. Den delen öppnas i nästa steg av bygget.",
-    reflectionTest:
-      "TEST: ramverket och frågorna är platshållare, inte studiens riktiga.",
+    reflectionTest: "TEST: ramverket är inte studiens slutliga version.",
     reflectionFake: "Testanalys utan AI: kodningen är påhittad.",
   },
 } as const;

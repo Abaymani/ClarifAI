@@ -13,7 +13,6 @@ export const FRAMEWORK_FILES = {
 } as const;
 
 const TEST_STATUS = "TEST";
-const TEST_MARKER = "[TEST]";
 
 // Loose objects: the researchers may add fields, and everything they add is passed
 // on to the model. Only what the code relies on is required.
@@ -31,12 +30,19 @@ const sequenceCodingFile = z.looseObject({
   ...header,
   patterns: z.array(entry).min(1),
 });
+// `intro` is what the researchers call Inledning (R groups) or Återkoppling (F
+// groups). Bracketed parts of the texts are filled in per student.
 const group = z.looseObject({
   code: z.string().min(1),
-  kind: z.enum(["reflect", "reinforce", "general", "none"]),
+  // "general" is used when nothing in the chat suits reflection, "no_transcript"
+  // when a student used no AI at all, and "none" for codes that are never
+  // reflected on.
+  kind: z.enum(["reflect", "reinforce", "general", "no_transcript", "none"]),
   name: z.string().min(1),
   behaviourCodes: z.array(z.string()),
-  question: z.string().min(1).nullable(),
+  intro: z.string().min(1).nullable(),
+  questions: z.array(z.string().min(1)),
+  tip: z.string().min(1).nullable(),
 });
 const groupingFile = z.looseObject({
   ...header,
@@ -45,6 +51,11 @@ const groupingFile = z.looseObject({
 
 export type FrameworkEntry = z.infer<typeof entry>;
 export type BehaviourGroup = z.infer<typeof group>;
+export type ReflectionTexts = {
+  intro: string;
+  questions: string[];
+  tip: string | null;
+};
 
 export type Framework = {
   status: string;
@@ -154,30 +165,33 @@ export function parseFramework(files: FrameworkFiles): Framework {
       }
       groupByCode.set(code, g);
     }
-    if ((g.question === null) !== (g.kind === "none")) {
-      problems.push(
-        `group ${g.code}: only "none" groups go without a question`,
-      );
+    const hasTexts = g.intro !== null && g.questions.length > 0;
+    if (g.kind === "none" && (g.intro !== null || g.questions.length > 0)) {
+      problems.push(`group ${g.code}: a "none" group has no texts`);
+    } else if (g.kind !== "none" && !hasTexts) {
+      problems.push(`group ${g.code}: needs an intro and a question`);
     }
-    // A TEST framework must never pass for the real one, and the real one must not
-    // keep a placeholder by mistake.
-    if (
-      g.question &&
-      g.question.startsWith(TEST_MARKER) !== (status === TEST_STATUS)
-    ) {
-      problems.push(
-        `group ${g.code}: ${TEST_MARKER} marker does not match status`,
-      );
+    const standalone = g.kind === "general" || g.kind === "no_transcript";
+    if (standalone && g.behaviourCodes.length > 0) {
+      problems.push(`group ${g.code}: cannot have behaviour codes`);
+    }
+    // Bracketed parts are filled in per student, which happens only for the intro
+    // and questions of groups tied to behaviour.
+    const asWritten = standalone ? [g.intro, ...g.questions, g.tip] : [g.tip];
+    if (asWritten.some((text) => text && /[[\]]/.test(text))) {
+      problems.push(`group ${g.code}: brackets in a text shown as written`);
     }
   }
   for (const code of codes) {
     if (!groupByCode.has(code)) problems.push(`code ${code} is in no group`);
   }
 
-  const general = grouping.data.groups.filter((g) => g.kind === "general");
+  const ofKind = (kind: BehaviourGroup["kind"]) =>
+    grouping.data.groups.filter((g) => g.kind === kind);
+  const general = ofKind("general");
   if (general.length !== 1) problems.push("needs exactly one general group");
-  if (general[0]?.behaviourCodes.length) {
-    problems.push("the general group cannot have behaviour codes");
+  if (ofKind("no_transcript").length > 1) {
+    problems.push("at most one no_transcript group");
   }
 
   if (problems.length > 0) throw new AnalysisError("S2-FRAMEWORK", problems);
@@ -197,7 +211,15 @@ export function parseFramework(files: FrameworkFiles): Framework {
   };
 }
 
-// Research data must never be produced with the TEST framework.
+// Every group except "none" has texts; parseFramework guarantees it.
+export function textsOf(group: BehaviourGroup): ReflectionTexts {
+  if (group.intro === null || group.questions.length === 0) {
+    throw new AnalysisError("S2-FRAMEWORK", [`group ${group.code}: no texts`]);
+  }
+  return { intro: group.intro, questions: group.questions, tip: group.tip };
+}
+
+// Research data must never be produced with a TEST framework.
 export function assertFrameworkAllowed(
   framework: Framework,
   env: Readonly<Record<string, string | undefined>> = process.env,

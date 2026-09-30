@@ -117,19 +117,21 @@ The same document holds the student's `pin`, which is what to read out when some
 |---|---|
 | `prompt_coding.JSON` | The ICAP categories and the prompt codes |
 | `sequence_coding.JSON` | The sequence patterns |
-| `behaviour_grouping.JSON` | The behaviour groups, each with its reflection question |
+| `behaviour_grouping.JSON` | The behaviour groups, each with an intro (feedback, for the F groups), its questions and a tip for the answer |
 | `analysis_guidelines.md` | The researchers' guidelines for coding. Required. |
 | `reflection_guidelines.md` | Optional: the researchers' guidelines for choosing examples and adapting the questions. Only the second step sees this file, so put that guidance here rather than in the coding guidelines (DL-035). |
 
-What the requirements demand is built into the prompts themselves (`src/lib/analysis/prompts.ts`) and holds whatever the guidelines say: the transcript is data and never instructions, no code is forced, every excerpt is quoted word for word, nothing is graded, and students are addressed in Swedish. The analysis gives each student prompt one code, or none when there is too little context.
+What the requirements demand is built into the prompts themselves (`src/lib/analysis/prompts.ts`) and holds whatever the guidelines say: the transcript is data and never instructions, no code is forced, every excerpt is quoted word for word, nothing is graded, and students are addressed in Swedish. A student prompt can get several codes, listed in the priority order the guidelines define, or none when there is too little context (DL-039).
 
-**The three JSON files are a TEST framework (DL-034).** The codes, patterns and groups were copied from the working version of the "Framework for scaffolding" Google Sheet on 2026-09-29, and the questions are placeholders. Every JSON file says `"status": "TEST"` and every question starts with `[TEST]`. Replace them before real student transcripts are analysed; production refuses to analyse with a TEST framework. The files are checked every time they are loaded, and by `pnpm test`: they share one status and version, every behaviour code is in exactly one group, and only a TEST framework may contain `[TEST]` questions.
+**The three JSON files still say `"status": "TEST"` (DL-034).** The codes, patterns and groups were copied from the working version of the "Framework for scaffolding" Google Sheet on 2026-09-29, and the intros, questions and tips from the researchers' document "Reflektionsfrågor" on 2026-09-30 (DL-040). Production refuses to analyse while the status is TEST; the researchers decide when the framework is final. The files are checked every time they are loaded, and by `pnpm test`: they share one status and version, every behaviour code is in exactly one group, every group a student can get has an intro and questions, and texts that are shown as written contain no brackets.
+
+Parts of an intro or question in `[square brackets]` are fitted to each student by the model, for example `[hitta felet / säga vad du skulle ändra]`. Tips, and the texts of the general group (R0), reach the student exactly as written. Group R01, for a student who used no AI, is in the file but nothing uses it yet.
 
 ## Transcript analysis (S2)
 For lessons 2 and 3, confirming the transcript starts the analysis (DL-035, DL-036). The confirm button returns at once, the analysis keeps running on the server, and the page shows "Vi analyserar din chatt" and checks back every few seconds. A student who closes the tab finds the result when logging in again.
 
 1. **Coding.** The model gets the coding guidelines and framework, then the transcript, and codes every student prompt and sequence. Our code checks the result before storing it as research data: every code exists in the framework, every cited message exists, and every excerpt is really in its message. An invalid result gets one more try, then counts as a failure.
-2. **Reflection.** The model sees the coding conversation so far, chooses at most three observations (`REFLECTION_MAX_QUESTIONS`) from the checked coding and adapts each group's question; this is checked the same way. If nothing is suitable, the student gets the general question (group R0), recorded as insufficient evidence rather than a failure.
+2. **Reflection.** The model sees the coding conversation so far, chooses at most three observations (`REFLECTION_MAX_QUESTIONS`) from the checked coding, never two from the same prompt, and fits each group's intro and questions to what the student did. This is checked too: every question is there and no brackets are left. If nothing is suitable, the student gets the general questions (group R0) as written, recorded as insufficient evidence rather than a failure.
 
 Each step opens the same way for every student, so after the first analysis OpenAI reads the framework (about 7,800 tokens) from its prompt cache at a tenth of the price. The output format is part of that opening, so each step has its own cache. On the synthetic test chat, each step took 7–13 seconds.
 

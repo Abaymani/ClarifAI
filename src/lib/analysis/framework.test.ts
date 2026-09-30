@@ -6,6 +6,7 @@ import {
   FRAMEWORK_FILES,
   loadFramework,
   parseFramework,
+  textsOf,
   type FrameworkFiles,
 } from "./framework";
 import { testFramework, testFrameworkFiles } from "./test-fixtures";
@@ -31,7 +32,7 @@ describe("the framework in framework/", () => {
     const framework = loadFramework();
     expect(framework.promptCodes.length).toBeGreaterThan(0);
     expect(framework.sequencePatterns.length).toBeGreaterThan(0);
-    expect(framework.generalGroup.question).toBeTruthy();
+    expect(textsOf(framework.generalGroup).questions.length).toBeGreaterThan(0);
     expect(framework.isTest).toBe(framework.status === "TEST");
   });
 });
@@ -105,38 +106,52 @@ describe("parseFramework", () => {
     );
   });
 
-  it("rejects an unmarked question in a TEST framework", () => {
+  it("needs an intro and a question for every group a student can get", () => {
     const files = testFrameworkFiles();
-    files.grouping.groups[0].question = "A question without the marker?";
-    expect(rejected(files)).toContain(
-      "group R1: [TEST] marker does not match status",
-    );
+    files.grouping.groups[0].questions = [];
+    files.grouping.groups.find((g) => g.kind === "none")!.intro = "Text.";
+    expect(rejected(files)).toEqual([
+      "group R1: needs an intro and a question",
+      'group RN: a "none" group has no texts',
+    ]);
   });
 
-  it("rejects a leftover [TEST] question in a real framework", () => {
+  // Only the intro and questions of behaviour groups are fitted to the student;
+  // everything else reaches them exactly as written.
+  it("rejects brackets in texts that are shown as written", () => {
     const files = testFrameworkFiles();
-    for (const file of [
-      files.promptCoding,
-      files.sequenceCoding,
-      files.grouping,
-    ]) {
-      file.status = "FINAL";
-    }
-    expect(rejected(files)).toContain(
-      "group R1: [TEST] marker does not match status",
-    );
+    files.grouping.groups[0].tip = "Jag valde [det här] eftersom …";
+    files.grouping.groups.find((g) => g.kind === "general")!.intro =
+      "Här [hände något].";
+    expect(rejected(files)).toEqual([
+      "group R1: brackets in a text shown as written",
+      "group R0: brackets in a text shown as written",
+    ]);
   });
 
-  it("needs exactly one general group without behaviour codes", () => {
+  it("needs exactly one general group, and at most one for students without a transcript", () => {
     const files = testFrameworkFiles();
     const general = files.grouping.groups.find((g) => g.kind === "general")!;
     general.behaviourCodes = ["P1"];
     expect(rejected(files)).toEqual(
       expect.arrayContaining([
-        "the general group cannot have behaviour codes",
+        "group R0: cannot have behaviour codes",
         "code P1 is in more than one group",
       ]),
     );
+
+    const doubled = testFrameworkFiles();
+    doubled.grouping.groups.push({
+      ...doubled.grouping.groups.find((g) => g.kind === "no_transcript")!,
+      code: "R02",
+    });
+    expect(rejected(doubled)).toEqual(["at most one no_transcript group"]);
+
+    const missing = testFrameworkFiles();
+    missing.grouping.groups = missing.grouping.groups.filter(
+      (g) => g.kind !== "general",
+    );
+    expect(rejected(missing)).toEqual(["needs exactly one general group"]);
   });
 
   it("names the field when a file has the wrong shape", () => {

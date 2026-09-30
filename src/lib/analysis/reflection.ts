@@ -1,17 +1,25 @@
 import { z } from "zod";
 
 import type { Validated } from "./coding";
-import type { BehaviourGroup, Framework } from "./framework";
+import {
+  textsOf,
+  type BehaviourGroup,
+  type Framework,
+  type ReflectionTexts,
+} from "./framework";
 import type { Coding, ReflectionItem, ReflectionQuestions } from "./types";
 
-const MAX_TEXT_LENGTH = 600;
+const MAX_TEXT_LENGTH = 800;
 
 export type Candidate = {
-  // "p<message>" for a prompt, "s<n>" for the nth sequence.
+  // "p<message>-<code>" for a coded prompt, "s<n>" for the nth sequence.
   id: string;
   kind: "prompt" | "sequence";
   code: string;
-  group: BehaviourGroup;
+  // Rank among the prompt's codes, 1 being the most important; 1 for sequences.
+  priority: number;
+  group: BehaviourGroup & { kind: "reflect" | "reinforce" };
+  texts: ReflectionTexts;
   firstMessage: number;
   lastMessage: number;
   excerptMessage: number;
@@ -19,36 +27,47 @@ export type Candidate = {
   justification: string;
 };
 
-// Only coded behaviour with a question can be reflected on; NA codes (group RN)
-// and uncodable prompts never can.
+// Only behaviour whose group reflects or reinforces can be shown to the student;
+// NA codes (group RN) and uncodable prompts never are.
 export function reflectionCandidates(
   coding: Coding,
   framework: Framework,
 ): Candidate[] {
+  const shown = (code: string) => {
+    const group = framework.groupByCode.get(code);
+    return group && (group.kind === "reflect" || group.kind === "reinforce")
+      ? { group: group as Candidate["group"], texts: textsOf(group) }
+      : null;
+  };
+
   const candidates: Candidate[] = [];
   for (const prompt of coding.prompts) {
-    const group = prompt.code ? framework.groupByCode.get(prompt.code) : null;
-    if (!prompt.code || !group?.question || group.kind === "none") continue;
-    candidates.push({
-      id: `p${prompt.message}`,
-      kind: "prompt",
-      code: prompt.code,
-      group,
-      firstMessage: prompt.message,
-      lastMessage: prompt.message,
-      excerptMessage: prompt.message,
-      excerpt: prompt.excerpt,
-      justification: prompt.justification,
+    prompt.codes.forEach((coded, i) => {
+      const group = shown(coded.code);
+      if (!group) return;
+      candidates.push({
+        id: `p${prompt.message}-${coded.code}`,
+        kind: "prompt",
+        code: coded.code,
+        priority: i + 1,
+        ...group,
+        firstMessage: prompt.message,
+        lastMessage: prompt.message,
+        excerptMessage: prompt.message,
+        excerpt: coded.excerpt,
+        justification: coded.justification,
+      });
     });
   }
   coding.sequences.forEach((sequence, i) => {
-    const group = framework.groupByCode.get(sequence.pattern);
-    if (!group?.question || group.kind === "none") return;
+    const group = shown(sequence.pattern);
+    if (!group) return;
     candidates.push({
       id: `s${i + 1}`,
       kind: "sequence",
       code: sequence.pattern,
-      group,
+      priority: 1,
+      ...group,
       firstMessage: sequence.firstMessage,
       lastMessage: sequence.lastMessage,
       excerptMessage: sequence.excerptMessage,
@@ -67,12 +86,11 @@ export function reflectionSchema(maxObservations: number) {
       .array(
         z.object({
           candidate: z.string(),
-          explanation: z.string(),
-          question: z.string(),
+          intro: z.string(),
+          questions: z.array(z.string()),
         }),
       )
       .max(maxObservations),
-    generalQuestion: z.string().nullable(),
   });
 }
 
@@ -85,14 +103,7 @@ export function validateReflection(
   maxObservations: number,
 ): Validated<ReflectionQuestions> {
   if (raw.observations.length === 0) {
-    const question = raw.generalQuestion?.trim() ?? "";
-    if (!question || question.length > MAX_TEXT_LENGTH) {
-      return {
-        ok: false,
-        problems: ["no observations and no usable general question"],
-      };
-    }
-    return { ok: true, value: generalReflection(framework, question) };
+    return { ok: true, value: generalReflection(framework) };
   }
 
   const problems: string[] = [];
@@ -103,11 +114,11 @@ export function validateReflection(
     candidates.map((candidate) => [candidate.id, candidate]),
   );
   const chosen = new Set<string>();
+  const prompts = new Set<number>();
   const items: ReflectionItem[] = [];
+
   raw.observations.forEach((observation, i) => {
     const candidate = byId.get(observation.candidate);
-    const explanation = observation.explanation.trim();
-    const question = observation.question.trim();
     if (!candidate) {
       problems.push(`observation ${i + 1}: unknown candidate`);
       return;
@@ -115,16 +126,30 @@ export function validateReflection(
     if (chosen.has(candidate.id))
       problems.push(`${candidate.id}: chosen twice`);
     chosen.add(candidate.id);
-    if (!explanation || explanation.length > MAX_TEXT_LENGTH) {
-      problems.push(`${candidate.id}: explanation missing or too long`);
+    // Two examples showing the same prompt would only repeat each other.
+    if (candidate.kind === "prompt") {
+      if (prompts.has(candidate.firstMessage)) {
+        problems.push(`${candidate.id}: its prompt is already chosen`);
+      }
+      prompts.add(candidate.firstMessage);
     }
-    if (!question || question.length > MAX_TEXT_LENGTH) {
-      problems.push(`${candidate.id}: question missing or too long`);
+
+    const intro = observation.intro.trim();
+    const questions = observation.questions.map((question) => question.trim());
+    if (!fitted(intro)) problems.push(`${candidate.id}: intro not usable`);
+    if (questions.length !== candidate.texts.questions.length) {
+      problems.push(
+        `${candidate.id}: ${questions.length} questions, the group has ${candidate.texts.questions.length}`,
+      );
     }
+    if (!questions.every(fitted)) {
+      problems.push(`${candidate.id}: a question is not usable`);
+    }
+
     items.push({
       id: `q${i + 1}`,
       group: candidate.group.code,
-      groupKind: candidate.group.kind === "reinforce" ? "reinforce" : "reflect",
+      groupKind: candidate.group.kind,
       basedOn: {
         kind: candidate.kind,
         code: candidate.code,
@@ -133,9 +158,13 @@ export function validateReflection(
       },
       // Taken from the validated coding, so the student sees their own words.
       excerpt: { message: candidate.excerptMessage, text: candidate.excerpt },
-      explanation,
-      template: candidate.group.question ?? "",
-      question,
+      intro,
+      questions,
+      tip: candidate.texts.tip,
+      template: {
+        intro: candidate.texts.intro,
+        questions: candidate.texts.questions,
+      },
     });
   });
 
@@ -143,14 +172,19 @@ export function validateReflection(
   return { ok: true, value: { outcome: "observations", items } };
 }
 
-// Used when the transcript supports no specific observation. Without candidates the
-// model isn't asked at all and the general question is used as written.
-export function generalReflection(
-  framework: Framework,
-  question?: string,
-): ReflectionQuestions {
+// A fitted text has content, a sensible length, and no [bracketed part] left
+// over from the researchers' template.
+function fitted(text: string): boolean {
+  return (
+    text.length > 0 && text.length <= MAX_TEXT_LENGTH && !/[[\]]/.test(text)
+  );
+}
+
+// Used when the transcript supports no specific observation: the general group's
+// texts, exactly as the researchers wrote them.
+export function generalReflection(framework: Framework): ReflectionQuestions {
   const general = framework.generalGroup;
-  const template = general.question ?? "";
+  const texts = textsOf(general);
   return {
     outcome: "insufficient_evidence",
     items: [
@@ -160,9 +194,10 @@ export function generalReflection(
         groupKind: "general",
         basedOn: null,
         excerpt: null,
-        explanation: null,
-        template,
-        question: question ?? template,
+        intro: texts.intro,
+        questions: texts.questions,
+        tip: texts.tip,
+        template: { intro: texts.intro, questions: texts.questions },
       },
     ],
   };

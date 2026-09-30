@@ -27,6 +27,7 @@ import {
 import { hashSessionToken } from "./session-token";
 import {
   analysisInterrupted,
+  analysisResultMissing,
   sessionId,
   type Session,
   type SessionStatus,
@@ -406,7 +407,9 @@ export async function retryAnalysis(
     }
     const analysed = current.lesson === 2 || current.lesson === 3;
     const retryable =
-      current.status === "failed" || analysisInterrupted(current, now);
+      current.status === "failed" ||
+      analysisInterrupted(current, now) ||
+      analysisResultMissing(current);
     if (!analysed || !current.transcriptConfirmedAt || !retryable) {
       return { ok: false, reason: "NOT_READY" };
     }
@@ -546,13 +549,32 @@ function toSession(id: string, data: Record<string, unknown>): Session {
     transcript: toTranscript(data.transcript),
     transcriptConfirmedAt: toDate(data.transcriptConfirmedAt),
     analysisStartedAt: toDate(data.analysisStartedAt),
-    analysis: hasArrays(data.analysis, "prompts", "sequences")
-      ? (data.analysis as StoredCoding)
-      : null,
-    reflectionQuestions: hasArrays(data.reflectionQuestions, "items")
-      ? (data.reflectionQuestions as StoredReflectionQuestions)
+    analysis: isStoredCoding(data.analysis) ? data.analysis : null,
+    reflectionQuestions: isStoredQuestions(data.reflectionQuestions)
+      ? data.reflectionQuestions
       : null,
   };
+}
+
+// Results stored in a shape this version doesn't know are treated as absent, so
+// the analysis is simply done again.
+function isStoredCoding(value: unknown): value is StoredCoding {
+  return (
+    hasArrays(value, "prompts", "sequences") &&
+    (value as StoredCoding).prompts.every((prompt) =>
+      Array.isArray(prompt?.codes),
+    )
+  );
+}
+
+function isStoredQuestions(value: unknown): value is StoredReflectionQuestions {
+  return (
+    hasArrays(value, "items") &&
+    (value as StoredReflectionQuestions).items.every(
+      (item) =>
+        typeof item?.intro === "string" && Array.isArray(item?.questions),
+    )
+  );
 }
 
 function hasArrays(value: unknown, ...keys: string[]): boolean {

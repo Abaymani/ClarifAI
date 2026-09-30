@@ -57,18 +57,26 @@ async function confirmedSession(
   return { token, sessionId };
 }
 
+const run = {
+  frameworkVersion: "TEST-fixture",
+  frameworkStatus: "TEST",
+  analyser: "fake",
+  model: null,
+  reasoningEffort: null,
+  createdAt: "2026-09-29T10:00:00.000Z",
+  durationMs: 10,
+  usage: null,
+} as const;
+
 function coding(): StoredCoding {
   return {
-    frameworkVersion: "TEST-fixture",
-    frameworkStatus: "TEST",
-    analyser: "fake",
-    model: null,
-    reasoningEffort: null,
-    createdAt: "2026-09-29T10:00:00.000Z",
-    durationMs: 10,
-    usage: null,
+    ...run,
     prompts: [
-      { message: 1, code: "C5", excerpt: "Jag tror", justification: "x" },
+      {
+        message: 1,
+        codes: [{ code: "C5", excerpt: "Jag tror", justification: "x" }],
+        note: null,
+      },
     ],
     sequences: [],
   };
@@ -76,7 +84,7 @@ function coding(): StoredCoding {
 
 function questions(): StoredReflectionQuestions {
   return {
-    ...coding(),
+    ...run,
     outcome: "insufficient_evidence",
     items: [
       {
@@ -85,9 +93,10 @@ function questions(): StoredReflectionQuestions {
         groupKind: "general",
         basedOn: null,
         excerpt: null,
-        explanation: null,
-        template: "[TEST] Fråga",
-        question: "[TEST] Fråga",
+        intro: "Inledning.",
+        questions: ["Fråga?"],
+        tip: "Tips …",
+        template: { intro: "Inledning.", questions: ["Fråga?"] },
       },
     ],
   };
@@ -128,7 +137,7 @@ describe("analysis in the session store", () => {
 
     expect(await getSessionByToken(token)).toMatchObject({
       status: "awaiting_reflection",
-      analysis: { prompts: [{ code: "C5" }] },
+      analysis: { prompts: [{ codes: [{ code: "C5" }] }] },
       reflectionQuestions: { outcome: "insufficient_evidence" },
     });
     // The attempt is finished, so a late duplicate cannot overwrite anything.
@@ -151,7 +160,7 @@ describe("analysis in the session store", () => {
       session: { status: "processing", errorCode: null },
     });
     expect(await analysisStore.load(sessionId, "analysis-b")).toMatchObject({
-      coding: { prompts: [{ code: "C5" }] },
+      coding: { prompts: [{ codes: [{ code: "C5" }] }] },
     });
     expect(await analysisStore.load(sessionId, "analysis-a")).toBeNull();
 
@@ -195,6 +204,25 @@ describe("analysis in the session store", () => {
     expect(await retryAnalysis(lessonOne.token, "analysis-b")).toEqual({
       ok: false,
       reason: "ALREADY_COMPLETED",
+    });
+  });
+
+  test("a result stored in an unknown shape can be analysed again", async () => {
+    const { token, sessionId } = await confirmedSession("830", 2);
+    await analysisStore.saveQuestions(sessionId, "analysis-a", questions());
+    // As an earlier version stored it: one question instead of a list.
+    await getDb()
+      .collection("sessions")
+      .doc(sessionId)
+      .update({ reflectionQuestions: { items: [{ question: "Fråga?" }] } });
+
+    expect(await getSessionByToken(token)).toMatchObject({
+      status: "awaiting_reflection",
+      reflectionQuestions: null,
+    });
+    expect(await retryAnalysis(token, "analysis-b")).toMatchObject({
+      ok: true,
+      session: { status: "processing" },
     });
   });
 

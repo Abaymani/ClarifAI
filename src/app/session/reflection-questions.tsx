@@ -66,11 +66,19 @@ export function ReflectionQuestions({
             <ChatContext messages={messages} excerpt={item.excerpt} />
           ) : null}
 
-          {item.explanation ? (
-            <p className="text-sm text-muted-foreground">{item.explanation}</p>
-          ) : null}
+          <p className="text-sm">{item.intro}</p>
 
-          <p className="font-medium">{item.question}</p>
+          <ul className="flex list-disc flex-col gap-1 pl-5 font-medium">
+            {item.questions.map((question) => (
+              <li key={question}>{question}</li>
+            ))}
+          </ul>
+
+          {item.tip ? (
+            <p className="text-sm text-muted-foreground">
+              {sv.session.reflectionTip(item.tip)}
+            </p>
+          ) : null}
 
           <div className="flex flex-col gap-2">
             <Label htmlFor={`${item.id}-answer`}>

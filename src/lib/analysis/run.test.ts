@@ -220,9 +220,8 @@ describe("runAnalysis", () => {
           .filter((message) => message.role === "student")
           .map((message) => ({
             message: message.index,
-            code: null,
-            excerpt: "",
-            justification: "För lite sammanhang.",
+            codes: [],
+            note: "För lite sammanhang.",
           })),
         sequences: [],
       },
@@ -236,6 +235,22 @@ describe("runAnalysis", () => {
       outcome: "insufficient_evidence",
       model: null,
       items: [{ group: "R0", groupKind: "general" }],
+    });
+  });
+
+  it("uses the general questions when the model finds nothing suitable", async () => {
+    const analyser = spyAnalyser();
+    analyser.reflect.mockResolvedValue({
+      output: { observations: [] },
+      usage: null,
+    });
+    const { store, saved } = memoryStore();
+    await runAnalysis("s1", "a1", dependencies(store, analyser));
+
+    expect(saved.failure).toBeNull();
+    expect(saved.questions).toMatchObject({
+      outcome: "insufficient_evidence",
+      items: [{ group: "R0", questions: ["General question (R0)?"] }],
     });
   });
 

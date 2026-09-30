@@ -1,13 +1,17 @@
 {
   "status": "TEST",
-  "notice": "TEST FRAMEWORK. A placeholder for building and testing the analysis, copied from the working version of the Google Sheet on 2026-09-29. It is not the study's framework and must be replaced before real student transcripts are analysed. The questions are placeholders written by Claude (agent) for testing, one per group, and each starts with [TEST].",
-  "version": "TEST-2026-09-29",
+  "notice": "TEST status. The codes, patterns and groups were copied from the working version of the Google Sheet on 2026-09-29. The researchers decide when the framework is final; while the status is TEST, production refuses to analyse with it. The intros, questions and tips come from the researchers' document \"Reflektionsfrågor\", retrieved 2026-09-30.",
+  "version": "TEST-2026-09-30",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
       "behaviour_grouping"
     ],
-    "retrieved": "2026-09-29"
+    "retrieved": "2026-09-29",
+    "questions": {
+      "document": "https://docs.google.com/document/d/1xgyVfv354h2rHPQU2U8Z0Ue7JP03rQtvR8Zo8RuCgzo",
+      "retrieved": "2026-09-30"
+    }
   },
   "groups": [
     {
@@ -21,7 +25,13 @@
         "S3"
       ],
       "description": "Gemini made a choice for the student: a component, the project idea, or everything from idea to fix (S3)",
-      "question": "[TEST] Här fattade Gemini beslutet åt dig. Hur hade du själv resonerat om du hade fått bestämma, och vad hade du behövt veta för att kunna göra det?"
+      "intro": "I utdraget får Gemini bestämma [vad du ska bygga / vilken komponent du ska välja].",
+      "questions": [
+        "Varför lät du Gemini välja här?",
+        "Vad hade du behövt för att själv ta beslutet?",
+        "Hur upplevde du att det påverkade ditt ägandeskap över lösningen?"
+      ],
+      "tip": "Jag lät Gemini välja eftersom …, men själv hade jag nog valt …, för att …"
     },
     {
       "code": "R2",
@@ -34,7 +44,13 @@
         "P9"
       ],
       "description": "Something didn't work, and the student asked for the cause or a fix without offering a guess",
-      "question": "[TEST] När något inte fungerade frågade du Gemini vad felet var. Vad trodde du själv att felet kunde vara, och hur hade du kunnat testa det?"
+      "intro": "Här [fungerade något inte], och du bad Gemini [hitta felet / säga vad du skulle ändra].",
+      "questions": [
+        "Innan du frågade, hade du själv någon hypotes kring vad som kunde vara fel?",
+        "Om ja, varför berättade du inte för Gemini om det?",
+        "Hur stämde den överens med svaret du fick av Gemini?"
+      ],
+      "tip": "Jag gissade att det kunde bero på …, eftersom jag hade sett att …"
     },
     {
       "code": "R3",
@@ -47,7 +63,12 @@
         "S6"
       ],
       "description": "The student got answers, steps or explanations and moved on without working through them",
-      "question": "[TEST] Du fick ett svar från Gemini och gick sedan vidare. Hur skulle du förklara svaret med egna ord?"
+      "intro": "Här fick du [svaret / stegen / en förklaring] om [ämnet] från Gemini.",
+      "questions": [
+        "Genom att be Gemini om svaret, hur skulle du säga att din förståelse om [ämnet] är?",
+        "Skulle du kunna förklara [ämnet] för en klasskamrat nu i efterhand?"
+      ],
+      "tip": "Jag skulle säga att min förståelse är… Det fungerar så här: …"
     },
     {
       "code": "R4",
@@ -57,7 +78,13 @@
         "S2"
       ],
       "description": "The student drifted from own ideas to asking for solutions. Reflect on what caused it",
-      "question": "[TEST] I början kom du med egna idéer, men senare bad du mest om lösningar. Vad hände som fick dig att ändra arbetssätt?"
+      "intro": "I början av chatten kom du med egna idéer, som [exempel], men längre fram bad du oftare Gemini om färdiga lösningar.",
+      "questions": [
+        "Var det ett medvetet val att ändra hur du interagerade med Gemini?",
+        "Vad hände som fick dig att ändra ditt sätt att använda Gemini?",
+        "Vad kan du göra för att undvika en liknande situation i framtiden?"
+      ],
+      "tip": "Det ändrades när …, och jag tror att det berodde på att …"
     },
     {
       "code": "R5",
@@ -67,7 +94,12 @@
         "S4"
       ],
       "description": "The student followed a suggestion that later caused problems",
-      "question": "[TEST] Du följde ett förslag från Gemini som senare ställde till problem. Hur hade du kunnat kontrollera förslaget innan du byggde vidare?"
+      "intro": "Här följde du Geminis förslag att [förslaget], och längre fram i chatten verkar det ha hängt ihop med [problemet]. Även om AI låter självsäker, så behöver inte svaren vara korrekt.",
+      "questions": [
+        "Känner du att du hade tillräckliga förkunskaper för att kunna upptäcka felet som AI gav?",
+        "Hur hade du kunnat skriva din prompt för att få information som du lättare kan granska?"
+      ],
+      "tip": "Jag hade kunnat testa … eller jämföra med … innan jag byggde vidare. I framtiden borde jag tänka på…"
     },
     {
       "code": "R0",
@@ -75,7 +107,26 @@
       "name": "Allmän fråga",
       "behaviourCodes": [],
       "description": "No suitable examples found (the requirements ask for a general question)",
-      "question": "[TEST] Tänk tillbaka på hur du använde Gemini under lektionen. Vid vilket tillfälle tänkte du mest själv, och vad fick dig att göra det?"
+      "intro": "Den här gången hittade ClarifAI inga tydliga exempel att lyfta fram ur din chatt. Det säger inget om hur du har arbetat, bara att chatten inte visar tillräckligt. Vi har istället några generella frågor:",
+      "questions": [
+        "Tänk på ett tillfälle under lektionen när du använde Gemini: vad lät du Gemini göra, och vad gjorde du själv?",
+        "Finns det några tillfällen då du valde att inte använda Gemini och varför då?"
+      ],
+      "tip": "När jag skulle … lät jag Gemini …, medan jag själv …"
+    },
+    {
+      "code": "R01",
+      "kind": "no_transcript",
+      "name": "Inget transkript",
+      "behaviourCodes": [],
+      "description": "No transcript uploaded",
+      "intro": "Du uppgav att du inte använde Gemini under denna lektionen.",
+      "questions": [
+        "Vad motiverade dig för att inte använda det?",
+        "Fanns det någon situation där du funderade på att använda det?",
+        "I vilka situationer brukar du använda AI?"
+      ],
+      "tip": "Jag använde det inte för att… men jag funderade på att använda det för… I vanliga fall använder jag det för…"
     },
     {
       "code": "RN",
@@ -91,7 +142,9 @@
         "NA7"
       ],
       "description": "Not relevant according to the framework",
-      "question": null
+      "intro": null,
+      "questions": [],
+      "tip": null
     },
     {
       "code": "F1",
@@ -103,7 +156,12 @@
         "C11"
       ],
       "description": "Own plan, attempt or idea first, then asked Gemini to check it",
-      "question": "[TEST] Du kom med en egen plan eller idé innan du frågade Gemini. Hur kom du fram till den, och vad fick du ut av att låta Gemini granska den?"
+      "intro": "Här kom du med [en egen plan / ett eget försök / en egen projektidé] innan du frågade, och bad sedan Gemini granska det du hade kommit fram till. Då är det du som styr, och Gemini blir ett bollplank.",
+      "questions": [
+        "Vad känner du att du drog för nytta av att delge din [plan/försök/projektidé]?",
+        "Hur upplevde du att det påverkade ditt ägandeskap över lösningen?"
+      ],
+      "tip": "När jag började själv märkte jag att …"
     },
     {
       "code": "F2",
@@ -114,7 +172,13 @@
         "C5"
       ],
       "description": "Own guess about what's wrong (mirrors R2)",
-      "question": "[TEST] Du hade en egen gissning om vad som var fel. Vad fick dig att misstänka just det, och stämde din gissning?"
+      "intro": "Här föreslog du själv vad felet kunde bero på innan du frågade. Att gissa först och sedan kolla är ett sätt att träna upp din egna felsökningsförmåga.",
+      "questions": [
+        "Försökte du medvetet utföra egen felsökning innan du diskuterade med AI?",
+        "Hur kan du göra det till en vana att först tänka ut en möjlig orsak innan du tar hjälp av AI?",
+        "På vilket sätt kan en egen hypotes göra AI:s svar mer användbart för dig?"
+      ],
+      "tip": "Jag misstänkte …, eftersom jag hade märkt att …"
     },
     {
       "code": "F3",
@@ -126,7 +190,12 @@
         "C9"
       ],
       "description": "Explained in own words, linked to something they already knew, or compared",
-      "question": "[TEST] Du förklarade med egna ord eller kopplade till något du redan kunde. Hur hjälpte det dig att förstå?"
+      "intro": "Här [förklarade du med egna ord / kopplade du till något du redan kunde / jämförde du med något annat].",
+      "questions": [
+        "Vad blev tydligare för dig när du [förklarade / kopplade / jämförde]?",
+        "Varför kan det vara fördelaktigt att sätta egna ord på information du tar in?"
+      ],
+      "tip": "Jag förstod bättre att …, eftersom …"
     },
     {
       "code": "F4",
@@ -136,7 +205,13 @@
         "C7"
       ],
       "description": "Questioned Gemini and gave a reason (mirrors R5)",
-      "question": "[TEST] Du ifrågasatte ett svar från Gemini. Vad fick dig att tvivla, och hur tog du reda på vad som stämde?"
+      "intro": "Här ifrågasatte du Geminis svar och gav ett eget skäl. AI-svar kan låta säkra även när de inte stämmer, så genom att jämföra dem mot det du själv vet behåller du kontrollen.",
+      "questions": [
+        "Vad fick dig att reagera på svaret?",
+        "I vilka situationer känner du att du kan avgöra sanningsgraden av AI-svar?",
+        "Finns det situationer där du känner att du inte kan avgöra sanningsgraden av AI-svar?"
+      ],
+      "tip": "Jag reagerade eftersom det inte stämde med att …"
     },
     {
       "code": "F5",
@@ -147,7 +222,11 @@
         "C10"
       ],
       "description": "Pinpointed what they didn't understand, or asked for a hint instead of the answer",
-      "question": "[TEST] Du bad om en ledtråd eller pekade ut exakt vad du inte förstod. Varför valde du att be om hjälp på det sättet?"
+      "intro": "Här [pekade du ut exakt vad du inte förstod / bad du om en ledtråd i stället för hela lösningen]. Då bestämmer du själv vilken hjälp du får, och tänkandet stannar hos dig.",
+      "questions": [
+        "Hur visste du vilken typ av hjälp du behövde just då?"
+      ],
+      "tip": "Jag märkte att jag behövde …, eftersom …"
     },
     {
       "code": "F6",
@@ -159,7 +238,12 @@
         "A4"
       ],
       "description": "Asked Gemini to explain again, asked why, or restated what Gemini said",
-      "question": "[TEST] Du ville förstå mer och bad Gemini förklara. Vad förstår du nu som du inte förstod innan?"
+      "intro": "Här [bad du Gemini förklara igen / frågade du varför / sammanfattade du vad Gemini menade] för att förstå [ämnet] bättre.",
+      "questions": [
+        "Vad fick dig att inse att du inte förstått [ämnet] fullt ut?",
+        "Känner du att du fick ett svar som hjälpte dig att förstå [ämnet] bättre?"
+      ],
+      "tip": "Jag insåg att jag inte förstod … när jag …"
     },
     {
       "code": "F7",
@@ -170,7 +254,12 @@
         "A5"
       ],
       "description": "Chose among the options Gemini gave",
-      "question": "[TEST] Du valde själv mellan alternativen som Gemini gav. Hur tänkte du när du valde?"
+      "intro": "Här valde du själv bland alternativen som Gemini gav, i stället för att låta Gemini bestämma.",
+      "questions": [
+        "Varför var det viktigt för dig att det var du som tog beslutet?",
+        "Hur kan du säkerställa att du behåller kontrollen och beslutsfattandet i ditt lärande när du använder AI?"
+      ],
+      "tip": "Det var viktigt för mig för att … I framtiden kommer jag se till att …"
     },
     {
       "code": "F8",
@@ -180,7 +269,11 @@
         "S1"
       ],
       "description": "Started passive, then took back the initiative (mirrors R4)",
-      "question": "[TEST] Först lät du Gemini styra, men sedan tog du över själv. Vad fick dig att ta tillbaka initiativet?"
+      "intro": "Här bad du först Gemini om [en lösning], men sedan tog du över själv och [det du gjorde].",
+      "questions": [
+        "Vad fick dig att ändra strategi och ta tillbaka kontrollen över ditt lärande?"
+      ],
+      "tip": "Jag tog över när …, eftersom …"
     },
     {
       "code": "F9",
@@ -190,7 +283,11 @@
         "S7"
       ],
       "description": "Interactive sequences",
-      "question": "[TEST] Du och Gemini byggde vidare på varandras idéer. Vad bidrog du själv med som Gemini inte kom på?"
+      "intro": "I den här delen av chatten byggde du och Gemini vidare på varandras idéer: du [testade / ifrågasatte / utvecklade] det Gemini föreslog och kom med egna tankar i varje steg.",
+      "questions": [
+        "Vad känner du att du vann på att konversera med AI på detta sätt?"
+      ],
+      "tip": "Jag använder AI som ett verktyg för… Jag ser fördelar som…"
     },
     {
       "code": "F10",
@@ -200,7 +297,12 @@
         "S8"
       ],
       "description": "Few, targeted prompts; your sheet says not to read this as low engagement",
-      "question": "[TEST] Du använde Gemini sparsamt och till avgränsade frågor. Hur bestämde du när du behövde hjälp och när du klarade dig själv?"
+      "intro": "Du frågade Gemini vid några få tillfällen och med tydliga frågor, och verkar ha arbetat mycket på egen hand däremellan.",
+      "questions": [
+        "Skulle du säga att du ofta använder AI som en punktinsats eller brukar du förlita dig på AI i större utsträckning?",
+        "Hur bestämde du när det var läge att fråga Gemini?"
+      ],
+      "tip": "Jag frågade först när …, innan dess försökte jag …"
     }
   ]
 }

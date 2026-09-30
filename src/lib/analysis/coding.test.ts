@@ -24,6 +24,13 @@ describe("validateCoding", () => {
     }
   });
 
+  it("keeps a prompt's codes in the priority order they were given", () => {
+    const result = validateCoding(sampleCoding(), transcript);
+    expect(
+      result.ok && result.value.prompts[0].codes.map((c) => c.code),
+    ).toEqual(["C5", "C2"]);
+  });
+
   it("requires every student prompt to be coded exactly once", () => {
     expect(problems((c) => c.prompts.pop())).toEqual(["prompt 7: not coded"]);
     expect(problems((c) => c.prompts.push({ ...c.prompts[0] }))).toEqual([
@@ -40,20 +47,30 @@ describe("validateCoding", () => {
 
   it("withholds codes whose excerpt is not in the message", () => {
     expect(
-      problems((c) => (c.prompts[0].excerpt = "Vi vill bygga en robot.")),
-    ).toEqual(["prompt 1: excerpt not in the message"]);
+      problems(
+        (c) => (c.prompts[0].codes[0].excerpt = "Vi vill bygga en robot."),
+      ),
+    ).toEqual(["prompt 1, C5: excerpt not in the message"]);
   });
 
-  it("drops a loose excerpt on an uncoded prompt instead of failing", () => {
-    const coding = sampleCoding();
-    coding.prompts[3].excerpt = "something else";
-    const result = validateCoding(coding, transcript);
-    expect(result.ok && result.value.prompts[3].excerpt).toBe("");
+  it("wants each code once per prompt, each with a justification", () => {
+    expect(
+      problems((c) => c.prompts[0].codes.push({ ...c.prompts[0].codes[0] })),
+    ).toEqual(["prompt 1, C5: given twice"]);
+    expect(
+      problems((c) => (c.prompts[0].codes[1].justification = " ")),
+    ).toEqual(["prompt 1, C2: no justification"]);
   });
 
-  it("requires a justification, also for uncoded prompts", () => {
-    expect(problems((c) => (c.prompts[3].justification = " "))).toEqual([
-      "prompt 7: no justification",
+  it("accepts an uncoded prompt only with a reason", () => {
+    const result = validateCoding(sampleCoding(), transcript);
+    expect(result.ok && result.value.prompts[3]).toEqual({
+      message: 7,
+      codes: [],
+      note: "Meddelandet är bara en bild.",
+    });
+    expect(problems((c) => (c.prompts[3].note = " "))).toEqual([
+      "prompt 7: no codes and no reason",
     ]);
   });
 
@@ -71,7 +88,7 @@ describe("validateCoding", () => {
 
   it("keeps problems free of transcript content, so they can be logged", () => {
     const logged = problems((c) => {
-      c.prompts[0].excerpt = "Vi vill bygga en robot.";
+      c.prompts[0].codes[0].excerpt = "Vi vill bygga en robot.";
       c.prompts.pop();
     }).join(" ");
     expect(logged).not.toMatch(/robot|avståndslarm/i);
@@ -94,7 +111,7 @@ describe("codingSchema", () => {
     expect(schema.safeParse(sampleCoding()).success).toBe(true);
 
     const invented = sampleCoding();
-    invented.prompts[0].code = "Z9";
+    invented.prompts[0].codes[0].code = "Z9";
     expect(schema.safeParse(invented).success).toBe(false);
   });
 });

@@ -20,12 +20,18 @@ export type AnalysisRun = {
   usage: Usage | null;
 };
 
-export type PromptCoding = {
-  message: number;
-  // null when the transcript gave too little context; `justification` says why.
-  code: string | null;
+export type CodedBehaviour = {
+  code: string;
   excerpt: string;
   justification: string;
+};
+
+export type PromptCoding = {
+  message: number;
+  // In priority order, most important first (DL-039). Empty when the transcript
+  // gave too little context to code the prompt; `note` then says why.
+  codes: CodedBehaviour[];
+  note: string | null;
 };
 
 export type SequenceCoding = {
@@ -55,10 +61,13 @@ export type ReflectionItem = {
     lastMessage: number;
   } | null;
   excerpt: { message: number; text: string } | null;
-  explanation: string | null;
-  // The group's question before adaptation, kept for the research record.
-  template: string;
-  question: string;
+  // The group's intro (or feedback) and questions, fitted to what the student did.
+  intro: string;
+  questions: string[];
+  // A sentence starter for the student's answer, shown as the researchers wrote it.
+  tip: string | null;
+  // The texts before they were fitted, kept for the research record.
+  template: { intro: string; questions: string[] };
 };
 
 export type ReflectionQuestions = {

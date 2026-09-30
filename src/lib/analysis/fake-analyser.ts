@@ -4,7 +4,7 @@ import type { Candidate, RawReflection } from "./reflection";
 
 // Stands in for OpenAI when there is no API key (local development, end-to-end
 // tests). It codes by keyword so the flow can be tried end to end; its results are
-// marked [FAKE] and stored with analyser "fake", so they are never research data.
+// marked FAKE and stored with analyser "fake", so they are never research data.
 const KEYWORD_CODES: [RegExp, string][] = [
   [/\bvarför\b|\bwhy\b/i, "A3"],
   [/\b(jag|vi) tror\b|\bmisstänker\b|\bi think\b/i, "C5"],
@@ -33,22 +33,29 @@ export function createFakeAnalyser(): Analyser {
         if (!excerpt) {
           return {
             message: message.index,
-            code: null,
-            excerpt: "",
-            justification: "[FAKE] Meddelandet har ingen text att koda.",
+            codes: [],
+            note: "FAKE: Meddelandet har ingen text att koda.",
           };
         }
-        const byKeyword = KEYWORD_CODES.find(([pattern]) =>
+        // Every keyword that matches gives a code, so some prompts get several.
+        const matched = KEYWORD_CODES.filter(([pattern]) =>
           pattern.test(message.text),
-        )?.[1];
-        const code = [byKeyword, FALLBACK_CODES[i % FALLBACK_CODES.length]]
-          .concat([...known])
-          .find((candidate) => candidate && known.has(candidate))!;
+        )
+          .map(([, code]) => code)
+          .filter((code) => known.has(code));
+        const fallback = [
+          FALLBACK_CODES[i % FALLBACK_CODES.length],
+          ...known,
+        ].find((code) => known.has(code))!;
+        const codes = matched.length > 0 ? matched : [fallback];
         return {
           message: message.index,
-          code,
-          excerpt,
-          justification: "[FAKE] Kodat automatiskt utan AI, bara för test.",
+          codes: codes.map((code) => ({
+            code,
+            excerpt,
+            justification: "FAKE: Kodat automatiskt utan AI, bara för test.",
+          })),
+          note: null,
         };
       });
 
@@ -68,7 +75,7 @@ export function createFakeAnalyser(): Analyser {
                 lastMessage: last.index,
                 excerptMessage: first.index,
                 excerpt,
-                justification: "[FAKE] Sekvens tillagd automatiskt för test.",
+                justification: "FAKE: Sekvens tillagd automatiskt för test.",
               },
             ]
           : [];
@@ -77,25 +84,34 @@ export function createFakeAnalyser(): Analyser {
     },
 
     async reflect(_prompt, { candidates, maxObservations }) {
-      const chosen = pickVaried(candidates, maxObservations);
       const output: RawReflection = {
-        observations: chosen.map((candidate) => ({
-          candidate: candidate.id,
-          explanation:
-            "[FAKE] Förklaringen skrivs av AI när en API-nyckel finns.",
-          question: candidate.group.question ?? "",
-        })),
-        generalQuestion: null,
+        observations: pickVaried(candidates, maxObservations).map(
+          (candidate) => ({
+            candidate: candidate.id,
+            intro: `FAKE: ${withoutBrackets(candidate.texts.intro)}`,
+            questions: candidate.texts.questions.map(withoutBrackets),
+          }),
+        ),
       };
       return { output, usage: null };
     },
   };
 }
 
-// Reflection and reinforcement alternate, one per group, so the page shows both.
+// Reflection and reinforcement alternate, one per group and per prompt, so the
+// page shows both.
 function pickVaried(candidates: Candidate[], max: number): Candidate[] {
   const chosen: Candidate[] = [];
-  const groups = new Set<string>();
+  const free = (candidate: Candidate) =>
+    chosen.every(
+      (other) =>
+        other.group.code !== candidate.group.code &&
+        !(
+          other.kind === "prompt" &&
+          candidate.kind === "prompt" &&
+          other.firstMessage === candidate.firstMessage
+        ),
+    );
   const order = ["reflect", "reinforce"];
   for (
     let round = 0;
@@ -104,14 +120,20 @@ function pickVaried(candidates: Candidate[], max: number): Candidate[] {
   ) {
     const kind = order[round % order.length];
     const next =
-      candidates.find(
-        (c) => c.group.kind === kind && !groups.has(c.group.code),
-      ) ?? candidates.find((c) => !groups.has(c.group.code));
+      candidates.find((c) => c.group.kind === kind && free(c)) ??
+      candidates.find(free);
     if (!next) break;
     chosen.push(next);
-    groups.add(next.group.code);
   }
   return chosen;
+}
+
+// The real model fits the bracketed parts to the student; the fake just keeps
+// the first alternative, which is enough to show the layout.
+function withoutBrackets(text: string): string {
+  return text.replace(/\[([^\]]*)\]/g, (_match, inside: string) =>
+    inside.split("/")[0].trim(),
+  );
 }
 
 // Excerpts must appear word for word, so they never span an image placeholder.

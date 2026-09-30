@@ -44,6 +44,13 @@ export function sessionId(participantCode: string, lesson: Lesson): string {
 // been "processing" for longer never reported back, and may be restarted.
 export const ANALYSIS_STALE_AFTER_MS = 6 * 60_000;
 
+// A result this version cannot read must not strand the student on an empty page.
+export function analysisResultMissing(session: Session): boolean {
+  return (
+    session.status === "awaiting_reflection" && !session.reflectionQuestions
+  );
+}
+
 export function analysisInterrupted(session: Session, now: Date): boolean {
   if (session.status !== "processing" || !session.transcriptConfirmedAt) {
     return false;

@@ -20,45 +20,40 @@ function coding() {
 
 const candidates = reflectionCandidates(coding(), framework);
 
+// What the model returns for a candidate: the group's texts without brackets.
+const fit = (candidate: string, questions = 2) => ({
+  candidate,
+  intro: "Här bad du Gemini hitta felet.",
+  questions: Array.from({ length: questions }, (_, i) => `Fråga ${i + 1}?`),
+});
+
 describe("reflectionCandidates", () => {
-  it("offers coded prompts and sequences, each with its group", () => {
+  it("offers every code of a prompt, and sequences, each with its group", () => {
     expect(
-      candidates.map((c) => [c.id, c.code, c.group.code, c.group.kind]),
+      candidates.map((c) => [c.id, c.group.code, c.group.kind, c.priority]),
     ).toEqual([
-      ["p1", "C5", "F2", "reinforce"],
-      ["p3", "P3", "R2", "reflect"],
-      ["p5", "A3", "F6", "reinforce"],
-      ["s1", "S1", "F8", "reinforce"],
+      ["p1-C5", "F2", "reinforce", 1],
+      ["p1-C2", "F1", "reinforce", 2],
+      ["p3-P3", "R2", "reflect", 1],
+      ["p5-A3", "F6", "reinforce", 1],
+      ["s1", "F8", "reinforce", 1],
     ]);
   });
 
   it("never offers NA codes or uncodable prompts", () => {
     const withNa = coding();
-    withNa.prompts[0].code = "NA3";
+    withNa.prompts[0].codes[0].code = "NA3";
     const ids = reflectionCandidates(withNa, framework).map((c) => c.id);
-    expect(ids).not.toContain("p1");
-    expect(ids).not.toContain("p7");
+    expect(ids).toEqual(["p1-C2", "p3-P3", "p5-A3", "s1"]);
   });
 });
 
 describe("validateReflection", () => {
   const choose = (observations: RawReflection["observations"]) =>
-    validateReflection(
-      { observations, generalQuestion: null },
-      candidates,
-      framework,
-      3,
-    );
+    validateReflection({ observations }, candidates, framework, 3);
 
-  it("builds items from the validated coding, not from the model's words", () => {
-    const result = choose([
-      {
-        candidate: "p3",
-        explanation: "Du bad om felet.",
-        question: "Vad trodde du?",
-      },
-      { candidate: "s1", explanation: "Du tog över.", question: "Vad hände?" },
-    ]);
+  it("builds items from the validated coding and the group's texts", () => {
+    const result = choose([fit("p3-P3"), fit("s1")]);
     expect(result).toMatchObject({
       ok: true,
       value: {
@@ -75,7 +70,17 @@ describe("validateReflection", () => {
               lastMessage: 3,
             },
             excerpt: { message: 3, text: "Det fungerar inte, vad är fel?" },
-            question: "Vad trodde du?",
+            intro: "Här bad du Gemini hitta felet.",
+            questions: ["Fråga 1?", "Fråga 2?"],
+            // Shown as the researchers wrote it, and kept with the originals.
+            tip: "I did it because … (R2)",
+            template: {
+              intro: "Here you [did this / did that] (R2).",
+              questions: [
+                "What made you [do it] (R2)?",
+                "Second question (R2)?",
+              ],
+            },
           },
           {
             id: "q2",
@@ -91,93 +96,83 @@ describe("validateReflection", () => {
         ],
       },
     });
-    if (result.ok) {
-      expect(result.value.items[0].template).toBe("[TEST] Question for R2?");
-    }
   });
 
-  it("rejects unknown, repeated or empty choices", () => {
+  it("rejects unknown and repeated choices", () => {
+    expect(choose([fit("p9-P3")])).toEqual({
+      ok: false,
+      problems: ["observation 1: unknown candidate"],
+    });
+    expect(choose([fit("p3-P3"), fit("p3-P3")])).toMatchObject({
+      ok: false,
+      problems: expect.arrayContaining(["p3-P3: chosen twice"]),
+    });
+  });
+
+  it("shows a prompt in one example only, even if it has several codes", () => {
+    expect(choose([fit("p1-C5"), fit("p1-C2")])).toEqual({
+      ok: false,
+      problems: ["p1-C2: its prompt is already chosen"],
+    });
+  });
+
+  it("wants every question of the group, with no brackets left", () => {
+    expect(choose([fit("p3-P3", 1)])).toEqual({
+      ok: false,
+      problems: ["p3-P3: 1 questions, the group has 2"],
+    });
     expect(
-      choose([{ candidate: "p9", explanation: "x", question: "y" }]),
-    ).toEqual({ ok: false, problems: ["observation 1: unknown candidate"] });
+      choose([{ ...fit("p3-P3"), intro: "Här [fungerade något inte]." }]),
+    ).toEqual({ ok: false, problems: ["p3-P3: intro not usable"] });
     expect(
-      choose([
-        { candidate: "p3", explanation: "x", question: "y" },
-        { candidate: "p3", explanation: "x", question: "y" },
-      ]),
-    ).toEqual({ ok: false, problems: ["p3: chosen twice"] });
-    expect(
-      choose([{ candidate: "p3", explanation: " ", question: "y" }]),
-    ).toEqual({ ok: false, problems: ["p3: explanation missing or too long"] });
+      choose([{ ...fit("p3-P3"), questions: ["Vad gjorde [ämnet]?", " "] }]),
+    ).toEqual({ ok: false, problems: ["p3-P3: a question is not usable"] });
   });
 
   it("rejects more observations than configured", () => {
-    const four = ["p1", "p3", "p5", "s1"].map((candidate) => ({
-      candidate,
-      explanation: "x",
-      question: "y",
-    }));
-    expect(choose(four)).toMatchObject({
-      ok: false,
-      problems: ["more than 3 observations"],
-    });
+    expect(
+      choose(["p1-C5", "p3-P3", "p5-A3", "s1"].map((id) => fit(id))),
+    ).toMatchObject({ ok: false, problems: ["more than 3 observations"] });
   });
 
-  it("records a general question as insufficient evidence, not as a failure", () => {
-    const result = validateReflection(
-      { observations: [], generalQuestion: "Vad tänkte du mest själv på?" },
-      candidates,
-      framework,
-      3,
-    );
-    expect(result).toMatchObject({
+  it("records no chosen observations as insufficient evidence, not as a failure", () => {
+    expect(choose([])).toEqual({
       ok: true,
-      value: {
-        outcome: "insufficient_evidence",
-        items: [
-          {
-            group: "R0",
-            groupKind: "general",
-            excerpt: null,
-            question: "Vad tänkte du mest själv på?",
-          },
-        ],
-      },
-    });
-    expect(
-      validateReflection(
-        { observations: [], generalQuestion: null },
-        candidates,
-        framework,
-        3,
-      ),
-    ).toEqual({
-      ok: false,
-      problems: ["no observations and no usable general question"],
+      value: generalReflection(framework),
     });
   });
 });
 
 describe("generalReflection", () => {
-  it("uses the general group's question as written", () => {
-    const reflection = generalReflection(framework);
-    expect(reflection.items[0].question).toBe(framework.generalGroup.question);
+  it("uses the general group's texts exactly as written", () => {
+    expect(generalReflection(framework)).toEqual({
+      outcome: "insufficient_evidence",
+      items: [
+        {
+          id: "q1",
+          group: "R0",
+          groupKind: "general",
+          basedOn: null,
+          excerpt: null,
+          intro: "Intro R0.",
+          questions: ["General question (R0)?"],
+          tip: "I did it because … (R0)",
+          template: {
+            intro: "Intro R0.",
+            questions: ["General question (R0)?"],
+          },
+        },
+      ],
+    });
   });
 });
 
 describe("reflectionSchema", () => {
-  it("limits the number of observations; validation checks the IDs", () => {
+  it("limits the number of observations; validation checks the rest", () => {
     const schema = reflectionSchema(2);
     const pick = (ids: string[]) =>
-      schema.safeParse({
-        observations: ids.map((candidate) => ({
-          candidate,
-          explanation: "x",
-          question: "y",
-        })),
-        generalQuestion: null,
-      }).success;
-    expect(pick(["p1", "s1"])).toBe(true);
-    expect(pick(["p1", "p3", "p5"])).toBe(false);
+      schema.safeParse({ observations: ids.map((id) => fit(id)) }).success;
+    expect(pick(["p1-C5", "s1"])).toBe(true);
+    expect(pick(["p1-C5", "p3-P3", "p5-A3"])).toBe(false);
   });
 });

@@ -14,11 +14,15 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
-import { INTERRUPTED_ANALYSIS } from "@/lib/analysis/errors";
+import { INTERRUPTED_ANALYSIS, UNREADABLE_RESULT } from "@/lib/analysis/errors";
 import type { StoredReflectionQuestions } from "@/lib/analysis/types";
 import { SESSION_COOKIE } from "@/lib/session/session-token";
 import { getSessionByToken } from "@/lib/session/store";
-import { analysisInterrupted, type Session } from "@/lib/session/types";
+import {
+  analysisInterrupted,
+  analysisResultMissing,
+  type Session,
+} from "@/lib/session/types";
 import { sv } from "@/lib/sv";
 
 // Server Actions on this page start the analysis, which keeps running after the
@@ -41,6 +45,9 @@ function viewFor(session: Session, now: Date): View {
   }
   if (session.status === "awaiting_reflection" && session.reflectionQuestions) {
     return { kind: "reflection", questions: session.reflectionQuestions };
+  }
+  if (analysisResultMissing(session)) {
+    return { kind: "analysisFailed", errorCode: UNREADABLE_RESULT };
   }
   if (session.status === "failed") {
     return {

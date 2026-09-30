@@ -17,9 +17,15 @@ export function codingSchema(framework: Framework) {
     prompts: z.array(
       z.object({
         message: z.number(),
-        code: z.enum(codes as [string, ...string[]]).nullable(),
-        excerpt: z.string(),
-        justification: z.string(),
+        // In priority order; empty when the prompt cannot be coded.
+        codes: z.array(
+          z.object({
+            code: z.enum(codes as [string, ...string[]]),
+            excerpt: z.string(),
+            justification: z.string(),
+          }),
+        ),
+        note: z.string().nullable(),
       }),
     ),
     sequences: z.array(
@@ -39,7 +45,7 @@ export type RawCoding = z.infer<ReturnType<typeof codingSchema>>;
 
 // The requirements withhold results whose references don't hold, so every cited
 // message must exist and every excerpt must really be in it. Problems name
-// message numbers only, so they are safe to log.
+// message numbers and codes only, so they are safe to log.
 export function validateCoding(
   raw: RawCoding,
   transcript: Transcript,
@@ -60,19 +66,29 @@ export function validateCoding(
       continue;
     }
     coded.add(entry.message);
-    if (!entry.justification.trim()) {
-      problems.push(`prompt ${entry.message}: no justification`);
+
+    const given = new Set<string>();
+    for (const { code, excerpt, justification } of entry.codes) {
+      const label = `prompt ${entry.message}, ${code}`;
+      if (given.has(code)) problems.push(`${label}: given twice`);
+      given.add(code);
+      if (!quotes(message.text, excerpt)) {
+        problems.push(`${label}: excerpt not in the message`);
+      }
+      if (!justification.trim()) problems.push(`${label}: no justification`);
     }
-    const quoted = quotes(message.text, entry.excerpt);
-    if (entry.code !== null && !quoted) {
-      problems.push(`prompt ${entry.message}: excerpt not in the message`);
+    const note = entry.note?.trim() || null;
+    if (entry.codes.length === 0 && !note) {
+      problems.push(`prompt ${entry.message}: no codes and no reason`);
     }
     prompts.push({
       message: entry.message,
-      code: entry.code,
-      // An uncoded prompt needs no evidence, so a bad excerpt is dropped instead.
-      excerpt: quoted ? entry.excerpt.trim() : "",
-      justification: entry.justification.trim(),
+      codes: entry.codes.map((code) => ({
+        code: code.code,
+        excerpt: code.excerpt.trim(),
+        justification: code.justification.trim(),
+      })),
+      note,
     });
   }
   for (const message of transcript.messages) {
@@ -106,8 +122,9 @@ export function validateCoding(
     } else if (!quotes(excerptMessage.text, entry.excerpt)) {
       problems.push(`${label}: excerpt not in message ${entry.excerptMessage}`);
     }
-    if (!entry.justification.trim())
+    if (!entry.justification.trim()) {
       problems.push(`${label}: no justification`);
+    }
     sequences.push({
       ...entry,
       excerpt: entry.excerpt.trim(),

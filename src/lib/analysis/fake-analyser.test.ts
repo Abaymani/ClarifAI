@@ -25,14 +25,20 @@ describe("the fake analyser", () => {
     const result = await fakeCoding();
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.prompts.map((p) => p.code)).toEqual([
-        "C5",
-        "P3",
-        "A3",
-        null,
-      ]);
+      expect(
+        result.value.prompts.map((p) => p.codes.map((c) => c.code)),
+      ).toEqual([["C5"], ["P3"], ["A3"], []]);
       expect(result.value.sequences).toHaveLength(1);
     }
+  });
+
+  it("gives a prompt several codes when several keywords match", async () => {
+    const transcript = sampleTranscript();
+    transcript.messages[2].text = "Varför fungerar inte sensorn?";
+    const result = await fakeCoding(transcript);
+    expect(
+      result.ok && result.value.prompts[1].codes.map((c) => c.code),
+    ).toEqual(["A3", "P3"]);
   });
 
   it("quotes long messages and messages around images word for word", async () => {
@@ -58,7 +64,12 @@ describe("the fake analyser", () => {
       const groups = result.value.items.map((item) => item.group);
       expect(groups).toHaveLength(3);
       expect(new Set(groups).size).toBe(3);
-      expect(result.value.items[0].groupKind).toBe("reflect");
+      expect(result.value.items[0]).toMatchObject({
+        groupKind: "reflect",
+        // The brackets are gone: the fake keeps the first alternative.
+        intro: "FAKE: Here you did this (R2).",
+        questions: ["What made you do it (R2)?", "Second question (R2)?"],
+      });
     }
   });
 });

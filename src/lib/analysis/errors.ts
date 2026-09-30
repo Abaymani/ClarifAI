@@ -16,6 +16,8 @@ export type AnalysisErrorCode =
 // Shown to the student while an analysis that was started never reported back,
 // for example because the function running it hit its time limit.
 export const INTERRUPTED_ANALYSIS = "S2-INTERRUPTED";
+// Shown when a finished analysis is stored in a shape this version cannot read.
+export const UNREADABLE_RESULT = "S2-RESULT";
 
 export class AnalysisError extends Error {
   readonly code: AnalysisErrorCode;

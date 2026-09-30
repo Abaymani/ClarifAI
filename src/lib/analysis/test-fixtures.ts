@@ -9,10 +9,12 @@ import {
 
 type GroupFixture = {
   code: string;
-  kind: "reflect" | "reinforce" | "general" | "none";
+  kind: "reflect" | "reinforce" | "general" | "no_transcript" | "none";
   name: string;
   behaviourCodes: string[];
-  question: string | null;
+  intro: string | null;
+  questions: string[];
+  tip: string | null;
 };
 
 // A small framework of their own keeps the tests independent of `framework/`,
@@ -24,13 +26,24 @@ export function testFrameworkFiles() {
     id: string,
     kind: GroupFixture["kind"],
     behaviourCodes: string[],
-  ): GroupFixture => ({
-    code: id,
-    kind,
-    name: `Group ${id}`,
-    behaviourCodes,
-    question: kind === "none" ? null : `[TEST] Question for ${id}?`,
-  });
+  ): GroupFixture => {
+    const base = { code: id, kind, name: `Group ${id}`, behaviourCodes };
+    if (kind === "none")
+      return { ...base, intro: null, questions: [], tip: null };
+    // Texts tied to behaviour have bracketed parts to fit; the others are shown
+    // as written.
+    const fitted = kind === "reflect" || kind === "reinforce";
+    return {
+      ...base,
+      intro: fitted
+        ? `Here you [did this / did that] (${id}).`
+        : `Intro ${id}.`,
+      questions: fitted
+        ? [`What made you [do it] (${id})?`, `Second question (${id})?`]
+        : [`General question (${id})?`],
+      tip: `I did it because … (${id})`,
+    };
+  };
 
   return {
     promptCoding: {
@@ -63,6 +76,7 @@ export function testFrameworkFiles() {
         group("R2", "reflect", ["P3"]),
         group("R3", "reflect", ["P2", "P8"]),
         group("R0", "general", []),
+        group("R01", "no_transcript", []),
         group("RN", "none", ["NA3"]),
         group("F1", "reinforce", ["C2"]),
         group("F2", "reinforce", ["C5"]),
@@ -123,29 +137,45 @@ export function sampleCoding(): RawCoding {
     prompts: [
       {
         message: 1,
-        code: "C5",
-        excerpt: "Jag tror att Trig ska till pin 9, stämmer det?",
-        justification:
-          "Eleven föreslår en egen koppling och ber om bekräftelse.",
+        // Two codes, the more important one first.
+        codes: [
+          {
+            code: "C5",
+            excerpt: "Jag tror att Trig ska till pin 9, stämmer det?",
+            justification:
+              "Eleven föreslår en egen koppling och ber om bekräftelse.",
+          },
+          {
+            code: "C2",
+            excerpt: "Vi vill bygga ett avståndslarm.",
+            justification: "Eleven kommer med en egen projektidé.",
+          },
+        ],
+        note: null,
       },
       {
         message: 3,
-        code: "P3",
-        excerpt: "Det fungerar inte, vad är fel?",
-        justification: "Eleven ber Gemini hitta felet utan egen gissning.",
+        codes: [
+          {
+            code: "P3",
+            excerpt: "Det fungerar inte, vad är fel?",
+            justification: "Eleven ber Gemini hitta felet utan egen gissning.",
+          },
+        ],
+        note: null,
       },
       {
         message: 5,
-        code: "A3",
-        excerpt: "Varför behöver sensorn gemensam jord?",
-        justification: "Eleven frågar efter en motivering.",
+        codes: [
+          {
+            code: "A3",
+            excerpt: "Varför behöver sensorn gemensam jord?",
+            justification: "Eleven frågar efter en motivering.",
+          },
+        ],
+        note: null,
       },
-      {
-        message: 7,
-        code: null,
-        excerpt: "",
-        justification: "Meddelandet är bara en bild.",
-      },
+      { message: 7, codes: [], note: "Meddelandet är bara en bild." },
     ],
     sequences: [
       {

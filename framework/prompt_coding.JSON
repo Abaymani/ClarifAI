@@ -1,7 +1,7 @@
 {
   "status": "TEST",
-  "notice": "TEST FRAMEWORK. A placeholder for building and testing the analysis, copied from the working version of the Google Sheet on 2026-09-29. It is not the study's framework and must be replaced before real student transcripts are analysed.",
-  "version": "TEST-2026-09-29",
+  "notice": "TEST status. The codes, patterns and groups were copied from the working version of the Google Sheet on 2026-09-29. The researchers decide when the framework is final; while the status is TEST, production refuses to analyse with it.",
+  "version": "TEST-2026-09-30",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
