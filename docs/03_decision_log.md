@@ -303,3 +303,9 @@
 - **Decision:** They are removed. The student's statement that there is no transcript is taken at face value, so nothing from an earlier attempt in that session is kept: not the link, not its error code.
 - **Risks/consequences:** A record cannot tell a student who used no Gemini from one who gave up on a link that failed. If retrieval breaks for many students at once, their links are not there to fall back on.
 - **Decided by:** Armin Baymani (human), 2026-09-30, when a review of DL-045 raised it.
+
+### DL-049: Unsent reflection answers are kept in the browser tab
+- **Options:** Leave the answers only in the page, where a reload empties them; have the browser warn before the page is left; also keep a copy in the tab and fill it in again; save drafts on the server.
+- **Decision:** Both the warning and the copy. While an answer has text, the browser asks before a reload, a closed tab or a move to another site. Answers and Ja/Delvis/Nej choices are also written to the tab's `sessionStorage` on every change, and filled in again when the same questions are shown in that tab. The copy is removed once the reflection is handed in, and disappears with the tab. Drafts are not saved on the server, because that would store text the student never handed in.
+- **Risks/consequences:** The copy is what the student typed, before redaction. It stays in that tab until hand-in or until the tab is closed, also after logging out, but it is only filled in again for the same participant, lesson and set of questions. A closed tab, a crash or another computer still loses unsent text. The browser words the warning itself; handing in and logging out do not trigger it.
+- **Decided by:** Armin Baymani (human), 2026-09-30; design by Claude (agent).

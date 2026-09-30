@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { cn } from "cn";
 
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/app/session/actions";
 import { ChatContext } from "@/app/session/chat-context";
 import { NoGeminiActions } from "@/app/session/no-gemini-actions";
+import { useReflectionDrafts } from "@/app/session/use-reflection-drafts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -19,10 +20,7 @@ import type {
   StoredReflectionQuestions,
 } from "@/lib/analysis/types";
 import type { TranscriptMessage } from "@/lib/scraping/transcript";
-import {
-  MAX_REFLECTION_ANSWER_LENGTH,
-  type AnalysisAgreement,
-} from "@/lib/session/types";
+import { MAX_REFLECTION_ANSWER_LENGTH } from "@/lib/session/types";
 import { sv } from "@/lib/sv";
 
 const TONE: Record<ReflectionItem["groupKind"], string> = {
@@ -34,37 +32,30 @@ const TONE: Record<ReflectionItem["groupKind"], string> = {
   no_transcript: "",
 };
 
-type Draft = { answer: string; agreement: AnalysisAgreement | null };
-
 const EMPTY: ReflectionFormState = { error: null, fields: [] };
 
 export function ReflectionQuestions({
   questions,
   messages,
+  draftKey,
 }: {
   questions: StoredReflectionQuestions;
   messages: TranscriptMessage[];
+  draftKey: string;
 }) {
   const [state, formAction, pending] = useActionState(
     submitReflectionAction,
     EMPTY,
   );
-  const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
-    Object.fromEntries(
-      questions.items.map((item) => [item.id, { answer: "", agreement: null }]),
-    ),
+  const { drafts, updateDraft } = useReflectionDrafts(
+    draftKey,
+    questions.items,
+    pending,
   );
   const notices = [
     questions.frameworkStatus === "TEST" ? sv.session.reflectionTest : null,
     questions.analyser === "fake" ? sv.session.reflectionFake : null,
   ].filter(Boolean);
-
-  const updateDraft = (id: string, change: Partial<Draft>) => {
-    setDrafts((current) => ({
-      ...current,
-      [id]: { ...current[id], ...change },
-    }));
-  };
 
   return (
     <div className="flex flex-col gap-5">

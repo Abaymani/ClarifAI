@@ -146,6 +146,8 @@ For every concrete analysed example, the student chooses **Ja**, **Delvis**, or 
 
 Students can state on the transcript screen that they did not use Gemini. Lessons 1 and 4 then record `no_gemini` and show a reversible confirmation before completion. Lessons 2 and 3 skip scraping and analysis, show R01, and complete after its answer is saved. Before completion, both paths let the student return to transcript submission; doing so clears the no-Gemini choice and any generated R01 questions. Reflection answers are redacted before storage and saved atomically with their agreement choices, then followed by a dedicated completion page.
 
+Until the reflection is handed in, what the student has written is kept in that browser tab (`sessionStorage`), so a reload brings it back, and the browser asks before a page with unsent text is left (DL-049). The copy never leaves the computer; it is removed at hand-in and disappears when the tab closes.
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 
