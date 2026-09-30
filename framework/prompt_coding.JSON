@@ -1,0 +1,455 @@
+{
+  "status": "TEST",
+  "notice": "TEST FRAMEWORK. A placeholder for building and testing the analysis, copied from the working version of the Google Sheet on 2026-09-29. It is not the study's framework and must be replaced before real student transcripts are analysed.",
+  "version": "TEST-2026-09-29",
+  "source": {
+    "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
+    "tabs": [
+      "ICAP",
+      "Prompt-behaviour",
+      "Cody mode"
+    ],
+    "retrieved": "2026-09-29"
+  },
+  "icapCategories": [
+    {
+      "code": "P",
+      "name": "Passive",
+      "definition": "Eleven inställning är en mottagare av information från AI, minimala egna bidrag, AIs bidrag tas emot utan reflektion.",
+      "knowledgeChange": "Förvarande av fakta, isolerad förståelse",
+      "expectedOutcome": "Eleven får grundlig försåelse. Kan applicera kunskapen i identiska sammanhang."
+    },
+    {
+      "code": "A",
+      "name": "Active",
+      "definition": "Eleven visar fokuserad engagemang på specifika aspekter av information genom att välja, repetera, ändra parameter, rapportera observationer, men gör inte enga slutledningar.",
+      "knowledgeChange": "Integrerad förståelse, eleven fyller kunskapsgapp i befinitlig förståelse. Eleven assimilerar kunskapen främst.",
+      "expectedOutcome": "Eleven får en mer integrerad förståelse. Kan applicera kunskapen i liknande sammanhang."
+    },
+    {
+      "code": "C",
+      "name": "Constructive",
+      "definition": "Eleven externaliserar nytt innehåll utöver det som AI bidrar med. Egna hypoteser, försök, förutspår, förklarar med egna ord, planerar, jämför.",
+      "knowledgeChange": "Eleven gör slutledningar som går längre än den givna informationen. Eleven ackomoderar sin teori givet ny information.",
+      "expectedOutcome": "Eleven får en djupare och transfererbar förståelse."
+    },
+    {
+      "code": "I",
+      "name": "Interactive",
+      "definition": "En längre sekvens där eleven är konstruktiv i varje tur och explicit upptar AIs bidrag (testar, utvidgar, utmanar)",
+      "knowledgeChange": "Eleven skapar nya slutledningar i samråd (co-inference).",
+      "expectedOutcome": "Eleven får djup förståelse, högt sannolikhet för nytänkande."
+    }
+  ],
+  "codes": [
+    {
+      "code": "NA1",
+      "name": "Avlastning av minnet",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Påminn mig om vad vi tidigare kom fram till om sensorn.",
+        "Påminn oss om vad vi kom fram till förra gången om hur ultraljudssensorns Echo-pin skulle kopplas.",
+        "Vilka fel hade vi redan uteslutit när LED-lampan inte tändes?",
+        "Vad var det vi bestämde att nästa test med fotoresistorn skulle vara?"
+      ],
+      "notes": "Använder AI som minne, behöver nödvändigtvis inte ersätta resonemang utan enbart minska kognitiv belastning"
+    },
+    {
+      "code": "NA2",
+      "name": "Avlastning av sammanfattning",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Sammanfatta vad vi hittills har testat",
+        "Sammanfatta vilka tester vi hittills har gjort på ultraljudssensorn och vad resultaten blev.",
+        "Kan du sammanfatta våra observationer från när vi testade fotoresistorn i mörker och i ljus?",
+        "Sammanfatta vad vi hittills har bestämt om projektets sensorer, utgångar och kopplingar."
+      ],
+      "notes": "Hjälper eleven sammanfatta utan att ge ledning, kan göra det lättare för eleven att planera nästa steg"
+    },
+    {
+      "code": "NA3",
+      "name": "Kodgenerering",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Skriv koden som gör..."
+      ],
+      "notes": "Inte relevant för studien, eleverna har inte förkunskaperna för att programmera i språket själva samt det är inte en del av lärandemålen för uppgiften"
+    },
+    {
+      "code": "NA4",
+      "name": "Matematisk avlastning",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Om jag använder 5 V och 220 Ω, hur stor blir strömmen?",
+        "Om LED-lampan matas med 5 V genom ett motstånd på 220 Ω, hur stor blir strömmen ungefär?",
+        "Vi mätte 4,8 V över ett motstånd på 330 Ω. Hur många milliampere motsvarar det?",
+        "Om ultraljudssensorn registrerar en tid på 1 200 mikrosekunder, vilket avstånd motsvarar det?"
+      ],
+      "notes": "Att räkna själv är inte en del av lärandemålen. Eleven visar ändå med frågan att hen förstår att ett samband existerar."
+    },
+    {
+      "code": "NA5",
+      "name": "Översättning",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Vad betyder det här på svenska?",
+        "Vad betyder VCC, GND och SIG på svenska i instruktionen till sensorn?",
+        "Översätt “connect the trigger pin to a digital output” till svenska.",
+        "Vad betyder “operating voltage” och “detection range” i databladet för sensorn?"
+      ],
+      "notes": "Not a part of the ILOs, outscourcear inget till AIn utan begär enbart en översättning"
+    },
+    {
+      "code": "NA6",
+      "name": "Syntaxgenerering",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Hur skriver man en for-loop i C?"
+      ],
+      "notes": "Not a part of the ILOs, även om det tyder på en önskan av kunskap istället för blind generering"
+    },
+    {
+      "code": "NA7",
+      "name": "Tolkning av felmeddelande av compiler",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Vad betyder det här compiler-felet?",
+        "Arduino IDE visar “avrdude: stk500_recv(): programmer is not responding”. Vad betyder det felmeddelandet?",
+        "Vad betyder compiler-felet “expected ; before } token”?",
+        "Vi får meddelandet “was not declared in this scope”. Vad säger det om problemet?"
+      ],
+      "notes": "Not a part of the ILOs, faktamässig fråga."
+    },
+    {
+      "code": "P1",
+      "name": "Beslutsdelegation",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Ska vi använda den här eller den andra komponenten för att tända lampan?",
+        "Ska vi använda en PIR-sensor eller en ultraljudssensor för att tända lampan? Bestäm åt oss.",
+        "Ska buzzern kopplas till pin 8 eller pin 9? Säg vilken vi ska välja.",
+        "Bestäm om vårt projekt ska reagera med en LED-lampa eller en buzzer när sensorn aktiveras."
+      ],
+      "notes": "OBS: Kan vara active, om AI:n ger ett svar där båda komponenterna fungerar och eleven själv tar beslutet om vilken de ska använda."
+    },
+    {
+      "code": "P2",
+      "name": "Faktafråga",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Vilken resistor behöver jag för denna LEDen?",
+        "Vilket motstånd behöver vi till den blå LED-lampan i Elegoo-kitet?",
+        "Vilket av benen på LED-lampan är plus?",
+        "Vilken anslutning på Elegoo Uno R3 ger 5 V?"
+      ],
+      "notes": "Det kan finnas fall där detta är en aktiv handling, men sammanhanget spelar roll."
+    },
+    {
+      "code": "P3",
+      "name": "Felsökningsdelegation",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Det fungerar inte, vad är fel?",
+        "Vår ultraljudssensor visar inga värden. Vad är fel?",
+        "LED-lampan tänds inte fast allt är inkopplat. Hitta felet åt oss.",
+        "Buzzern är helt tyst när vi startar projektet. Kan du diagnostisera problemet?"
+      ],
+      "notes": "Eleven bidrar inte till undersökningen av varför något gått snett, utan ber AI att ta fram potentiella fel som eleven sen kan verifiera/dementera"
+    },
+    {
+      "code": "P4",
+      "name": "Idédelegation",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Jag har de här komponenterna, säg något som jag kan bygga med dem.",
+        "Vi har en fotoresistor, en LED-lampa och en buzzer. Ge oss en projektidé.",
+        "Vad kan vi bygga med ultraljudssensorn och servomotorn?",
+        "Hitta på något roligt som vi kan göra med komponenterna i Elegoo Uno R3-kitet."
+      ],
+      "notes": "Eleven funderar inte själv på vad den skulle kunna göra, utan ber AI ta fram ett projekt utifrån de tillgängliga komponenterna. Delegering av kreativitet."
+    },
+    {
+      "code": "P5",
+      "name": "Orsaksdelegation",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Varför blinkar LED:en så konstigt?",
+        "Varför blinkar LED-lampan fast den ska lysa konstant?",
+        "Varför hoppar värdena från ultraljudssensorn hela tiden?",
+        "Varför låter buzzern konstigt när vi flyttar handen framför sensorn?"
+      ],
+      "notes": "Eleven outsourcar tänkandet istället för att själv ta fram en hypotes först"
+    },
+    {
+      "code": "P6",
+      "name": "Problemorienterad felsökning",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Den här komponenten funkar inte, vad ska jag ändra för att den ska fungera?",
+        "Fotoresistorn fungerar inte. Vad ska vi ändra för att den ska fungera?",
+        "LED-lampan är tänd hela tiden. Säg exakt vad vi ska koppla om.",
+        "Ultraljudssensorn visar bara noll. Vad behöver vi göra om?"
+      ],
+      "notes": "Kännetecken på lösningsfokus istället för lärandefokus, vill ha lösning på problemet"
+    },
+    {
+      "code": "P7",
+      "name": "Projektdelegation",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Jag har de här komponenterna, säg vad jag ska bygga och berätta hur jag gör det",
+        "Vi har en ultraljudssensor, en buzzer och några LED-lampor. Bestäm vad vi ska bygga och berätta exakt hur.",
+        "Välj ett helt projekt åt oss med Elegoo Uno R3 och ge oss alla steg från början till slut.",
+        "Gör en fullständig plan åt oss med projektidé, komponenter, kopplingar och tester."
+      ],
+      "notes": "Bristande kreativt initiativtagande, delegerar idéframtagningen till AI och får ett recept på hur eleven ska skapa den idén."
+    },
+    {
+      "code": "P8",
+      "name": "Steg-för-steg förfrågan",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Berätta hur jag ska göra, ett steg i taget",
+        "Berätta hur vi ska koppla in ultraljudssensorn, ett steg i taget.",
+        "Ge oss den exakta ordningen för hur vi ska bygga en lampa som reagerar på mörker.",
+        "Guida oss steg för steg från en tom kopplingsplatta till ett fungerande avståndslarm."
+      ],
+      "notes": "Begäran av ett recept som eleven sen kan kopiera, kännetecken på bristande engagemangsnivå."
+    },
+    {
+      "code": "P9",
+      "name": "Upprepad lösningsbegäran",
+      "level": "P",
+      "categorisation": "CO, Passive",
+      "examplePrompts": [
+        "Det fungerade inte. Ge mig något nytt att testa.",
+        "Vi gjorde som du sa men LED-lampan fungerar fortfarande inte. Ge oss något nytt att testa.",
+        "Vi bytte plats på kablarna enligt ditt förslag men sensorn visar fortfarande noll. Vad ska vi prova nu?",
+        "Det förra förslaget fungerade inte heller. Säg nästa sak vi ska ändra."
+      ],
+      "notes": "Eleven engagerar sig inte i att ta fram en hypotes på vad som kan vara problemet, utan delegerar det felsökande inslaget till AI och sedan producerar det AI säger."
+    },
+    {
+      "code": "A1",
+      "name": "Ber AI förklara igen",
+      "level": "A",
+      "categorisation": "Positive, active",
+      "examplePrompts": [
+        "Jag förstod inte riktigt det där, kan du förklara igen på ett annat sätt?",
+        "Jag förstod inte förklaringen om spänningsdelaren. Kan du förklara den på ett enklare sätt?",
+        "Jag förstod inte hur Trigger och Echo fungerar på ultraljudssensorn. Kan du förklara igen?",
+        "Kan du förklara varför LED-lampan behöver ett motstånd med hjälp av en liknelse?"
+      ],
+      "notes": "Visar tecken på sökande efter djupare förståelse, men bidrar inte själv med något"
+    },
+    {
+      "code": "A2",
+      "name": "Beslutsdelegation",
+      "level": "A",
+      "categorisation": "Positive, active",
+      "examplePrompts": [
+        "Ska vi använda den här eller den andra komponenten för att tända lampan? --> Båda funkar. --> Då väljer jag den första.",
+        "Du säger att både PIR-sensorn och ultraljudssensorn fungerar. Då väljer vi ultraljudssensorn.",
+        "Av de två kopplingarna du beskrev väljer vi den första.",
+        "Du säger att både pin 7 och pin 8 fungerar för buzzern. Då använder vi pin 7."
+      ],
+      "notes": "Eleven engagerar sig i svaren som AI ger och tar själv ett beslut om vilken av alternativen som den vill ta."
+    },
+    {
+      "code": "A3",
+      "name": "Motiveringskrävande",
+      "level": "A",
+      "categorisation": "Positive, active",
+      "examplePrompts": [
+        "Du säger att båda kopplingarna fungerar, men varför spelar då motståndets placering ingen roll?",
+        "Du säger att motståndet kan placeras före eller efter LED-lampan. Varför fungerar båda placeringarna?",
+        "Varför måste sensorn och Elegoo Uno-kortet ha gemensam jord?",
+        "Du säger att ultraljudssensorns värden kan variera mellan mätningarna. Varför händer det?"
+      ],
+      "notes": "Eleven engagerar sig i AI svaren och begär ytterligare information för att förstå fullständigt."
+    },
+    {
+      "code": "A4",
+      "name": "Upprepning av AI-given information",
+      "level": "A",
+      "categorisation": "Positive, active",
+      "examplePrompts": [
+        "Så du menar att en resistor behövs för att inte ge LEDen för mycket ström?",
+        "Så du menar att motståndet skyddar LED-lampan genom att begränsa strömmen?",
+        "Om jag förstår dig rätt skickar Trigger-pinnen ut pulsen och Echo-pinnen tar emot svaret?",
+        "Så problemet kan alltså bero på att sensorn och Uno-kortet inte använder samma jord?"
+      ],
+      "notes": "Eleven har tagit in information som AI gett och kan reproducera den, den bidrar inte med något eget men återger information."
+    },
+    {
+      "code": "A5",
+      "name": "Val bland givna alternativ",
+      "level": "A",
+      "categorisation": "Positive, active",
+      "examplePrompts": [
+        "Av dina presenterade alternativ så väljer jag nummer tre.",
+        "Av de tre testerna du föreslog börjar vi med test nummer två.",
+        "Vi väljer alternativ tre av kopplingarna du beskrev.",
+        "Av LDR-, PIR- och ultraljudssensorn som du föreslog väljer vi PIR-sensorn."
+      ],
+      "notes": "AI skapar uppsättning av förslag för vägen fram, där eleven får välja bland alternativen. Det kan också vara att AI skapar \"förhör\"-uppgift som eleven får svara på. I dessa fall är eleven inte engagerad konstruktivt utan endast aktivt."
+    },
+    {
+      "code": "C1",
+      "name": "AI-stöttad planering",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag tänker att vi börjar med att få sensorn att fungera, sedan buzzern och koppla samman dem. Skulle du säga att det är en rimlig ordning?",
+        "Vi tänker först testa ultraljudssensorn ensam, sedan buzzern och sist koppla ihop dem. Är det en rimlig ordning?",
+        "Vår plan är att först kontrollera strömförsörjningen, sedan sensorvärdena och därefter LED-lampan. Saknas något viktigt steg?",
+        "Vi vill börja med ett enkelt avståndslarm och lägga till servomotorn först när det fungerar. Hur kan vi förbättra den planen?"
+      ],
+      "notes": "I detta fall är sammanhanget avgörande. Om eleven i stora drag självständigt eller helt på egen hand skapar merparten av planeringen är det konstruktivt engagemant. Om planen uteslutande skapas av AI, med eventuella val bland givna alternativ är detta istället aktiv engagemang."
+    },
+    {
+      "code": "C2",
+      "name": "Eget försök först",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag testade att koppla knappen mellan pin 2 och GND, är detta korrekt?",
+        "Vi testade själva att koppla knappen mellan pin 2 och GND. Är det en korrekt koppling?",
+        "Jag flyttade motståndet från före till efter LED-lampan och den lyser fortfarande. Är det resultatet rimligt?",
+        "Vi provade att testa buzzern separat från sensorn och då fungerade den. Har vi undersökt problemet på ett bra sätt?"
+      ],
+      "notes": "Eleven har försökt sätta in sig i problemet och skapat en hypotes utan hjälp från AI."
+    },
+    {
+      "code": "C3",
+      "name": "Förklaring och verifikation",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag tror att denna sensorn fungerar genom att den mäter av hur långt bort min hand är och därefter ger en siffra som motsvarar hur långt bort min hand är. Har jag förstått rätt?",
+        "Jag tror att ultraljudssensorn skickar ut en ljudpuls och mäter hur lång tid det tar innan ekot kommer tillbaka. Har jag förstått rätt?",
+        "Som jag förstår det ändrar fotoresistorn sitt motstånd beroende på ljuset, vilket gör att spänningen som Uno-kortet läser ändras. Stämmer det?",
+        "Jag tror att LED-lampan behöver ett motstånd eftersom för hög ström annars kan skada den. Är min förklaring korrekt?"
+      ],
+      "notes": "Teach-back-metoden"
+    },
+    {
+      "code": "C4",
+      "name": "Hypotesdriven orsakssökande",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Min LED blinkar konstigt, jag misstänker att det har att göra med kopplingarna här men är inte riktigt säker var. Vad tror du är anledningen till att LEDen blinkar konstigt?",
+        "LED-lampan blinkar konstigt och jag misstänker att problemet finns någonstans i sensorkopplingen. Vilka orsaker skulle passa med det?",
+        "Värdet från fotoresistorn ändras inte. Jag tror att något är fel kring spänningsdelaren men vet inte exakt vad. Vad bör vi undersöka?",
+        "Buzzern låter hela tiden och vi misstänker att signalen från ultraljudssensorn inte tolkas som vi tänkt. Vilka möjliga orsaker finns?"
+      ],
+      "notes": "Eleven kommer med sin egen hypotes och har därmed aktivt engagerat sig i problemet. Utöver att bara konstatera att något är fel så har eleven konstruerat en potentiell orsak."
+    },
+    {
+      "code": "C5",
+      "name": "Hypotespresentation",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag tror att min LED inte lyser för att jag inte har kopplat till jord och därmed inte har en sluten krets, skulle det kunna förklara mitt problem?",
+        "Jag tror att LED-lampan inte lyser eftersom vi har glömt jordanslutningen och därför inte har en sluten krets. Kan det förklara problemet?",
+        "Vi tror att ultraljudssensorn visar noll eftersom Trigger och Echo har bytt plats. Är det en rimlig förklaring?",
+        "Jag tror att buzzern låter hela tiden eftersom sensorn hela tiden registrerar ett avstånd under vår valda gräns. Skulle det kunna vara orsaken?"
+      ],
+      "notes": "Eleven skapar en egen hypotes och ber om validering från AI."
+    },
+    {
+      "code": "C6",
+      "name": "Koppling till tidigare kunskap",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Det verkar hänga ihop med Ohms lag. Om resistansen ökar borde väl strömmen minska?",
+        "Det här verkar hänga ihop med Ohms lag. Om vi ökar motståndet borde väl strömmen genom LED-lampan minska?",
+        "Vi lärde oss att parallellkopplade grenar har samma spänning. Betyder det att båda LED-lamporna får ungefär 5 V här?",
+        "När vi använde potentiometern ändrades den avlästa spänningen. Är det samma princip som gör att fotoresistorn ger olika värden?"
+      ],
+      "notes": "Genom att knyta an till tidigare kunskap uppvisar eleven att den aktivt engagerar sig i det nuvarande problemet till en hög grad, för att kunna skapa kopplingar till tidigare kunskap."
+    },
+    {
+      "code": "C7",
+      "name": "Kritisk granskning av AI",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag tror inte det där stämmer. Om LED:erna är parallellkopplade borde strämmen delas mellan grenarna.",
+        "Jag tror inte att ditt förslag stämmer, eftersom LED-lampans båda ben då verkar hamna på samma sida av kopplingsplattan. Kan du kontrollera kopplingen igen?",
+        "Du säger att vi inte behöver gemensam jord, men då saknas väl en gemensam referens för signalen från sensorn?",
+        "Jag tror inte att PIR-sensorn kan mäta avstånd som du skrev. Den upptäcker väl bara förändringar i infraröd strålning?"
+      ],
+      "notes": "Uppvisar eget tänkande utifrån det som AI producerar, inte blint lyssnande utan tar in informationen och kan använda sin tidigare kunskap för att hävda att AI producerat felaktigt."
+    },
+    {
+      "code": "C8",
+      "name": "Metakognitiv monitorering",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag förstår hur kretsen kopplas men inte varför motståndets placering inte spelar nån roll.",
+        "Jag förstår hur kretsen ska kopplas men inte varför motståndets placering före eller efter LED-lampan inte spelar någon roll.",
+        "Jag förstår att ultraljudssensorn mäter tiden för ett eko, men inte hur tiden blir ett avstånd. Kan du hjälpa mig med just den delen?",
+        "Jag förstår varför fotoresistorns värde ändras i ljus, men inte varför riktningen på förändringen beror på var den sitter i spänningsdelaren."
+      ],
+      "notes": "Eleven har tillräckligt stor metakognitiv självinsikt för att förså egen brist. Eleven kan alltså pin-point:a en specifik aspekt som hen inte förstår."
+    },
+    {
+      "code": "C9",
+      "name": "Överföring, analogi eller jämförelse",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Gör potentiometern ungefär samma sak som en fotoresistor?",
+        "Fungerar en fotoresistor ungefär som potentiometern, fast ljuset ändrar motståndet i stället för att vi vrider på den?",
+        "Är ultraljudssensorns mätning ungefär som att mäta tiden tills ett eko kommer tillbaka i ett rum?",
+        "Kan man jämföra knappen och PIR-sensorn genom att båda ger Uno-kortet en signal om att något har hänt?"
+      ],
+      "notes": "Kännetecknar engagemang genom att dra paralleller eller andra anknytningar, skapar egna kopplingar för att förstå problem/ta in kunskap"
+    },
+    {
+      "code": "C10",
+      "name": "Strategisk hjälpsökning",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Ge mig inte lösningen, men kan du ge mig en ledtråd om vilken del jag ska felsöka?",
+        "Ge oss inte lösningen, men ge en ledtråd om vilken del av sensorkopplingen vi bör undersöka först.",
+        "Kan du ställa en fråga som hjälper oss lista ut varför LED-lampan inte tänds, utan att säga felet direkt?",
+        "Vi vill felsöka själva. Vilken mätning skulle ge oss mest information om huruvida felet ligger i sensorn eller buzzern?"
+      ],
+      "notes": "Stora kännetecken på eftersökan efter lärande, vill inte ha lösningen men vill ha the scaffolding av AI:n."
+    },
+    {
+      "code": "C11",
+      "name": "Verifiering av projektidé",
+      "level": "C",
+      "categorisation": "Positive, constructive",
+      "examplePrompts": [
+        "Jag vill bygga ett system där en sensor känner av hur långt bort min hand är och anpassar ljudet i den passiva buzzers så det blir högre och längre beroende på hur långt bort min hand är, liknande ett instrument. Är det möjligt med de här komponenterna?",
+        "Vi vill bygga ett instrument där avståndet till ultraljudssensorn styr hur buzzern låter. Är idén möjlig med komponenterna i Elegoo Uno R3-kitet?",
+        "Vi vill bygga en nattlampa som bara tänds när det är mörkt och någon rör sig framför den. Går det att kombinera fotoresistorn och PIR-sensorn på det sättet?",
+        "Vi vill att en servomotor ska öppna en liten lucka när ultraljudssensorn känner att en hand är nära. Är det ett rimligt projekt för de komponenter vi har?"
+      ]
+    }
+  ]
+}

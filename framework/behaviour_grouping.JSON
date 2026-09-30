@@ -1,0 +1,206 @@
+{
+  "status": "TEST",
+  "notice": "TEST FRAMEWORK. A placeholder for building and testing the analysis, copied from the working version of the Google Sheet on 2026-09-29. It is not the study's framework and must be replaced before real student transcripts are analysed. The questions are placeholders written by Claude (agent) for testing, one per group, and each starts with [TEST].",
+  "version": "TEST-2026-09-29",
+  "source": {
+    "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
+    "tabs": [
+      "behaviour_grouping"
+    ],
+    "retrieved": "2026-09-29"
+  },
+  "groups": [
+    {
+      "code": "R1",
+      "kind": "reflect",
+      "name": "Vem bestämde?",
+      "behaviourCodes": [
+        "P1",
+        "P4",
+        "P7",
+        "S3"
+      ],
+      "description": "Gemini made a choice for the student: a component, the project idea, or everything from idea to fix (S3)",
+      "question": "[TEST] Här fattade Gemini beslutet åt dig. Hur hade du själv resonerat om du hade fått bestämma, och vad hade du behövt veta för att kunna göra det?"
+    },
+    {
+      "code": "R2",
+      "kind": "reflect",
+      "name": "Ingen egen hypotes",
+      "behaviourCodes": [
+        "P3",
+        "P5",
+        "P6",
+        "P9"
+      ],
+      "description": "Something didn't work, and the student asked for the cause or a fix without offering a guess",
+      "question": "[TEST] När något inte fungerade frågade du Gemini vad felet var. Vad trodde du själv att felet kunde vara, och hur hade du kunnat testa det?"
+    },
+    {
+      "code": "R3",
+      "kind": "reflect",
+      "name": "Förstå det du fick",
+      "behaviourCodes": [
+        "P2",
+        "P8",
+        "S5",
+        "S6"
+      ],
+      "description": "The student got answers, steps or explanations and moved on without working through them",
+      "question": "[TEST] Du fick ett svar från Gemini och gick sedan vidare. Hur skulle du förklara svaret med egna ord?"
+    },
+    {
+      "code": "R4",
+      "kind": "reflect",
+      "name": "När arbetssättet ändrades",
+      "behaviourCodes": [
+        "S2"
+      ],
+      "description": "The student drifted from own ideas to asking for solutions. Reflect on what caused it",
+      "question": "[TEST] I början kom du med egna idéer, men senare bad du mest om lösningar. Vad hände som fick dig att ändra arbetssätt?"
+    },
+    {
+      "code": "R5",
+      "kind": "reflect",
+      "name": "Kolla innan du bygger vidare",
+      "behaviourCodes": [
+        "S4"
+      ],
+      "description": "The student followed a suggestion that later caused problems",
+      "question": "[TEST] Du följde ett förslag från Gemini som senare ställde till problem. Hur hade du kunnat kontrollera förslaget innan du byggde vidare?"
+    },
+    {
+      "code": "R0",
+      "kind": "general",
+      "name": "Allmän fråga",
+      "behaviourCodes": [],
+      "description": "No suitable examples found (the requirements ask for a general question)",
+      "question": "[TEST] Tänk tillbaka på hur du använde Gemini under lektionen. Vid vilket tillfälle tänkte du mest själv, och vad fick dig att göra det?"
+    },
+    {
+      "code": "RN",
+      "kind": "none",
+      "name": "No template",
+      "behaviourCodes": [
+        "NA1",
+        "NA2",
+        "NA3",
+        "NA4",
+        "NA5",
+        "NA6",
+        "NA7"
+      ],
+      "description": "Not relevant according to the framework",
+      "question": null
+    },
+    {
+      "code": "F1",
+      "kind": "reinforce",
+      "name": "Eget förslag först",
+      "behaviourCodes": [
+        "C1",
+        "C2",
+        "C11"
+      ],
+      "description": "Own plan, attempt or idea first, then asked Gemini to check it",
+      "question": "[TEST] Du kom med en egen plan eller idé innan du frågade Gemini. Hur kom du fram till den, och vad fick du ut av att låta Gemini granska den?"
+    },
+    {
+      "code": "F2",
+      "kind": "reinforce",
+      "name": "Egen gissning om felet",
+      "behaviourCodes": [
+        "C4",
+        "C5"
+      ],
+      "description": "Own guess about what's wrong (mirrors R2)",
+      "question": "[TEST] Du hade en egen gissning om vad som var fel. Vad fick dig att misstänka just det, och stämde din gissning?"
+    },
+    {
+      "code": "F3",
+      "kind": "reinforce",
+      "name": "Egna ord och kopplingar",
+      "behaviourCodes": [
+        "C3",
+        "C6",
+        "C9"
+      ],
+      "description": "Explained in own words, linked to something they already knew, or compared",
+      "question": "[TEST] Du förklarade med egna ord eller kopplade till något du redan kunde. Hur hjälpte det dig att förstå?"
+    },
+    {
+      "code": "F4",
+      "kind": "reinforce",
+      "name": "Granskade svaret",
+      "behaviourCodes": [
+        "C7"
+      ],
+      "description": "Questioned Gemini and gave a reason (mirrors R5)",
+      "question": "[TEST] Du ifrågasatte ett svar från Gemini. Vad fick dig att tvivla, och hur tog du reda på vad som stämde?"
+    },
+    {
+      "code": "F5",
+      "kind": "reinforce",
+      "name": "Styrde hjälpen",
+      "behaviourCodes": [
+        "C8",
+        "C10"
+      ],
+      "description": "Pinpointed what they didn't understand, or asked for a hint instead of the answer",
+      "question": "[TEST] Du bad om en ledtråd eller pekade ut exakt vad du inte förstod. Varför valde du att be om hjälp på det sättet?"
+    },
+    {
+      "code": "F6",
+      "kind": "reinforce",
+      "name": "Ville förstå",
+      "behaviourCodes": [
+        "A1",
+        "A3",
+        "A4"
+      ],
+      "description": "Asked Gemini to explain again, asked why, or restated what Gemini said",
+      "question": "[TEST] Du ville förstå mer och bad Gemini förklara. Vad förstår du nu som du inte förstod innan?"
+    },
+    {
+      "code": "F7",
+      "kind": "reinforce",
+      "name": "Valde själv",
+      "behaviourCodes": [
+        "A2",
+        "A5"
+      ],
+      "description": "Chose among the options Gemini gave",
+      "question": "[TEST] Du valde själv mellan alternativen som Gemini gav. Hur tänkte du när du valde?"
+    },
+    {
+      "code": "F8",
+      "kind": "reinforce",
+      "name": "Tog över igen",
+      "behaviourCodes": [
+        "S1"
+      ],
+      "description": "Started passive, then took back the initiative (mirrors R4)",
+      "question": "[TEST] Först lät du Gemini styra, men sedan tog du över själv. Vad fick dig att ta tillbaka initiativet?"
+    },
+    {
+      "code": "F9",
+      "kind": "reinforce",
+      "name": "Byggde vidare tillsammans",
+      "behaviourCodes": [
+        "S7"
+      ],
+      "description": "Interactive sequences",
+      "question": "[TEST] Du och Gemini byggde vidare på varandras idéer. Vad bidrog du själv med som Gemini inte kom på?"
+    },
+    {
+      "code": "F10",
+      "kind": "reinforce",
+      "name": "Sparsamt och riktat",
+      "behaviourCodes": [
+        "S8"
+      ],
+      "description": "Few, targeted prompts; your sheet says not to read this as low engagement",
+      "question": "[TEST] Du använde Gemini sparsamt och till avgränsade frågor. Hur bestämde du när du behövde hjälp och när du klarade dig själv?"
+    }
+  ]
+}

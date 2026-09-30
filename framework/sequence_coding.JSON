@@ -1,0 +1,62 @@
+{
+  "status": "TEST",
+  "notice": "TEST FRAMEWORK. A placeholder for building and testing the analysis, copied from the working version of the Google Sheet on 2026-09-29. It is not the study's framework and must be replaced before real student transcripts are analysed.",
+  "version": "TEST-2026-09-29",
+  "source": {
+    "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
+    "tabs": [
+      "Sekvens-mönster"
+    ],
+    "retrieved": "2026-09-29"
+  },
+  "patterns": [
+    {
+      "code": "S1",
+      "name": "Återtagande av handlingskraft",
+      "characteristics": "Passiv följt av konstruktiv i samma sekvens",
+      "interpretation": "Eleven agerar med medvetenhet, bör förstärkas."
+    },
+    {
+      "code": "S2",
+      "name": "Delegationsdrift",
+      "characteristics": "Förloppet börjar med C, men skiftar succcessivt till P, exempelvis efter repeterade misslyckanden.",
+      "interpretation": "Viktig reflektionsmoment då studenten visar att hen har förståelse för att inte delegera, men att avlastningen kan ske trots detta om eleven inte är aktivt engagerad. Reflektion bör vara centrerad kring vad som orsakade driften."
+    },
+    {
+      "code": "S3",
+      "name": "Direkt-svarssökande förlopp",
+      "characteristics": "Efterfråga idé -> Efterfråga kopplingsschema -> \"funkar inte\" -> koppla om enligt respons",
+      "interpretation": "Stark signal för kognitiv avlastning som missgynnar eleven, elevens egna bidrag är minimala. Eleven bidrar inte med hypoteser om vad som ska göras härnäst, utan enbart gör det som AI säger. Blir förd av AI.\n\nSamma mönster för skrivande av kod är dock inte intressanta i detta fall."
+    },
+    {
+      "code": "S4",
+      "name": "Felfortplantning",
+      "characteristics": "Blind acceptans av fel information som senare skapar problem.",
+      "interpretation": "Blint förlitande på AI svar med direkta konsekvenser. Högt prioriterad i reflektionen."
+    },
+    {
+      "code": "S5",
+      "name": "Förklaringar utan upptagning",
+      "characteristics": "Repeterade förekomster av P8, utan C3 eller C7.",
+      "interpretation": "Möjlig illusion av förståelse. Rekommendera eleven att i framtiden besvara förklaringar."
+    },
+    {
+      "code": "S6",
+      "name": "Individuell dialog",
+      "characteristics": "Sekvens av längre AI respons som eleven endast bemöted med enkla, minimala svar.",
+      "interpretation": "Det är AI som är den konstruktiva parten, ser ut som interaktiv dialog, men är inte det."
+    },
+    {
+      "code": "S7",
+      "name": "Produktiv samkonstruktion",
+      "characteristics": "En eller fler I-sekvenser",
+      "interpretation": "Starkaste möjliga dialogen. bör alltid förstärkas och berömmas."
+    },
+    {
+      "code": "S8",
+      "name": "Sparsam och riktad användning",
+      "characteristics": "Få prompts, C2, C4.",
+      "interpretation": "Implicerar självständig arbete mellan prompts. Bör inte tolkas som att dem är oengagerade"
+    }
+  ]
+}
