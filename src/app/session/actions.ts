@@ -25,12 +25,14 @@ import { SESSION_COOKIE } from "@/lib/session/session-token";
 import {
   analysisStore,
   beginTranscriptSubmission,
+  completeNoGeminiUse,
   completeReflection,
   confirmTranscript,
   declareNoGeminiUse,
   failTranscriptSubmission,
   getSessionByToken,
   rejectTranscript,
+  reopenNoGeminiUse,
   retryAnalysis,
   saveTranscriptSubmission,
   TranscriptTooLargeError,
@@ -156,7 +158,6 @@ export async function declareNoGeminiAction(
 ): Promise<NoGeminiState> {
   void _previous;
   const token = await requireSessionToken();
-  let completed = false;
   try {
     const session = await getSessionByToken(token);
     if (!session) return { error: sv.errors.sessionExpired };
@@ -180,18 +181,47 @@ export async function declareNoGeminiAction(
 
     const result = await declareNoGeminiUse(token, questions);
     if (!result.ok) return { error: mutationProblemMessage(result.reason) };
-    completed = result.session.status === "completed";
   } catch (error) {
     logSafeError("S3-NO-GEMINI", error);
     return { error: sv.errors.noGeminiFailed("S3-NO-GEMINI") };
   }
 
-  if (completed) {
-    (await cookies()).delete(SESSION_COOKIE);
-    redirect("/?submitted=no-gemini");
-  }
   revalidatePath("/session");
   redirect("/session");
+}
+
+export async function reopenNoGeminiAction(
+  _previous: ConfirmationState,
+): Promise<ConfirmationState> {
+  void _previous;
+  const token = await requireSessionToken();
+  try {
+    const result = await reopenNoGeminiUse(token);
+    if (!result.ok) return { error: mutationProblemMessage(result.reason) };
+  } catch (error) {
+    logSafeError("S3-REOPEN-NO-GEMINI", error);
+    return { error: sv.errors.unexpected("S3-REOPEN-NO-GEMINI") };
+  }
+
+  revalidatePath("/session");
+  redirect("/session");
+}
+
+export async function completeNoGeminiAction(
+  _previous: ConfirmationState,
+): Promise<ConfirmationState> {
+  void _previous;
+  const token = await requireSessionToken();
+  try {
+    const result = await completeNoGeminiUse(token);
+    if (!result.ok) return { error: mutationProblemMessage(result.reason) };
+  } catch (error) {
+    logSafeError("S3-COMPLETE-NO-GEMINI", error);
+    return { error: sv.errors.unexpected("S3-COMPLETE-NO-GEMINI") };
+  }
+
+  (await cookies()).delete(SESSION_COOKIE);
+  redirect("/?submitted=no-gemini");
 }
 
 export async function submitReflectionAction(
@@ -262,7 +292,7 @@ export async function submitReflectionAction(
   }
 
   (await cookies()).delete(SESSION_COOKIE);
-  redirect("/?submitted=reflection");
+  redirect("/reflection-complete");
 }
 
 export async function retryAnalysisAction(

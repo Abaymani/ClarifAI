@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
 import { AnalysisPending } from "@/app/session/analysis-pending";
 import { AnalysisRetry } from "@/app/session/analysis-retry";
+import { NoGeminiConfirmation } from "@/app/session/no-gemini-confirmation";
 import { ReflectionQuestions } from "@/app/session/reflection-questions";
 import { TranscriptForm } from "@/app/session/transcript-form";
 import { TranscriptPreview } from "@/app/session/transcript-preview";
@@ -35,9 +36,13 @@ type View =
   | { kind: "analysing" }
   | { kind: "analysisFailed"; errorCode: string }
   | { kind: "reflection"; questions: StoredReflectionQuestions }
+  | { kind: "noGeminiConfirmation" }
   | { kind: "confirmed" };
 
 function viewFor(session: Session, now: Date): View {
+  if (session.status === "awaiting_no_gemini_confirmation") {
+    return { kind: "noGeminiConfirmation" };
+  }
   if (session.status === "awaiting_reflection" && session.reflectionQuestions) {
     return { kind: "reflection", questions: session.reflectionQuestions };
   }
@@ -119,6 +124,11 @@ export default async function SessionPage() {
               : sv.session.reflectionIntro
           : sv.session.reflectionIntro,
     },
+    noGeminiConfirmation: {
+      status: sv.session.statusNoGeminiConfirmation,
+      heading: sv.session.noGeminiConfirmationHeading,
+      intro: sv.session.noGeminiConfirmationIntro,
+    },
     confirmed: {
       status: sv.session.statusTranscriptConfirmed,
       heading: sv.session.confirmedHeading,
@@ -175,6 +185,8 @@ export default async function SessionPage() {
               questions={view.questions}
               messages={session.transcript?.messages ?? []}
             />
+          ) : view.kind === "noGeminiConfirmation" ? (
+            <NoGeminiConfirmation />
           ) : null}
         </CardContent>
       </Card>

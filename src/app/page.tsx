@@ -19,9 +19,7 @@ export default async function Home({
       ? sv.session.submittedSuccess
       : submitted === "no-gemini"
         ? sv.session.noGeminiSuccess
-        : submitted === "reflection"
-          ? sv.session.reflectionSuccess
-          : null;
+        : null;
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-4 p-6">
