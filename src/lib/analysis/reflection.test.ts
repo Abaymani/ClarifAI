@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { validateCoding } from "./coding";
 import {
   generalReflection,
+  noTranscriptReflection,
   reflectionCandidates,
   reflectionSchema,
   validateReflection,
@@ -160,6 +161,30 @@ describe("generalReflection", () => {
           template: {
             intro: "Intro R0.",
             questions: ["General question (R0)?"],
+          },
+        },
+      ],
+    });
+  });
+});
+
+describe("noTranscriptReflection", () => {
+  it("uses the no-transcript group's texts exactly as written", () => {
+    expect(noTranscriptReflection(framework)).toEqual({
+      outcome: "no_transcript",
+      items: [
+        {
+          id: "q1",
+          group: "R01",
+          groupKind: "no_transcript",
+          basedOn: null,
+          excerpt: null,
+          intro: "Intro R01.",
+          questions: ["General question (R01)?"],
+          tip: "I did it because … (R01)",
+          template: {
+            intro: "Intro R01.",
+            questions: ["General question (R01)?"],
           },
         },
       ],

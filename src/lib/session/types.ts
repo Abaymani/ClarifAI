@@ -6,6 +6,22 @@ import type { Transcript } from "../scraping/transcript";
 
 import type { Lesson } from "./credentials";
 
+export type TranscriptSubmission = "transcript" | "no_gemini" | null;
+export type AnalysisAgreement = "yes" | "partly" | "no";
+export const MAX_REFLECTION_ANSWER_LENGTH = 5_000;
+
+export type ReflectionResponse = {
+  itemId: string;
+  answer: string;
+  // Only concrete transcript observations have an analysis to agree with.
+  agreement: AnalysisAgreement | null;
+};
+
+export type StoredReflectionResponses = {
+  submittedAt: Date;
+  items: ReflectionResponse[];
+};
+
 // `awaiting_transcript` is the state a session starts in, before S1 has a link.
 // The rest follow the requirements' list of session states.
 export type SessionStatus =
@@ -27,6 +43,9 @@ export type Session = {
   updatedAt: Date;
   completedAt: Date | null;
   errorCode: string | null;
+  // Distinguishes a submitted transcript from an explicit declaration that
+  // Gemini was not used. Null is retained for sessions created by older code.
+  transcriptSubmission: TranscriptSubmission;
   transcript: Transcript | null;
   transcriptConfirmedAt: Date | null;
   analysisStartedAt: Date | null;
@@ -34,6 +53,7 @@ export type Session = {
   analysis: StoredCoding | null;
   // S2 step 2: what the student reflects on in S3.
   reflectionQuestions: StoredReflectionQuestions | null;
+  reflectionResponses: StoredReflectionResponses | null;
 };
 
 export function sessionId(participantCode: string, lesson: Lesson): string {

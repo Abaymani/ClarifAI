@@ -279,3 +279,15 @@
 - **Decision:** `framework/analysis_guidelines.md` and the new `framework/reflection_guidelines.md` hold the researchers' first draft, converted word for word from the two tabs of their Google Doc on 2026-09-30. The coding step gets only the analysis guidelines; the reflection step also gets the reflection guidelines (DL-035). The analysis guidelines give the first priority rule between codes (DL-039): a passive code takes precedence when a prompt also has active or constructive elements.
 - **Risks/consequences:** It is a draft and will change. The framework version (`2026-09-30.2`) is not raised automatically when a guideline file changes, so it has to be raised by hand for results to stay traceable to the guidelines that produced them. No order is defined yet between active and constructive codes, or for the NA codes.
 - **Decided by:** Armin Baymani (human), 2026-09-30.
+
+### DL-045: Every lesson accepts an explicit "no Gemini" submission
+- **Options:** Offer the choice only in reflection lessons; offer it in every lesson; require a transcript in lessons 1 and 4.
+- **Decision:** The transcript screen in all four lessons first asks whether the student used Gemini. If not, the session records `no_gemini` and stores no transcript or link. Lessons 1 and 4 complete immediately. Lessons 2 and 3 skip scraping and analysis and show the R01 intro, questions and tip exactly as written.
+- **Risks/consequences:** Lessons 1 and 4 can now produce records without the transcript that those lessons normally collect. A no-Gemini choice supersedes any unconfirmed retrieval attempt so a delayed scrape cannot overwrite it. R01 depends on the framework containing exactly one `no_transcript` group.
+- **Decided by:** Proposed by Codex (agent) in a mockup; approved by Armin Baymani (human), 2026-09-30.
+
+### DL-046: Students respond to each concrete analysis with yes, partly or no
+- **Options:** One agreement choice for the whole reflection; one per example; free text only; a choice plus a separate explanation field.
+- **Decision:** Every concrete analysed example asks "Känner du igen dig i analysen?" with the required choices `yes`, `partly`, and `no`. The interface presents the analysis as a possible interpretation that can miss context. `partly` and `no` show a prompt to explain why in the example's existing free-text answer. They do not alter the researchers' questions or add another answer field. R0 and R01 omit the choice because they contain no concrete analysis. The choice is stored with the answer and reflection item.
+- **Risks/consequences:** Completing an analysed reflection now requires one additional choice per example. The student's disagreement is research data, but does not change or overwrite the AI coding being compared with human coding.
+- **Decided by:** Proposed by Codex (agent) in a mockup; approved with the conditional explanation prompt by Armin Baymani (human), 2026-09-30.

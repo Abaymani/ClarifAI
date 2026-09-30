@@ -38,13 +38,13 @@ type View =
   | { kind: "confirmed" };
 
 function viewFor(session: Session, now: Date): View {
+  if (session.status === "awaiting_reflection" && session.reflectionQuestions) {
+    return { kind: "reflection", questions: session.reflectionQuestions };
+  }
   if (!session.transcriptConfirmedAt) {
     return session.status === "awaiting_confirmation" && session.transcript
       ? { kind: "preview" }
       : { kind: "transcript" };
-  }
-  if (session.status === "awaiting_reflection" && session.reflectionQuestions) {
-    return { kind: "reflection", questions: session.reflectionQuestions };
   }
   if (analysisResultMissing(session)) {
     return { kind: "analysisFailed", errorCode: UNREADABLE_RESULT };
@@ -111,9 +111,12 @@ export default async function SessionPage() {
       status: sv.session.statusAwaitingReflection,
       heading: sv.session.reflectionHeading,
       intro:
-        view.kind === "reflection" &&
-        view.questions.outcome === "insufficient_evidence"
-          ? sv.session.reflectionIntroGeneral
+        view.kind === "reflection"
+          ? view.questions.outcome === "insufficient_evidence"
+            ? sv.session.reflectionIntroGeneral
+            : view.questions.outcome === "no_transcript"
+              ? sv.session.reflectionIntroNoGemini
+              : sv.session.reflectionIntro
           : sv.session.reflectionIntro,
     },
     confirmed: {
@@ -155,6 +158,7 @@ export default async function SessionPage() {
                 {sv.session.transcriptHeading}
               </h2>
               <TranscriptForm
+                lesson={session.lesson}
                 initialError={
                   session.errorCode
                     ? sv.errors.transcriptRetry(session.errorCode)

@@ -8,24 +8,38 @@ import { after } from "next/server";
 
 import { defaultRunDependencies, runAnalysis } from "@/lib/analysis/run";
 import {
+  assertFrameworkAllowed,
+  loadFramework,
+} from "@/lib/analysis/framework";
+import { noTranscriptReflection } from "@/lib/analysis/reflection";
+import type { StoredReflectionQuestions } from "@/lib/analysis/types";
+import {
   parseShareLink,
   shareLinkForStorage,
   type ShareLink,
 } from "@/lib/scraping/gemini-link";
 import { scrapeGeminiShare } from "@/lib/scraping/gemini-share";
-import { redactTranscript } from "@/lib/scraping/redact-transcript";
+import { redactText, redactTranscript } from "@/lib/scraping/redact-transcript";
 import { ScrapeError, type ScrapeErrorCode } from "@/lib/scraping/scrape-error";
 import { SESSION_COOKIE } from "@/lib/session/session-token";
 import {
   analysisStore,
   beginTranscriptSubmission,
+  completeReflection,
   confirmTranscript,
+  declareNoGeminiUse,
   failTranscriptSubmission,
+  getSessionByToken,
   rejectTranscript,
   retryAnalysis,
   saveTranscriptSubmission,
   TranscriptTooLargeError,
 } from "@/lib/session/store";
+import type {
+  AnalysisAgreement,
+  ReflectionResponse,
+} from "@/lib/session/types";
+import { MAX_REFLECTION_ANSWER_LENGTH } from "@/lib/session/types";
 import { sv } from "@/lib/sv";
 
 export type TranscriptFormState = {
@@ -34,6 +48,11 @@ export type TranscriptFormState = {
 };
 
 export type ConfirmationState = { error: string | null };
+export type NoGeminiState = { error: string | null };
+export type ReflectionFormState = {
+  error: string | null;
+  fields: string[];
+};
 
 export async function submitTranscriptAction(
   _previous: TranscriptFormState,
@@ -132,6 +151,120 @@ export async function confirmTranscriptAction(
   return { error: null };
 }
 
+export async function declareNoGeminiAction(
+  _previous: NoGeminiState,
+): Promise<NoGeminiState> {
+  void _previous;
+  const token = await requireSessionToken();
+  let completed = false;
+  try {
+    const session = await getSessionByToken(token);
+    if (!session) return { error: sv.errors.sessionExpired };
+
+    let questions: StoredReflectionQuestions | null = null;
+    if (session.lesson === 2 || session.lesson === 3) {
+      const framework = loadFramework();
+      assertFrameworkAllowed(framework);
+      questions = {
+        ...noTranscriptReflection(framework),
+        frameworkVersion: framework.version,
+        frameworkStatus: framework.status,
+        analyser: "none",
+        model: null,
+        reasoningEffort: null,
+        createdAt: new Date().toISOString(),
+        durationMs: 0,
+        usage: null,
+      };
+    }
+
+    const result = await declareNoGeminiUse(token, questions);
+    if (!result.ok) return { error: mutationProblemMessage(result.reason) };
+    completed = result.session.status === "completed";
+  } catch (error) {
+    logSafeError("S3-NO-GEMINI", error);
+    return { error: sv.errors.noGeminiFailed("S3-NO-GEMINI") };
+  }
+
+  if (completed) {
+    (await cookies()).delete(SESSION_COOKIE);
+    redirect("/?submitted=no-gemini");
+  }
+  revalidatePath("/session");
+  redirect("/session");
+}
+
+export async function submitReflectionAction(
+  _previous: ReflectionFormState,
+  formData: FormData,
+): Promise<ReflectionFormState> {
+  void _previous;
+  const token = await requireSessionToken();
+  let session;
+  try {
+    session = await getSessionByToken(token);
+  } catch (error) {
+    logSafeError("S3-LOAD-DB", error);
+    return { error: sv.errors.unexpected("S3-LOAD-DB"), fields: [] };
+  }
+  if (!session) redirect("/");
+  if (
+    session.status !== "awaiting_reflection" ||
+    !session.reflectionQuestions
+  ) {
+    return { error: sv.errors.reflectionNotReady, fields: [] };
+  }
+
+  const fields: string[] = [];
+  const responses: ReflectionResponse[] = session.reflectionQuestions.items.map(
+    (item) => {
+      const answerField = `${item.id}:answer`;
+      const agreementField = `${item.id}:agreement`;
+      const answer = String(formData.get(answerField) ?? "").trim();
+      if (!answer || answer.length > MAX_REFLECTION_ANSWER_LENGTH) {
+        fields.push(answerField);
+      }
+
+      const rawAgreement = String(formData.get(agreementField) ?? "");
+      const agreement: AnalysisAgreement | null = isAnalysisAgreement(
+        rawAgreement,
+      )
+        ? rawAgreement
+        : null;
+      if (item.basedOn && agreement === null) fields.push(agreementField);
+
+      return {
+        itemId: item.id,
+        answer: redactText(answer),
+        agreement: item.basedOn ? agreement : null,
+      };
+    },
+  );
+
+  if (fields.length > 0) {
+    return { error: sv.errors.reflectionIncomplete, fields };
+  }
+
+  try {
+    const result = await completeReflection(token, responses);
+    if (!result.ok) {
+      return {
+        error:
+          result.reason === "INVALID_RESPONSE"
+            ? sv.errors.reflectionIncomplete
+            : mutationProblemMessage(result.reason),
+        fields: [],
+      };
+    }
+  } catch (error) {
+    logSafeError("S3-SAVE-DB", error);
+    return { error: sv.errors.unexpected("S3-SAVE-DB"), fields: [] };
+  }
+
+  (await cookies()).delete(SESSION_COOKIE);
+  redirect("/?submitted=reflection");
+}
+
 export async function retryAnalysisAction(
   _previous: ConfirmationState,
 ): Promise<ConfirmationState> {
@@ -201,6 +334,10 @@ function mutationProblemMessage(
   if (reason === "STALE") return sv.errors.transcriptSuperseded;
   if (reason === "NOT_READY") return sv.errors.transcriptNotReady;
   return sv.errors.sessionExpired;
+}
+
+function isAnalysisAgreement(value: string): value is AnalysisAgreement {
+  return value === "yes" || value === "partly" || value === "no";
 }
 
 function failureFor(error: unknown): {

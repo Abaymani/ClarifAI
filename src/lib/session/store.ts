@@ -28,9 +28,12 @@ import { hashSessionToken } from "./session-token";
 import {
   analysisInterrupted,
   analysisResultMissing,
+  MAX_REFLECTION_ANSWER_LENGTH,
   sessionId,
+  type ReflectionResponse,
   type Session,
   type SessionStatus,
+  type StoredReflectionResponses,
 } from "./types";
 
 const PARTICIPANTS = "participants";
@@ -58,6 +61,17 @@ export type TranscriptMutationResult =
   | {
       ok: false;
       reason: "UNAUTHENTICATED" | "ALREADY_COMPLETED" | "NOT_READY" | "STALE";
+    };
+
+export type ReflectionMutationResult =
+  | { ok: true; session: Session }
+  | {
+      ok: false;
+      reason:
+        | "UNAUTHENTICATED"
+        | "ALREADY_COMPLETED"
+        | "NOT_READY"
+        | "INVALID_RESPONSE";
     };
 
 // Everything happens in one transaction so that repeated clicks cannot create a
@@ -137,6 +151,7 @@ export async function startSession(
       updatedAt: Timestamp.fromDate(now),
       completedAt: null,
       errorCode: null,
+      transcriptSubmission: null,
       transcript: null,
       transcriptConfirmedAt: null,
     });
@@ -151,11 +166,13 @@ export async function startSession(
         updatedAt: now,
         completedAt: null,
         errorCode: null,
+        transcriptSubmission: null,
         transcript: null,
         transcriptConfirmedAt: null,
         analysisStartedAt: null,
         analysis: null,
         reflectionQuestions: null,
+        reflectionResponses: null,
       },
     };
   });
@@ -247,6 +264,7 @@ export async function saveTranscriptSubmission(
     }
 
     tx.update(ref, {
+      transcriptSubmission: "transcript",
       transcript,
       transcriptConfirmedAt: null,
       status: "awaiting_confirmation" satisfies SessionStatus,
@@ -264,6 +282,7 @@ export async function saveTranscriptSubmission(
       ok: true,
       session: {
         ...toSession(snapshot.id, data),
+        transcriptSubmission: "transcript",
         transcript,
         transcriptConfirmedAt: null,
         status: "awaiting_confirmation",
@@ -271,6 +290,7 @@ export async function saveTranscriptSubmission(
         analysisStartedAt: null,
         analysis: null,
         reflectionQuestions: null,
+        reflectionResponses: null,
         updatedAt: now,
       },
     };
@@ -342,6 +362,132 @@ export async function rejectTranscript(
       session: {
         ...current,
         status: "awaiting_transcript",
+        errorCode: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+// Declaring no Gemini use supersedes any unconfirmed scrape atomically. For
+// lessons 2 and 3 the prebuilt R01 reflection becomes the next step; lessons 1
+// and 4 have no reflection and complete immediately.
+export async function declareNoGeminiUse(
+  token: string,
+  questions: StoredReflectionQuestions | null,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  return updateAuthenticatedSession(token, (current, tx, ref) => {
+    if (current.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    if (current.transcriptConfirmedAt) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+    if (
+      !["awaiting_transcript", "processing", "failed"].includes(current.status)
+    ) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    const reflects = current.lesson === 2 || current.lesson === 3;
+    if (reflects && questions?.outcome !== "no_transcript") {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    const status = reflects ? "awaiting_reflection" : "completed";
+    tx.update(ref, {
+      transcriptSubmission: "no_gemini",
+      transcript: null,
+      transcriptConfirmedAt: null,
+      status: status satisfies SessionStatus,
+      completedAt: reflects ? null : Timestamp.fromDate(now),
+      errorCode: null,
+      activeTranscriptAttemptId: FieldValue.delete(),
+      lastSubmittedLink: FieldValue.delete(),
+      activeAnalysisAttemptId: FieldValue.delete(),
+      analysisStartedAt: FieldValue.delete(),
+      analysis: FieldValue.delete(),
+      reflectionQuestions: reflects ? questions : FieldValue.delete(),
+      reflectionResponses: FieldValue.delete(),
+      analysisFailures: FieldValue.delete(),
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        transcriptSubmission: "no_gemini",
+        transcript: null,
+        transcriptConfirmedAt: null,
+        status,
+        completedAt: reflects ? null : now,
+        errorCode: null,
+        analysisStartedAt: null,
+        analysis: null,
+        reflectionQuestions: reflects ? questions : null,
+        reflectionResponses: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+export async function completeReflection(
+  token: string,
+  responses: ReflectionResponse[],
+  now: Date = new Date(),
+): Promise<ReflectionMutationResult> {
+  const session = await getSessionByToken(token);
+  if (!session) return { ok: false, reason: "UNAUTHENTICATED" };
+
+  const db = getDb();
+  const ref = db.collection(SESSIONS).doc(session.id);
+  return db.runTransaction<ReflectionMutationResult>(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const data = snapshot.data();
+    if (
+      !snapshot.exists ||
+      data?.sessionTokenHash !== hashSessionToken(token)
+    ) {
+      return { ok: false, reason: "UNAUTHENTICATED" };
+    }
+    if (data.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+
+    const current = toSession(snapshot.id, data);
+    if (
+      current.status !== "awaiting_reflection" ||
+      !current.reflectionQuestions
+    ) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+    if (!responsesMatchQuestions(responses, current.reflectionQuestions)) {
+      return { ok: false, reason: "INVALID_RESPONSE" };
+    }
+
+    const stored: StoredReflectionResponses = {
+      submittedAt: now,
+      items: responses,
+    };
+    tx.update(ref, {
+      reflectionResponses: {
+        submittedAt: Timestamp.fromDate(now),
+        items: responses,
+      },
+      status: "completed" satisfies SessionStatus,
+      completedAt: Timestamp.fromDate(now),
+      errorCode: null,
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        reflectionResponses: stored,
+        status: "completed",
+        completedAt: now,
         errorCode: null,
         updatedAt: now,
       },
@@ -546,6 +692,13 @@ function toSession(id: string, data: Record<string, unknown>): Session {
     updatedAt: toDate(data.updatedAt) ?? new Date(0),
     completedAt: toDate(data.completedAt),
     errorCode: typeof data.errorCode === "string" ? data.errorCode : null,
+    transcriptSubmission:
+      data.transcriptSubmission === "transcript" ||
+      data.transcriptSubmission === "no_gemini"
+        ? data.transcriptSubmission
+        : data.transcript
+          ? "transcript"
+          : null,
     transcript: toTranscript(data.transcript),
     transcriptConfirmedAt: toDate(data.transcriptConfirmedAt),
     analysisStartedAt: toDate(data.analysisStartedAt),
@@ -553,6 +706,7 @@ function toSession(id: string, data: Record<string, unknown>): Session {
     reflectionQuestions: isStoredQuestions(data.reflectionQuestions)
       ? data.reflectionQuestions
       : null,
+    reflectionResponses: toStoredResponses(data.reflectionResponses),
   };
 }
 
@@ -575,6 +729,54 @@ function isStoredQuestions(value: unknown): value is StoredReflectionQuestions {
         typeof item?.intro === "string" && Array.isArray(item?.questions),
     )
   );
+}
+
+function toStoredResponses(value: unknown): StoredReflectionResponses | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  if (!Array.isArray(candidate.items)) return null;
+  const submittedAt = toDate(candidate.submittedAt);
+  if (!submittedAt) return null;
+  const items = candidate.items.filter(isReflectionResponse);
+  return items.length === candidate.items.length
+    ? { submittedAt, items }
+    : null;
+}
+
+function isReflectionResponse(value: unknown): value is ReflectionResponse {
+  if (!value || typeof value !== "object") return false;
+  const response = value as Partial<ReflectionResponse>;
+  return (
+    typeof response.itemId === "string" &&
+    typeof response.answer === "string" &&
+    (response.agreement === null ||
+      response.agreement === "yes" ||
+      response.agreement === "partly" ||
+      response.agreement === "no")
+  );
+}
+
+function responsesMatchQuestions(
+  responses: ReflectionResponse[],
+  questions: StoredReflectionQuestions,
+): boolean {
+  if (responses.length !== questions.items.length) return false;
+  const byId = new Map(
+    responses.map((response) => [response.itemId, response]),
+  );
+  if (byId.size !== responses.length) return false;
+
+  return questions.items.every((item) => {
+    const response = byId.get(item.id);
+    if (!response) return false;
+    const answer = response.answer.trim();
+    if (!answer || answer.length > MAX_REFLECTION_ANSWER_LENGTH) return false;
+    return item.basedOn
+      ? response.agreement === "yes" ||
+          response.agreement === "partly" ||
+          response.agreement === "no"
+      : response.agreement === null;
+  });
 }
 
 function hasArrays(value: unknown, ...keys: string[]): boolean {

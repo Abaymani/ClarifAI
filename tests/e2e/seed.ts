@@ -15,14 +15,27 @@ const app =
   initializeApp({ projectId: process.env.GCLOUD_PROJECT ?? "demo-clarifai" });
 const db = getFirestore(app);
 
+export async function getSessionData(code: string, lesson: number) {
+  return (
+    await db.collection("sessions").doc(`${code}_${lesson}`).get()
+  ).data();
+}
+
 export async function seedParticipant(
   code: string,
   pin: string,
 ): Promise<void> {
-  await db
-    .collection("participants")
-    .doc(code)
-    .set({ code, pin, failedAttempts: 0, lockedUntil: null });
+  const batch = db.batch();
+  batch.set(db.collection("participants").doc(code), {
+    code,
+    pin,
+    failedAttempts: 0,
+    lockedUntil: null,
+  });
+  for (const lesson of [1, 2, 3, 4]) {
+    batch.delete(db.collection("sessions").doc(`${code}_${lesson}`));
+  }
+  await batch.commit();
 }
 
 export async function seedCompletedSession(

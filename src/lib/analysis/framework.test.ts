@@ -129,7 +129,7 @@ describe("parseFramework", () => {
     ]);
   });
 
-  it("needs exactly one general group, and at most one for students without a transcript", () => {
+  it("needs exactly one general group and one for students without a transcript", () => {
     const files = testFrameworkFiles();
     const general = files.grouping.groups.find((g) => g.kind === "general")!;
     general.behaviourCodes = ["P1"];
@@ -145,13 +145,24 @@ describe("parseFramework", () => {
       ...doubled.grouping.groups.find((g) => g.kind === "no_transcript")!,
       code: "R02",
     });
-    expect(rejected(doubled)).toEqual(["at most one no_transcript group"]);
+    expect(rejected(doubled)).toEqual([
+      "needs exactly one no_transcript group",
+    ]);
 
     const missing = testFrameworkFiles();
     missing.grouping.groups = missing.grouping.groups.filter(
       (g) => g.kind !== "general",
     );
     expect(rejected(missing)).toEqual(["needs exactly one general group"]);
+
+    const missingNoTranscript = testFrameworkFiles();
+    missingNoTranscript.grouping.groups =
+      missingNoTranscript.grouping.groups.filter(
+        (g) => g.kind !== "no_transcript",
+      );
+    expect(rejected(missingNoTranscript)).toEqual([
+      "needs exactly one no_transcript group",
+    ]);
   });
 
   it("names the field when a file has the wrong shape", () => {

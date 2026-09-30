@@ -11,7 +11,9 @@ export type Usage = {
 export type AnalysisRun = {
   frameworkVersion: string;
   frameworkStatus: string;
-  analyser: "openai" | "fake";
+  // `none` is used for the R01 reflection, which is selected directly by the
+  // student and does not run transcript analysis.
+  analyser: "openai" | "fake" | "none";
   model: string | null;
   reasoningEffort: string | null;
   // ISO time the result was produced; measuring waits is part of the evaluation.
@@ -53,7 +55,7 @@ export type StoredCoding = AnalysisRun & Coding;
 export type ReflectionItem = {
   id: string;
   group: string;
-  groupKind: "reflect" | "reinforce" | "general";
+  groupKind: "reflect" | "reinforce" | "general" | "no_transcript";
   basedOn: {
     kind: "prompt" | "sequence";
     code: string;
@@ -73,7 +75,7 @@ export type ReflectionItem = {
 export type ReflectionQuestions = {
   // `insufficient_evidence` is a successful analysis without suitable examples,
   // which the requirements ask to record apart from failures.
-  outcome: "observations" | "insufficient_evidence";
+  outcome: "observations" | "insufficient_evidence" | "no_transcript";
   items: ReflectionItem[];
 };
 

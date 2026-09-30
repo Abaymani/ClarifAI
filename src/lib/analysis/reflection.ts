@@ -202,3 +202,31 @@ export function generalReflection(framework: Framework): ReflectionQuestions {
     ],
   };
 }
+
+// R01 is selected by the student, so its texts are shown exactly as the
+// researchers wrote them and never sent to the analyser.
+export function noTranscriptReflection(
+  framework: Framework,
+): ReflectionQuestions {
+  const group = framework.noTranscriptGroup;
+  if (!group) {
+    throw new Error("The framework has no no_transcript group");
+  }
+  const texts = textsOf(group);
+  return {
+    outcome: "no_transcript",
+    items: [
+      {
+        id: "q1",
+        group: group.code,
+        groupKind: "no_transcript",
+        basedOn: null,
+        excerpt: null,
+        intro: texts.intro,
+        questions: texts.questions,
+        tip: texts.tip,
+        template: { intro: texts.intro, questions: texts.questions },
+      },
+    ],
+  };
+}
