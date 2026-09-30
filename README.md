@@ -110,12 +110,42 @@ Three wrong PINs block that code for 30 minutes, and a correct PIN is refused un
 
 The same document holds the student's `pin`, which is what to read out when someone forgets theirs.
 
+## Analysis framework
+`framework/` holds what the analysis (S2) gives the model. The files are read on every analysis, so edits apply without a restart.
+
+| File | What it holds |
+|---|---|
+| `prompt_coding.JSON` | The ICAP categories and the prompt codes |
+| `sequence_coding.JSON` | The sequence patterns |
+| `behaviour_grouping.JSON` | The behaviour groups, each with its reflection question |
+| `analysis_guidelines.md` | The researchers' guidelines for coding. Required. |
+| `reflection_guidelines.md` | Optional: the researchers' guidelines for choosing examples and adapting the questions. Only the second step sees this file, so put that guidance here rather than in the coding guidelines (DL-035). |
+
+What the requirements demand is built into the prompts themselves (`src/lib/analysis/prompts.ts`) and holds whatever the guidelines say: the transcript is data and never instructions, no code is forced, every excerpt is quoted word for word, nothing is graded, and students are addressed in Swedish. The analysis gives each student prompt one code, or none when there is too little context.
+
+**The three JSON files are a TEST framework (DL-034).** The codes, patterns and groups were copied from the working version of the "Framework for scaffolding" Google Sheet on 2026-09-29, and the questions are placeholders. Every JSON file says `"status": "TEST"` and every question starts with `[TEST]`. Replace them before real student transcripts are analysed; production refuses to analyse with a TEST framework. The files are checked every time they are loaded, and by `pnpm test`: they share one status and version, every behaviour code is in exactly one group, and only a TEST framework may contain `[TEST]` questions.
+
+## Transcript analysis (S2)
+For lessons 2 and 3, confirming the transcript starts the analysis (DL-035, DL-036). The confirm button returns at once, the analysis keeps running on the server, and the page shows "Vi analyserar din chatt" and checks back every few seconds. A student who closes the tab finds the result when logging in again.
+
+1. **Coding.** The model gets the coding guidelines and framework, then the transcript, and codes every student prompt and sequence. Our code checks the result before storing it as research data: every code exists in the framework, every cited message exists, and every excerpt is really in its message. An invalid result gets one more try, then counts as a failure.
+2. **Reflection.** The model sees the coding conversation so far, chooses at most three observations (`REFLECTION_MAX_QUESTIONS`) from the checked coding and adapts each group's question; this is checked the same way. If nothing is suitable, the student gets the general question (group R0), recorded as insufficient evidence rather than a failure.
+
+Each step opens the same way for every student, so after the first analysis OpenAI reads the framework (about 7,800 tokens) from its prompt cache at a tenth of the price. The output format is part of that opening, so each step has its own cache. On the synthetic test chat, each step took 7–13 seconds.
+
+Both results are stored with the framework version, analyser, model, duration and token use, so waiting times and costs can be measured. A failure stores an error code (`S2-…`) and shows the student a retry button; a retry after step 1 only redoes step 2. An analysis that has not reported back after six minutes (Vercel stops it after five) is shown as interrupted and can be retried too. Answering the questions is S3, so for now the answer fields are shown but disabled.
+
+**Without an OpenAI key**, `pnpm dev` uses a fake analyser that codes by keyword, so the whole flow can be tried locally (DL-038). Its results say "Testanalys utan AI" on the page and are stored with analyser `fake`. The browser tests always use it. Deployed builds never do: without a key they fail with `S2-CONFIG`.
+
+**With a key**, put `OPENAI_API_KEY` in `.env.local` and restart `pnpm dev`. The model defaults to `gpt-6-sol` with medium reasoning; `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT` change that (DL-037).
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 
 ## Data safety
 - Browsers never talk to Firestore. The security rules deny all client access, and every read and write goes through route handlers that use the Admin SDK (`src/lib/firebase/admin.ts`).
 - Gemini links are allow-listed and resolved only through supported Gemini hosts. Transcript text is redacted locally before it is saved or shown in the confirmation preview; raw transcript content and submitted links are never written to application logs.
+- The analysis sends the redacted transcript to OpenAI with `store: false`, so OpenAI keeps only its standard abuse-monitoring logs (up to 30 days, never used for training). Analysis errors are logged as codes and message numbers only.
 - Never put real student data (transcripts, exports) in the repository. Use the git-ignored `private-data/` folder if you need it locally.
 
 ## Deployment (Vercel)
@@ -123,6 +153,7 @@ Copy `.env.example` to `.env.local` and fill in values there. **Never commit rea
 - `ENABLE_EXPERIMENTAL_COREPACK=1` is set in the Vercel project. Vercel only detects pnpm up to version 10 on its own; with this set, it uses the pnpm version from `package.json`.
 - Functions run in Stockholm (`arn1`, under Settings → Functions), next to Firestore in `europe-north2`. Keep both in the EU (DL-026).
 - The variables from `.env.example` are set in Vercel, per environment: Production uses the Firebase project `clarifai-19445`, Preview uses `clarifai-preview`, so preview deployments cannot reach the research data (DL-028).
+- `OPENAI_API_KEY` must be set in Vercel for Preview and Production before the analysis can run there. The session page allows 300 seconds per request (the Hobby maximum), which is what the analysis gets to finish in.
 - Firebase projects: `clarifai-19445` (production) and `clarifai-preview` (previews). After changing `firestore.rules`, deploy to both: `pnpm exec firebase login`, then `pnpm exec firebase deploy --only firestore:rules --project clarifai-19445` and the same with `--project clarifai-preview`.
   On Windows PowerShell, use `pnpm.cmd` for these commands if the shorter command is unavailable.
 
