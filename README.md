@@ -145,7 +145,7 @@ Both results are stored with the framework version, analyser, model, duration an
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 
 ## Data safety
-- Browsers never talk to Firestore. The security rules deny all client access, and every read and write goes through route handlers that use the Admin SDK (`src/lib/firebase/admin.ts`).
+- Browsers never talk to Firestore. The security rules deny all client access, and every read and write goes through server code (Next.js Server Actions) that uses the Admin SDK (`src/lib/firebase/admin.ts`).
 - Gemini links are allow-listed and resolved only through supported Gemini hosts. Transcript text is redacted locally before it is saved or shown in the confirmation preview; raw transcript content and submitted links are never written to application logs.
 - The analysis sends the redacted transcript to OpenAI with `store: false`, so OpenAI keeps only its standard abuse-monitoring logs (up to 30 days, never used for training). Analysis errors are logged as codes and message numbers only.
 - Never put real student data (transcripts, exports) in the repository. Use the git-ignored `private-data/` folder if you need it locally.

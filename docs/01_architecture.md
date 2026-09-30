@@ -9,7 +9,7 @@ For the use-case description, see [[00_product_brief]]
 |---|---|---|
 |Frontend|NextJS|Also use typescript.|
 |Styling|shadcn/ui|Use shadcn/ui components for styling wherever possible as to not reinvent the wheel.|
-|"Backend"|NextJS (Route handlers)|The use-case is simple, and as service providers we are not doing any real logic, only routing between the AI API, our database and the UI. This can all be done with just NextJS.|
+|"Backend"|NextJS (Server Actions)|The use-case is simple, and as service providers we are not doing any real logic, only routing between the AI API, our database and the UI. This can all be done with just NextJS.|
 |LLM Provider|OpenAI ChatGPT|Analysis will be done through API calls to ChatGPT. The scraped transcript, with names redacted, will be submitted together with the coding schemes and instructions. The transcript link is only stored as a fallback for researchers.|
 |Database|Google Firebase|Cloud Firestore is a document (NoSQL) database. There will be at most 60 users, with a maximum of 4 sessions each. Each session is self-contained. A document based system for storage is therefore likely more than enough for our purposes.|
 |Hosting|Vercel|Vercel makes it trivial to host NextJS projects and has a generous free hosting tier.|

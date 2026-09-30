@@ -45,12 +45,12 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR-|The system shall associate coded observations with supporting messages and validate analysis results before displaying them | | Assigned codes exist in the framework and evidence references point to actual messages. Results containing invalid codes or nonexistent references are withheld and handled as processing errors |
-|FR-| The system shall present up to the configured maximum number (default: three) of supported transcript examples with short explanations and reflection questions | |Each example includes an actual excerpt and one question about reasoning, decision-making, understanding, or deliberate delegation to AI. Fewer examples are shown when fewer are supported|
+|FR-| The system shall present up to the configured maximum number (default: three) of supported transcript examples with short explanations and reflection questions | |Each example includes an actual excerpt and one or more questions about reasoning, decision-making, understanding, or deliberate delegation to AI. The questions are suggestions that help the student write one answer. Fewer examples are shown when fewer are supported|
 
 ## Reflection question generation
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
-|FR- | The system shall accompany each selected example with a question addressing the student's reasoning, decision-making, understanding, or deliberate choice to delegate work to AI |
+|FR- | The system shall accompany each selected example with one or more questions addressing the student's reasoning, decision-making, understanding, or deliberate choice to delegate work to AI |
 
 
 ## Boundaries on feedback 
@@ -63,8 +63,8 @@
 ## Student reflection interaction
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
-|FR- | The system shall allow students to enter and submit a text response to each displayed reflection question | | Students can edit responses before submission. Each saved response is linked to its question and session. Empty responses prevent final submission and identify the unanswered questions |
-|FR-|The system shall present no more than a configured number of examples and reflection questions per session (default: 3), so the activity fits within the allocated lesson time|
+|FR- | The system shall allow students to enter and submit one free-text response to each displayed example | | Students can edit responses before submission. Each saved response is linked to its example and session. Empty responses prevent final submission and identify the unanswered examples |
+|FR-|The system shall present no more than a configured number of examples per session (default: 3), each with its reflection questions, so the activity fits within the allocated lesson time|
 
 ## Session progress and recovery
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
