@@ -283,9 +283,16 @@ test("shows the transcript preview and lets the student reject it", async ({
   ).toBeVisible();
   await expect(page.getByText("Hur kopplar jag en lysdiod?")).toBeVisible();
   await expect(page.getByText("Använd ett seriemotstånd")).toBeVisible();
+  // The line under the page heading describes this step, not the hand-in.
+  const handInIntro = page.getByText("Välj hur du arbetade under lektionen.");
+  await expect(
+    page.getByText("Nästa steg är att bekräfta att transkriptet är ditt."),
+  ).toBeVisible();
+  await expect(handInIntro).toHaveCount(0);
 
   await page.getByRole("button", { name: "Nej, välj en annan länk" }).click();
   await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
+  await expect(handInIntro).toBeVisible();
 });
 
 test("confirmation completes lesson 1 and returns a receipt", async ({

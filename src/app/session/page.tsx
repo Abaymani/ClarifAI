@@ -100,7 +100,7 @@ export default async function SessionPage() {
     preview: {
       status: sv.session.statusAwaitingConfirmation,
       heading: sv.session.heading,
-      intro: sv.session.intro,
+      intro: sv.session.introConfirmation,
     },
     analysing: {
       status: sv.session.statusAnalysing,
