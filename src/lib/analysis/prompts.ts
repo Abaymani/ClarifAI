@@ -26,7 +26,8 @@ const CODING_RULES = [
 
 const reflectionRules = (maxObservations: number) => [
   `Choose at most ${maxObservations} of the observations listed below: the ones most worth this student's reflection. Never choose two observations from the same student prompt. If none is suitable, choose none; the student then gets general questions instead.`,
-  "For each chosen observation, fit the intro and the questions of its group to what the student actually did. Keep the researchers' wording, and replace every part in [square brackets] with what applies here; where the brackets offer alternatives separated by a slash, keep the one that fits. Change anything else only as much as the situation requires.",
+  "For each chosen observation, fit the intro and the questions of its group to what the student actually did by replacing the parts in [square brackets], and nothing else. Where the brackets list alternatives separated by a slash, use the alternative that fits best. Where they describe something, such as a topic or what the student did, replace the description with the specific thing from this student's chat.",
+  "Leave every word outside the brackets exactly as the researchers wrote it. Change one only if the sentence would otherwise be grammatically wrong.",
   "Return as many questions as the group has, in the same order. No square brackets may remain in the intro or the questions.",
   'Write in Swedish and address the student as "du". Never mention codes, group names or ICAP categories.',
   "Do not add grades or judgements of your own, and do not assess whether the student's code, circuit or solution is correct.",

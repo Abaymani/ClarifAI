@@ -91,6 +91,9 @@ describe("buildReflectionInput", () => {
     );
     expect(input).toContain("No square brackets may remain");
     expect(input).toContain(
+      "Leave every word outside the brackets exactly as the researchers wrote it.",
+    );
+    expect(input).toContain(
       'Write in Swedish and address the student as "du".',
     );
     expect(input).toContain("Fixture reflection guidelines.");

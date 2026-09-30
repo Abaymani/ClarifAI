@@ -112,10 +112,12 @@ export const sv = {
     analysisRetrying: "Startar …",
     reflectionHeading: "Dags att reflektera",
     reflectionIntro:
-      "Här är några exempel från din chatt, med frågor till varje. Svara med egna ord.",
-    reflectionIntroGeneral: "Svara med egna ord på frågorna nedan.",
+      "Här är några exempel från din chatt. Skriv ett svar med egna ord till varje. Frågorna är förslag, inget du måste svara på i tur och ordning.",
+    reflectionIntroGeneral:
+      "Skriv ett svar med egna ord. Frågorna är förslag, inget du måste svara på i tur och ordning.",
     reflectionExample: (position: number) => `Exempel ${position}`,
-    reflectionGeneral: "Frågor",
+    reflectionGeneral: "Reflektion",
+    reflectionQuestions: "Frågor för att sätta igång tankarna",
     reflectionTip: (tip: string) => `Tips: ${tip}`,
     contextShowMore: "Visa mer",
     contextShowLess: "Visa mindre",

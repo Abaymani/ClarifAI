@@ -68,11 +68,17 @@ export function ReflectionQuestions({
 
           <p className="text-sm">{item.intro}</p>
 
-          <ul className="flex list-disc flex-col gap-1 pl-5 font-medium">
-            {item.questions.map((question) => (
-              <li key={question}>{question}</li>
-            ))}
-          </ul>
+          {/* Suggestions: the student writes one free-text answer per example. */}
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">
+              {sv.session.reflectionQuestions}
+            </p>
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+              {item.questions.map((question) => (
+                <li key={question}>{question}</li>
+              ))}
+            </ul>
+          </div>
 
           {item.tip ? (
             <p className="text-sm text-muted-foreground">

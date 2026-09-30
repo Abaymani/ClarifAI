@@ -34,9 +34,10 @@ const sequenceCodingFile = z.looseObject({
 // groups). Bracketed parts of the texts are filled in per student.
 const group = z.looseObject({
   code: z.string().min(1),
-  // "general" is used when nothing in the chat suits reflection, "no_transcript"
-  // when a student used no AI at all, and "none" for codes that are never
-  // reflected on.
+  // "general" is used when nothing in the chat suits reflection, and "none" for
+  // codes that are never reflected on.
+  // TODO(#16): "no_transcript" is for a student who used no AI. Nothing uses it
+  // yet: there is no way to hand in without a transcript.
   kind: z.enum(["reflect", "reinforce", "general", "no_transcript", "none"]),
   name: z.string().min(1),
   behaviourCodes: z.array(z.string()),

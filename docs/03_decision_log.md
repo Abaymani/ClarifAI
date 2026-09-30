@@ -253,5 +253,11 @@
 ### DL-040: The reflection texts are the researchers' own
 - **Options:** One question per behaviour group, freely adapted by the model; the researchers' intro, questions and tip per group, with marked parts to fit.
 - **Decision:** `behaviour_grouping.JSON` holds, for every group, the intro (Inledning, or Återkoppling for the F groups), one to three questions and a tip, copied from the researchers' document "Reflektionsfrågor" (2026-09-30). The model keeps their wording and only replaces the parts in square brackets with what the student did; it must return every question, and no brackets may remain. Tips and the general group's texts are shown as written. Group names, codes and descriptions stay as in the sheet: the document's R2 refers to a P10 that does not exist, so R2 keeps P9.
-- **Risks/consequences:** Each example has several questions and one answer field, on the reading that the tip is a starter for a single answer. The document's new group R01 (a student who used no AI) is stored but unused: that needs a way to say so at hand-in, which does not exist. The JSON files keep the status TEST until the researchers say the framework is final, so production still refuses to analyse.
+- **Risks/consequences:** Each example gets one free-text answer; its questions are suggestions and are always headed "Frågor för att sätta igång tankarna". Words outside the brackets change only when grammar requires it, and the originals are stored next to the fitted texts so the two can be compared. The document's new group R01 (a student who used no AI) is stored but unused: that needs a way to say so at hand-in, which does not exist (issue #16).
 - **Decided by:** Armin Baymani (human), 2026-09-30, who supplied the document; format and open points by Claude (agent).
+
+### DL-041: The framework is no longer marked TEST
+- **Options:** Keep the status TEST until the guidelines are written; treat the framework as the study's own now.
+- **Decision:** The three JSON files have the status `ACTIVE` and the version `2026-09-30`. Production analyses with them, and the reflection page no longer shows a test notice. The TEST status stays available for trying out a changed framework: production refuses it.
+- **Risks/consequences:** The analysis guidelines in the repository are still a three-line stub, and the priority order between codes (DL-039) is not written yet. Until the researchers' guidelines are merged, an analysis relies on the rules built into the prompts and on the framework alone.
+- **Decided by:** Armin Baymani (human), 2026-09-30.
