@@ -297,3 +297,9 @@
 - **Decision:** Lessons 1 and 4 enter `awaiting_no_gemini_confirmation` after a no-Gemini choice and complete only when the student chooses “Klar”. Lessons 2 and 3 can return from R01 before its response is submitted. Returning clears `no_gemini`, R01 questions and responses and restores transcript submission. Reflection tips move into the answer fields as placeholders; partly/no guidance appears directly after the agreement choice; and a submitted reflection gets its own positive receipt page.
 - **Risks/consequences:** DL-045's “complete immediately” wording for lessons 1 and 4 is superseded. One more explicit action is required, but a mistaken no-Gemini choice no longer locks the lesson. Placeholder tips are no longer visible after typing begins, by design.
 - **Decided by:** Proposed by Codex (agent) in reviewed mockups; approved by Armin Baymani (human), 2026-09-30.
+
+### DL-048: A "no Gemini" choice also removes the link from a failed attempt
+- **Options:** Keep the submitted link and its error code as the researchers' fallback when "no Gemini" follows a failed retrieval; remove them, as for any other "no Gemini" choice.
+- **Decision:** They are removed. The student's statement that there is no transcript is taken at face value, so nothing from an earlier attempt in that session is kept: not the link, not its error code.
+- **Risks/consequences:** A record cannot tell a student who used no Gemini from one who gave up on a link that failed. If retrieval breaks for many students at once, their links are not there to fall back on.
+- **Decided by:** Armin Baymani (human), 2026-09-30, when a review of DL-045 raised it.
