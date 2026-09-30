@@ -36,8 +36,6 @@ const group = z.looseObject({
   code: z.string().min(1),
   // "general" is used when nothing in the chat suits reflection, and "none" for
   // codes that are never reflected on.
-  // TODO(#16): "no_transcript" is for a student who used no AI. Nothing uses it
-  // yet: there is no way to hand in without a transcript.
   kind: z.enum(["reflect", "reinforce", "general", "no_transcript", "none"]),
   name: z.string().min(1),
   behaviourCodes: z.array(z.string()),
@@ -68,6 +66,7 @@ export type Framework = {
   groups: BehaviourGroup[];
   groupByCode: ReadonlyMap<string, BehaviourGroup>;
   generalGroup: BehaviourGroup;
+  noTranscriptGroup: BehaviourGroup | null;
   codingGuidelines: string;
   // Optional: guidance for choosing examples and adapting questions. Kept apart
   // from the coding guidelines so the coding step never sees it (DL-035).
@@ -191,8 +190,9 @@ export function parseFramework(files: FrameworkFiles): Framework {
     grouping.data.groups.filter((g) => g.kind === kind);
   const general = ofKind("general");
   if (general.length !== 1) problems.push("needs exactly one general group");
-  if (ofKind("no_transcript").length > 1) {
-    problems.push("at most one no_transcript group");
+  const noTranscript = ofKind("no_transcript");
+  if (noTranscript.length !== 1) {
+    problems.push("needs exactly one no_transcript group");
   }
 
   if (problems.length > 0) throw new AnalysisError("S2-FRAMEWORK", problems);
@@ -207,6 +207,7 @@ export function parseFramework(files: FrameworkFiles): Framework {
     groups: grouping.data.groups,
     groupByCode,
     generalGroup: general[0],
+    noTranscriptGroup: noTranscript[0] ?? null,
     codingGuidelines: files.codingGuidelines.trim(),
     reflectionGuidelines: files.reflectionGuidelines?.trim() || null,
   };

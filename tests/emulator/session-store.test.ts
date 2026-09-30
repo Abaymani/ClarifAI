@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
 
+import { noTranscriptReflection } from "@/lib/analysis/reflection";
+import { testFramework } from "@/lib/analysis/test-fixtures";
+import type { StoredReflectionQuestions } from "@/lib/analysis/types";
 import { getDb } from "@/lib/firebase/admin";
 import type { Transcript } from "@/lib/scraping/transcript";
 import { LOCKOUT_MINUTES } from "@/lib/session/credentials";
@@ -10,7 +13,9 @@ import {
 import {
   ensureParticipants,
   beginTranscriptSubmission,
+  completeReflection,
   confirmTranscript,
+  declareNoGeminiUse,
   failTranscriptSubmission,
   getSessionByToken,
   rejectTranscript,
@@ -18,6 +23,21 @@ import {
   startSession,
   TranscriptTooLargeError,
 } from "@/lib/session/store";
+
+function r01Questions(): StoredReflectionQuestions {
+  const framework = testFramework();
+  return {
+    ...noTranscriptReflection(framework),
+    frameworkVersion: framework.version,
+    frameworkStatus: framework.status,
+    analyser: "none",
+    model: null,
+    reasoningEffort: null,
+    createdAt: "2026-09-30T12:00:00.000Z",
+    durationMs: 0,
+    usage: null,
+  };
+}
 
 function transcript(title: string): Transcript {
   return {
@@ -316,5 +336,114 @@ describe("transcript lifecycle", () => {
       ok: true,
       session: { status: "processing", completedAt: null },
     });
+  });
+
+  test("records no Gemini and completes lessons 1 and 4", async () => {
+    const { token, sessionId } = await startedSession("814", 4);
+
+    const result = await declareNoGeminiUse(token, null);
+    expect(result).toMatchObject({
+      ok: true,
+      session: {
+        status: "completed",
+        transcriptSubmission: "no_gemini",
+        transcript: null,
+        reflectionQuestions: null,
+      },
+    });
+    expect(
+      (await getDb().collection("sessions").doc(sessionId).get()).data(),
+    ).toMatchObject({ status: "completed", transcriptSubmission: "no_gemini" });
+  });
+
+  test("goes directly to R01 in lessons 2 and 3 and invalidates a pending scrape", async () => {
+    const { token, sessionId } = await startedSession("815", 2);
+    await beginTranscriptSubmission(token, "old-attempt", "old-link");
+
+    const result = await declareNoGeminiUse(token, r01Questions());
+    expect(result).toMatchObject({
+      ok: true,
+      session: {
+        status: "awaiting_reflection",
+        transcriptSubmission: "no_gemini",
+        reflectionQuestions: {
+          outcome: "no_transcript",
+          items: [{ group: "R01", groupKind: "no_transcript" }],
+        },
+      },
+    });
+    expect(
+      await saveTranscriptSubmission(
+        sessionId,
+        token,
+        "old-attempt",
+        transcript("Too late"),
+      ),
+    ).toEqual({ ok: false, reason: "STALE" });
+  });
+
+  test("saves the R01 answer and completes the reflection", async () => {
+    const { token } = await startedSession("816", 3);
+    await declareNoGeminiUse(token, r01Questions());
+
+    const result = await completeReflection(token, [
+      { itemId: "q1", answer: "Jag ville prova själv.", agreement: null },
+    ]);
+    expect(result).toMatchObject({
+      ok: true,
+      session: {
+        status: "completed",
+        reflectionResponses: {
+          items: [
+            {
+              itemId: "q1",
+              answer: "Jag ville prova själv.",
+              agreement: null,
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  test("requires an agreement for each concrete analysis", async () => {
+    const { token, sessionId } = await startedSession("817", 2);
+    const questions = r01Questions();
+    questions.outcome = "observations";
+    questions.items[0] = {
+      ...questions.items[0],
+      group: "R1",
+      groupKind: "reflect",
+      basedOn: {
+        kind: "prompt",
+        code: "P1",
+        firstMessage: 1,
+        lastMessage: 1,
+      },
+      excerpt: { message: 1, text: "Gör det åt mig" },
+    };
+    await getDb().collection("sessions").doc(sessionId).update({
+      status: "awaiting_reflection",
+      reflectionQuestions: questions,
+    });
+
+    expect(
+      await completeReflection(token, [
+        {
+          itemId: "q1",
+          answer: "Analysen missar mitt försök.",
+          agreement: null,
+        },
+      ]),
+    ).toEqual({ ok: false, reason: "INVALID_RESPONSE" });
+    expect(
+      await completeReflection(token, [
+        {
+          itemId: "q1",
+          answer: "Analysen missar mitt försök.",
+          agreement: "no",
+        },
+      ]),
+    ).toMatchObject({ ok: true, session: { status: "completed" } });
   });
 });

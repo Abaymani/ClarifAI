@@ -64,24 +64,43 @@ export const sv = {
       `Analysen går inte att köra just nu. Be din lärare om hjälp. Felkod: ${errorCode}.`,
     analysisNotRetryable:
       "Analysen kan inte startas om just nu. Ladda om sidan och försök igen.",
+    noGeminiFailed: (errorCode: string) =>
+      `Valet kunde inte sparas. Försök igen eller be din lärare om hjälp. Felkod: ${errorCode}.`,
+    reflectionNotReady:
+      "Reflektionen är inte redo att lämnas in. Ladda om sidan och försök igen.",
+    reflectionIncomplete:
+      "Svara på varje reflektionspunkt. Välj också om du känner igen dig där en analys visas.",
   },
   session: {
     heading: "Sessionen är igång",
     participant: (code: string, lesson: number) =>
       `Deltagare ${code} · Lektion ${lesson}`,
     intro:
-      "Nästa steg är att lämna in länken till din Gemini-chatt. Du kan stänga fönstret och fortsätta senare med samma deltagarkod och PIN-kod.",
+      "Välj hur du arbetade under lektionen. Du kan stänga fönstret och fortsätta senare med samma deltagarkod och PIN-kod.",
     statusAwaitingTranscript: "Väntar på transkript",
     statusProcessing: "Hämtar transkript",
     statusAwaitingConfirmation: "Väntar på bekräftelse",
     statusTranscriptConfirmed: "Transkript bekräftat",
-    transcriptHeading: "Lämna in transkript",
+    transcriptHeading: "Hur arbetade du den här lektionen?",
+    geminiUseLegend: "Välj det som stämmer",
+    geminiUsed: "Jag använde Gemini",
+    geminiUsedHelp: "Jag lämnar in länken till chatten jag arbetade i.",
+    geminiNotUsed: "Jag använde inte Gemini",
+    geminiNotUsedHelp:
+      "Det finns ingen Gemini-chatt att lämna in från den här lektionen.",
     transcriptLabel: "Länk till din Gemini-chatt",
     transcriptPlaceholder: "https://share.gemini.google/...",
     transcriptHelp:
       "Öppna chatten i Gemini, välj Dela och kopiera den offentliga länken.",
     transcriptSubmit: "Lämna in",
     transcriptSubmitting: "Hämtar …",
+    noGeminiConfirmation: "Ingen chatt sparas eller analyseras.",
+    noGeminiReflectionExplanation:
+      "Du får i stället reflektera kort över varför du inte använde Gemini.",
+    noGeminiCompletionExplanation:
+      "Din inlämning registreras utan något transkript.",
+    noGeminiSubmit: "Fortsätt",
+    noGeminiSubmitting: "Sparar …",
     previewHeading: "Är det här ditt transkript?",
     previewIntro:
       "Kontrollera att meddelandena kommer från rätt Gemini-chatt innan du fortsätter.",
@@ -97,6 +116,8 @@ export const sv = {
     confirmedHeading: "Transkriptet är bekräftat",
     confirmedIntro: "Transkriptet är sparat.",
     submittedSuccess: "Tack! Ditt transkript har lämnats in.",
+    noGeminiSuccess: "Tack! Din inlämning har registrerats.",
+    reflectionSuccess: "Tack! Din reflektion har lämnats in.",
     logout: "Logga ut",
     statusAnalysing: "Analyseras",
     statusAnalysisFailed: "Analysen avbröts",
@@ -115,15 +136,30 @@ export const sv = {
       "Här är några exempel från din chatt. Skriv ett svar med egna ord till varje. Frågorna är förslag, inget du måste svara på i tur och ordning.",
     reflectionIntroGeneral:
       "Skriv ett svar med egna ord. Frågorna är förslag, inget du måste svara på i tur och ordning.",
+    reflectionIntroNoGemini:
+      "Du uppgav att det inte finns någon Gemini-chatt från lektionen. Skriv ett kort svar med egna ord.",
     reflectionExample: (position: number) => `Exempel ${position}`,
     reflectionGeneral: "Reflektion",
     reflectionQuestions: "Frågor för att sätta igång tankarna",
+    reflectionAnalysisLabel: "Så här tolkar analysen exemplet",
+    reflectionAnalysisCaveat:
+      "Det här är en möjlig tolkning utifrån chatten. Analysen kan ha missat vad du tänkte eller gjorde utanför Gemini.",
+    reflectionAgreementLegend: "Känner du igen dig i analysen?",
+    reflectionAgreement: (agreement: "yes" | "partly" | "no") =>
+      ({ yes: "Ja", partly: "Delvis", no: "Nej" })[agreement],
+    reflectionAgreementHelp:
+      "Det finns inget rätt svar. Ditt perspektiv hjälper oss att förstå situationen.",
+    reflectionExplainPartly:
+      "Du valde Delvis. Förklara i fritextrutan vad som stämmer och vad analysen inte fångar eller har missat.",
+    reflectionExplainNo:
+      "Du valde Nej. Förklara i fritextrutan varför analysen inte stämmer och vad den har missat.",
     reflectionTip: (tip: string) => `Tips: ${tip}`,
     contextShowMore: "Visa mer",
     contextShowLess: "Visa mindre",
     reflectionAnswerLabel: "Ditt svar",
-    reflectionAnswerSoon:
-      "Här skriver du ditt svar. Den delen öppnas i nästa steg av bygget.",
+    reflectionPerspectiveLabel: "Hur ser du själv på exemplet?",
+    reflectionSubmit: "Lämna in reflektionen",
+    reflectionSubmitting: "Lämnar in …",
     reflectionTest: "TEST: ramverket är inte studiens slutliga version.",
     reflectionFake: "Testanalys utan AI: kodningen är påhittad.",
   },

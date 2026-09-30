@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  getSessionData,
   seedCompletedSession,
   seedFailedAnalysis,
   seedParticipant,
@@ -29,7 +30,79 @@ test("starts a session with the right code and PIN", async ({ page }) => {
     page.getByRole("heading", { name: "Sessionen är igång" }),
   ).toBeVisible();
   await expect(page.getByText("Deltagare 901 · Lektion 2")).toBeVisible();
+  await expect(
+    page.getByRole("radio", { name: /Jag använde Gemini/ }),
+  ).toBeChecked();
   await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeEnabled();
+});
+
+test("records no Gemini and completes lesson 1 without a reflection", async ({
+  page,
+}) => {
+  await seedParticipant("912", "4321");
+  await logIn(page, "912", "4321", 1);
+
+  await page.getByRole("radio", { name: /Jag använde inte Gemini/ }).click();
+  await expect(page.getByLabel("Länk till din Gemini-chatt")).toBeHidden();
+  await page.getByRole("button", { name: "Fortsätt" }).click();
+
+  await expect(
+    page.getByText("Tack! Din inlämning har registrerats."),
+  ).toBeVisible();
+  expect(await getSessionData("912", 1)).toMatchObject({
+    status: "completed",
+    transcriptSubmission: "no_gemini",
+    transcript: null,
+  });
+});
+
+test("shows R01 and saves a reflection when Gemini was not used in lesson 2", async ({
+  page,
+}) => {
+  await seedParticipant("913", "4321");
+  await logIn(page, "913", "4321", 2);
+
+  await page.getByRole("radio", { name: /Jag använde inte Gemini/ }).click();
+  await page.getByRole("button", { name: "Fortsätt" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Dags att reflektera" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Du uppgav att du inte använde Gemini under denna lektionen.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Vad motiverade dig för att inte använda det?"),
+  ).toBeVisible();
+  await expect(page.getByText("Känner du igen dig i analysen?")).toHaveCount(0);
+
+  await page
+    .getByLabel("Ditt svar")
+    .fill("Jag heter Ada Lovelace och ville prova själv.");
+  await page.getByRole("button", { name: "Lämna in reflektionen" }).click();
+  await expect(
+    page.getByText("Tack! Din reflektion har lämnats in."),
+  ).toBeVisible();
+
+  expect(await getSessionData("913", 2)).toMatchObject({
+    status: "completed",
+    transcriptSubmission: "no_gemini",
+    reflectionQuestions: {
+      outcome: "no_transcript",
+      items: [{ group: "R01", groupKind: "no_transcript" }],
+    },
+    reflectionResponses: {
+      items: [
+        {
+          itemId: "q1",
+          answer: "Jag heter [REDACTED NAME] och ville prova själv.",
+          agreement: null,
+        },
+      ],
+    },
+  });
 });
 
 test("keeps the student out with a wrong PIN and counts the attempt", async ({
@@ -211,13 +284,77 @@ test("confirmation analyses lesson 3 and shows the reflection questions", async 
   await expect(page.locator('[data-slot="alert"]')).toContainText(
     "Testanalys utan AI",
   );
-  await expect(page.getByLabel("Ditt svar")).toBeDisabled();
+  await expect(
+    example.getByText("Så här tolkar analysen exemplet"),
+  ).toBeVisible();
+  await expect(
+    example.getByText(/Analysen kan ha missat vad du tänkte/),
+  ).toBeVisible();
+  await expect(
+    example.getByRole("radio", { name: "Delvis", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    example.getByLabel("Hur ser du själv på exemplet?"),
+  ).toBeEnabled();
+
+  await example.getByRole("radio", { name: "Delvis", exact: true }).click();
+  await expect(example).toContainText(
+    "Förklara i fritextrutan vad som stämmer",
+  );
+  await example.getByRole("radio", { name: "Ja", exact: true }).click();
+  await expect(example).not.toContainText(
+    "Förklara i fritextrutan vad som stämmer",
+  );
 
   // The questions are stored, so they are still there after a reload.
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Dags att reflektera" }),
   ).toBeVisible();
+});
+
+test("stores agreement and every free-text reflection answer", async ({
+  page,
+}) => {
+  await seedParticipant("914", "4321");
+  await seedTranscriptForConfirmation("914", 3);
+  await logIn(page, "914", "4321", 3);
+  await page.getByRole("button", { name: "Ja, fortsätt" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Dags att reflektera" }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  const examples = page.locator("section[data-tone]");
+  const count = await examples.count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i += 1) {
+    const example = examples.nth(i);
+    await example
+      .getByRole("radio", {
+        name: i === 0 ? "Nej" : "Ja",
+        exact: true,
+      })
+      .click();
+    await example
+      .getByLabel("Hur ser du själv på exemplet?")
+      .fill(`Mitt svar på exempel ${i + 1}.`);
+  }
+  await expect(examples.first()).toContainText(
+    "Förklara i fritextrutan varför analysen inte stämmer",
+  );
+
+  await page.getByRole("button", { name: "Lämna in reflektionen" }).click();
+  await expect(
+    page.getByText("Tack! Din reflektion har lämnats in."),
+  ).toBeVisible();
+
+  const session = await getSessionData("914", 3);
+  expect(session).toMatchObject({ status: "completed" });
+  expect(session?.reflectionResponses.items).toHaveLength(count);
+  expect(session?.reflectionResponses.items[0]).toMatchObject({
+    agreement: "no",
+    answer: "Mitt svar på exempel 1.",
+  });
 });
 
 test("lets the student restart a failed analysis", async ({ page }) => {

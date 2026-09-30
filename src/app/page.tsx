@@ -13,13 +13,21 @@ export default async function Home({
 }: {
   searchParams: Promise<{ submitted?: string }>;
 }) {
-  const submitted = (await searchParams).submitted === "1";
+  const submitted = (await searchParams).submitted;
+  const receipt =
+    submitted === "1"
+      ? sv.session.submittedSuccess
+      : submitted === "no-gemini"
+        ? sv.session.noGeminiSuccess
+        : submitted === "reflection"
+          ? sv.session.reflectionSuccess
+          : null;
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-4 p-6">
-      {submitted ? (
+      {receipt ? (
         <Alert>
-          <AlertDescription>{sv.session.submittedSuccess}</AlertDescription>
+          <AlertDescription>{receipt}</AlertDescription>
         </Alert>
       ) : null}
       <Card>
