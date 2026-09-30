@@ -261,3 +261,21 @@
 - **Decision:** The three JSON files have the status `ACTIVE` and the version `2026-09-30`. Production analyses with them, and the reflection page no longer shows a test notice. The TEST status stays available for trying out a changed framework: production refuses it.
 - **Risks/consequences:** The analysis guidelines in the repository are still a three-line stub, and the priority order between codes (DL-039) is not written yet. Until the researchers' guidelines are merged, an analysis relies on the rules built into the prompts and on the framework alone.
 - **Decided by:** Armin Baymani (human), 2026-09-30.
+
+### DL-042: Only redacted personal information may not be guessed
+- **Options:** Forbid guessing what removed pictures and redacted text contained; forbid it only for redacted personal information.
+- **Decision:** The rule built into the prompts now forbids guessing redacted personal information only. What a removed picture showed may be read from the messages around it, as the researchers' analysis guidelines say.
+- **Risks/consequences:** The model may read more into a picture than the chat supports. Codes still need an excerpt from the transcript and a justification based on what it shows.
+- **Decided by:** Armin Baymani (human), 2026-09-30.
+
+### DL-043: The framework no longer marks S4 as high priority
+- **Options:** Keep the sheet's note that S4 is high priority in the reflection; let the reflection guidelines alone say which patterns weigh more.
+- **Decision:** The note was removed from `sequence_coding.JSON`, which now differs from the sheet on this point. The framework version is `2026-09-30.2`, so results made before and after the change can be told apart.
+- **Risks/consequences:** The sheet still carries the note, so copying it again would bring it back. The version is kept by hand and has to be raised whenever the framework files change.
+- **Decided by:** Armin Baymani (human), 2026-09-30; version by Claude (agent).
+
+### DL-044: The researchers' first-draft guidelines are in the repository
+- **Options:** Keep the three-line stub until the guidelines are final; commit the first draft now.
+- **Decision:** `framework/analysis_guidelines.md` and the new `framework/reflection_guidelines.md` hold the researchers' first draft, converted word for word from the two tabs of their Google Doc on 2026-09-30. The coding step gets only the analysis guidelines; the reflection step also gets the reflection guidelines (DL-035). The analysis guidelines give the first priority rule between codes (DL-039): a passive code takes precedence when a prompt also has active or constructive elements.
+- **Risks/consequences:** It is a draft and will change. The framework version (`2026-09-30.2`) is not raised automatically when a guideline file changes, so it has to be raised by hand for results to stay traceable to the guidelines that produced them. No order is defined yet between active and constructive codes, or for the NA codes.
+- **Decided by:** Armin Baymani (human), 2026-09-30.
