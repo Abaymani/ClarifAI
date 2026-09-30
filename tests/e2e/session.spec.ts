@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   seedCompletedSession,
+  seedFailedAnalysis,
   seedParticipant,
   seedTranscriptForConfirmation,
 } from "./seed";
@@ -180,7 +181,7 @@ test("confirmation completes lesson 1 and returns a receipt", async ({
   await expect(page.getByRole("heading", { name: "Logga in" })).toBeVisible();
 });
 
-test("confirmation advances lesson 3 to the upcoming analysis step", async ({
+test("confirmation analyses lesson 3 and shows the reflection questions", async ({
   page,
 }) => {
   await seedParticipant("910", "4321");
@@ -189,7 +190,48 @@ test("confirmation advances lesson 3 to the upcoming analysis step", async ({
 
   await page.getByRole("button", { name: "Ja, fortsätt" }).click();
   await expect(
-    page.getByRole("heading", { name: "Transkriptet är bekräftat" }),
+    page.getByRole("heading", { name: "Vi analyserar din chatt" }),
   ).toBeVisible();
-  await expect(page.getByText("Analys- och reflektionssteget")).toBeVisible();
+
+  // The browser tests use the fake analyser; the page polls until it is done.
+  await expect(
+    page.getByRole("heading", { name: "Dags att reflektera" }),
+  ).toBeVisible({ timeout: 15_000 });
+  // The example shows the quoted prompt with the answer that followed it, tinted
+  // by whether the group reflects or reinforces.
+  const example = page.locator("section[data-tone]").first();
+  await expect(example).toHaveAttribute("data-tone", "reflect");
+  await expect(example).toContainText("1. Du");
+  await expect(example).toContainText("Hur kopplar jag en lysdiod?");
+  await expect(example).toContainText("2. Gemini");
+  await expect(example).toContainText("Använd ett seriemotstånd");
+  // The intro and the questions come from the behaviour group's texts.
+  await expect(example).toContainText("FAKE:");
+  await expect(example.getByRole("listitem").first()).toBeVisible();
+  await expect(page.locator('[data-slot="alert"]')).toContainText(
+    "Testanalys utan AI",
+  );
+  await expect(page.getByLabel("Ditt svar")).toBeDisabled();
+
+  // The questions are stored, so they are still there after a reload.
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Dags att reflektera" }),
+  ).toBeVisible();
+});
+
+test("lets the student restart a failed analysis", async ({ page }) => {
+  await seedParticipant("911", "4321");
+  await seedFailedAnalysis("911", 2, "S2-OPENAI");
+  await logIn(page, "911", "4321", 2);
+
+  await expect(
+    page.getByRole("heading", { name: "Analysen blev inte klar" }),
+  ).toBeVisible();
+  await expect(page.locator('[data-slot="alert"]')).toContainText("S2-OPENAI");
+
+  await page.getByRole("button", { name: "Försök igen" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Dags att reflektera" }),
+  ).toBeVisible({ timeout: 15_000 });
 });

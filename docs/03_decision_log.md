@@ -213,3 +213,51 @@
 - **Decision:** Before Firestore storage or preview, locally redact email addresses, Swedish personal identity numbers, Swedish-format phone numbers, `user@host` terminal identifiers, usernames in common home-directory paths, and names introduced with phrases such as “jag heter” or “my name is”. Query strings and fragments are removed from submitted share links before storage. No transcript content or link is written to diagnostic logs.
 - **Risks/consequences:** Deterministic patterns are auditable and keep raw content away from another service, but they cannot reliably find every personal name or contextual identifier, especially in Swedish. This is a first implementation of DL-007 and must be revisited with representative transcripts before S0.
 - **Decided by:** Codex (agent), 2026-09-23. Not yet reviewed by a human.
+
+### DL-034: A TEST framework stands in until the real one is ready
+- **Options:** Wait for the final coding framework before building the analysis; build it against a TEST copy.
+- **Decision:** Build against a TEST framework: the codes, sequence patterns and behaviour groups copied verbatim from the working version of the "Framework for scaffolding" sheet (2026-09-29), with one placeholder question per behaviour group (replaced by the researchers' own texts in DL-040). Every JSON file is marked `TEST`. The guidelines are not part of it: the researchers write those.
+- **Risks/consequences:** Results produced with it are only good for testing the pipeline. The analysis will store the framework version with every result, so TEST results can't be mistaken for research data, and production refuses to run on a TEST framework. Tests use a small fixture framework of their own, so replacing the files cannot break them.
+- **Decided by:** Armin Baymani (human) asked for a TEST framework from the sheet on 2026-09-29; file format and placeholders by Claude (agent).
+
+### DL-035: The analysis runs in two steps
+- **Options:** One request that codes the transcript and writes the reflection questions; a coding request followed by a request for the observations and questions.
+- **Decision:** Two steps. Step 1 codes every student prompt and sequence and is stored as soon as it passes validation. Step 2 continues the same conversation: the model chooses at most the configured number of observations (default 3) from the validated coding, using general guidelines rather than fixed rules, and adapts each behaviour group's question. The coding step sees only the coding guidelines (`analysis_guidelines.md`); guidance for choosing and adapting goes in the optional `reflection_guidelines.md`, which only step 2 gets, together with the groups' questions. What the requirements demand (the transcript is data, no forced codes, verbatim excerpts, no grading, Swedish) is written into the prompts in code, so it holds whatever the guidelines contain. The output format gave each student prompt one code, or none; DL-039 changed that. Each step opens identically for every student (output format, then framework), so after the first analysis OpenAI serves the framework from its prompt cache. Step 2 cannot reuse step 1's cache, because OpenAI caches the output format as part of the opening (measured 2026-09-29), so step 2's format must not vary between students either.
+- **Risks/consequences:** The AI coding is research data that will be compared with human coding, so it is kept free of the question task, and retrying the questions never changes it. The student waits for a second, shorter request. Adapting the templates, which the architecture had under S3, happens in step 2 of S2, and only answering remains for S3; the architecture document was updated to say so on 2026-09-30, with Armin Baymani's approval.
+- **Decided by:** Armin Baymani (human), 2026-09-29: the AI coding is research data, and the model picks observations from general guidelines. Design by Claude (agent), issue #14.
+
+### DL-036: The analysis runs in the background and the page polls
+- **Options:** Analyse inside the confirmation request; continue after the response with Next.js `after`; use OpenAI's background mode and poll OpenAI.
+- **Decision:** The confirmation (or retry) starts an attempt with a random ID in the same transaction and returns at once. The analysis continues with `after`, within the session page's `maxDuration` of 300 seconds, and every write names its attempt, so a superseded attempt can't overwrite a newer one (as in DL-032). The page shows the status and refreshes every three seconds. A session still processing after six minutes is treated as interrupted and can be retried.
+- **Risks/consequences:** Everything stays in our own code and database; OpenAI keeps no stored responses. An analysis that needs more than five minutes is cut off by Vercel and has to be retried; if that turns out to be common, OpenAI's background mode is the alternative.
+- **Decided by:** Claude (agent), 2026-09-29, as proposed in issue #14; Armin Baymani (human) gave the go-ahead.
+
+### DL-037: OpenAI settings for the analysis
+- **Options:** Model gpt-6-astra, gpt-6-sol or gpt-6-luna; free text or structured output; keep responses at OpenAI or not.
+- **Decision:** gpt-6-sol with medium reasoning by default, changeable with `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT`. Answers use strict Structured Outputs whose enums come from the framework, then pass our own validation; an invalid answer gets one automatic retry. Requests use `store: false` and one `prompt_cache_key` per step and framework version. Every result records the model, duration and token use.
+- **Risks/consequences:** Sol costs $2 per million input tokens ($0.20 cached) and $10 per million output tokens (September 2026). A rough estimate is 10–25 cents per analysis, so tens of dollars for the roughly 120 analyses in the study; the stored token counts will show the real figure. First measurements on an eight-message synthetic chat (2026-09-29): 7–13 seconds per step, about 8,000–11,000 input tokens per step, of which about 7,800 came from the cache once one analysis had run. The choice of model and reasoning effort should be revisited once real transcripts can be measured. OpenAI processing is covered by the study's existing agreement; abuse-monitoring logs are kept for up to 30 days.
+- **Decided by:** Claude (agent), 2026-09-29. Not yet reviewed by a human.
+
+### DL-038: A fake analyser for local development and browser tests
+- **Options:** Require an OpenAI key everywhere; stub OpenAI only in unit tests; a fake analyser behind the same interface.
+- **Decision:** Without a key, `pnpm dev` uses a fake analyser that codes by keyword and picks varied examples; browser tests always use it (`CLARIFAI_FAKE_ANALYSIS=1`). Its results pass the same validation, are stored with analyser `fake`, and are labelled on the page. Production never uses it, whatever the settings.
+- **Risks/consequences:** The whole flow can be tried and tested without a key or cost, but the fake says nothing about how well the real analysis codes. That needs real transcripts and an OpenAI key.
+- **Decided by:** Claude (agent), 2026-09-29. Not yet reviewed by a human.
+
+### DL-039: A prompt can have several codes, in priority order
+- **Options:** Exactly one code per student prompt; every code that applies, ordered by priority.
+- **Decision:** The model gives a prompt every code that clearly applies, each with its own excerpt and justification, listed with the most important first. The priority order comes from the analysis guidelines, which the researchers write. Where the guidelines give none, the code that describes the prompt best comes first. A prompt with too little context gets no codes and a note saying why.
+- **Risks/consequences:** Every code of a prompt can be offered for reflection, but one prompt is shown in at most one example. Until the guidelines define a priority order, the order is the model's judgement, which matters when the coding is compared with human coders.
+- **Decided by:** Armin Baymani (human), 2026-09-30.
+
+### DL-040: The reflection texts are the researchers' own
+- **Options:** One question per behaviour group, freely adapted by the model; the researchers' intro, questions and tip per group, with marked parts to fit.
+- **Decision:** `behaviour_grouping.JSON` holds, for every group, the intro (Inledning, or Återkoppling for the F groups), one to three questions and a tip, copied from the researchers' document "Reflektionsfrågor" (2026-09-30). The model keeps their wording and only replaces the parts in square brackets with what the student did; it must return every question, and no brackets may remain. Tips and the general group's texts are shown as written. Group names, codes and descriptions stay as in the sheet: the document's R2 refers to a P10 that does not exist, so R2 keeps P9.
+- **Risks/consequences:** Each example gets one free-text answer; its questions are suggestions and are always headed "Frågor för att sätta igång tankarna". Words outside the brackets change only when grammar requires it, and the originals are stored next to the fitted texts so the two can be compared. The document's new group R01 (a student who used no AI) is stored but unused: that needs a way to say so at hand-in, which does not exist (issue #16).
+- **Decided by:** Armin Baymani (human), 2026-09-30, who supplied the document; format and open points by Claude (agent).
+
+### DL-041: The framework is no longer marked TEST
+- **Options:** Keep the status TEST until the guidelines are written; treat the framework as the study's own now.
+- **Decision:** The three JSON files have the status `ACTIVE` and the version `2026-09-30`. Production analyses with them, and the reflection page no longer shows a test notice. The TEST status stays available for trying out a changed framework: production refuses it.
+- **Risks/consequences:** The analysis guidelines in the repository are still a three-line stub, and the priority order between codes (DL-039) is not written yet. Until the researchers' guidelines are merged, an analysis relies on the rules built into the prompts and on the framework alone.
+- **Decided by:** Armin Baymani (human), 2026-09-30.

@@ -1,10 +1,18 @@
+import { randomUUID } from "node:crypto";
+
 import {
   FieldValue,
   Timestamp,
+  type DocumentData,
   type DocumentReference,
   type Transaction,
 } from "firebase-admin/firestore";
 
+import type { AnalysisStore } from "@/lib/analysis/run";
+import type {
+  StoredCoding,
+  StoredReflectionQuestions,
+} from "@/lib/analysis/types";
 import { getDb } from "@/lib/firebase/admin";
 import type { Transcript } from "@/lib/scraping/transcript";
 
@@ -17,7 +25,13 @@ import {
   type Lesson,
 } from "./credentials";
 import { hashSessionToken } from "./session-token";
-import { sessionId, type Session, type SessionStatus } from "./types";
+import {
+  analysisInterrupted,
+  analysisResultMissing,
+  sessionId,
+  type Session,
+  type SessionStatus,
+} from "./types";
 
 const PARTICIPANTS = "participants";
 const SESSIONS = "sessions";
@@ -139,6 +153,9 @@ export async function startSession(
         errorCode: null,
         transcript: null,
         transcriptConfirmedAt: null,
+        analysisStartedAt: null,
+        analysis: null,
+        reflectionQuestions: null,
       },
     };
   });
@@ -235,9 +252,12 @@ export async function saveTranscriptSubmission(
       status: "awaiting_confirmation" satisfies SessionStatus,
       activeTranscriptAttemptId: FieldValue.delete(),
       errorCode: null,
+      activeAnalysisAttemptId: FieldValue.delete(),
+      analysisStartedAt: FieldValue.delete(),
       analysis: FieldValue.delete(),
       reflectionQuestions: FieldValue.delete(),
       reflectionResponses: FieldValue.delete(),
+      analysisFailures: FieldValue.delete(),
       updatedAt: Timestamp.fromDate(now),
     });
     return {
@@ -248,6 +268,9 @@ export async function saveTranscriptSubmission(
         transcriptConfirmedAt: null,
         status: "awaiting_confirmation",
         errorCode: null,
+        analysisStartedAt: null,
+        analysis: null,
+        reflectionQuestions: null,
         updatedAt: now,
       },
     };
@@ -326,8 +349,11 @@ export async function rejectTranscript(
   });
 }
 
+// For lessons 2 and 3 the analysis attempt starts in the same transaction, so a
+// confirmed session is never left without one.
 export async function confirmTranscript(
   token: string,
+  analysisAttemptId: string = randomUUID(),
   now: Date = new Date(),
 ): Promise<TranscriptMutationResult> {
   return updateAuthenticatedSession(token, (current, tx, ref) => {
@@ -346,6 +372,12 @@ export async function confirmTranscript(
       completedAt: completed ? Timestamp.fromDate(now) : null,
       errorCode: null,
       updatedAt: Timestamp.fromDate(now),
+      ...(completed
+        ? {}
+        : {
+            activeAnalysisAttemptId: analysisAttemptId,
+            analysisStartedAt: Timestamp.fromDate(now),
+          }),
     });
     return {
       ok: true,
@@ -355,9 +387,115 @@ export async function confirmTranscript(
         transcriptConfirmedAt: now,
         completedAt: completed ? now : null,
         errorCode: null,
+        analysisStartedAt: completed ? null : now,
         updatedAt: now,
       },
     };
+  });
+}
+
+// A failed analysis, or one that never reported back, can be started again. The
+// stored coding is kept, so a retry after step 1 only redoes step 2.
+export async function retryAnalysis(
+  token: string,
+  attemptId: string,
+  now: Date = new Date(),
+): Promise<TranscriptMutationResult> {
+  return updateAuthenticatedSession(token, (current, tx, ref) => {
+    if (current.status === "completed") {
+      return { ok: false, reason: "ALREADY_COMPLETED" };
+    }
+    const analysed = current.lesson === 2 || current.lesson === 3;
+    const retryable =
+      current.status === "failed" ||
+      analysisInterrupted(current, now) ||
+      analysisResultMissing(current);
+    if (!analysed || !current.transcriptConfirmedAt || !retryable) {
+      return { ok: false, reason: "NOT_READY" };
+    }
+
+    tx.update(ref, {
+      status: "processing" satisfies SessionStatus,
+      activeAnalysisAttemptId: attemptId,
+      analysisStartedAt: Timestamp.fromDate(now),
+      errorCode: null,
+      updatedAt: Timestamp.fromDate(now),
+    });
+    return {
+      ok: true,
+      session: {
+        ...current,
+        status: "processing",
+        analysisStartedAt: now,
+        errorCode: null,
+        updatedAt: now,
+      },
+    };
+  });
+}
+
+// Used by the analysis running in the background. It has no session token; the
+// unguessable attempt ID is what lets it write, and only while it is current.
+export const analysisStore: AnalysisStore = {
+  async load(sessionIdValue, attemptId) {
+    const snapshot = await getDb()
+      .collection(SESSIONS)
+      .doc(sessionIdValue)
+      .get();
+    const data = snapshot.data();
+    if (!data || !isCurrentAnalysis(data, attemptId)) return null;
+    const session = toSession(snapshot.id, data);
+    if (!session.transcript || !session.transcriptConfirmedAt) return null;
+    return { transcript: session.transcript, coding: session.analysis };
+  },
+
+  async saveCoding(sessionIdValue, attemptId, coding) {
+    return updateCurrentAnalysis(sessionIdValue, attemptId, (now) => ({
+      analysis: coding,
+      updatedAt: now,
+    }));
+  },
+
+  async saveQuestions(sessionIdValue, attemptId, questions) {
+    return updateCurrentAnalysis(sessionIdValue, attemptId, (now) => ({
+      reflectionQuestions: questions,
+      status: "awaiting_reflection" satisfies SessionStatus,
+      activeAnalysisAttemptId: FieldValue.delete(),
+      errorCode: null,
+      updatedAt: now,
+    }));
+  },
+
+  async fail(sessionIdValue, attemptId, errorCode) {
+    return updateCurrentAnalysis(sessionIdValue, attemptId, (now) => ({
+      status: "failed" satisfies SessionStatus,
+      activeAnalysisAttemptId: FieldValue.delete(),
+      errorCode,
+      // A retry clears errorCode; the history stays in the research record.
+      analysisFailures: FieldValue.arrayUnion({ errorCode, at: now }),
+      updatedAt: now,
+    }));
+  },
+};
+
+function isCurrentAnalysis(data: DocumentData, attemptId: string): boolean {
+  return (
+    data.status === "processing" && data.activeAnalysisAttemptId === attemptId
+  );
+}
+
+async function updateCurrentAnalysis(
+  sessionIdValue: string,
+  attemptId: string,
+  changes: (now: Timestamp) => Record<string, unknown>,
+): Promise<boolean> {
+  const db = getDb();
+  const ref = db.collection(SESSIONS).doc(sessionIdValue);
+  return db.runTransaction(async (tx) => {
+    const data = (await tx.get(ref)).data();
+    if (!data || !isCurrentAnalysis(data, attemptId)) return false;
+    tx.update(ref, changes(Timestamp.now()));
+    return true;
   });
 }
 
@@ -410,7 +548,41 @@ function toSession(id: string, data: Record<string, unknown>): Session {
     errorCode: typeof data.errorCode === "string" ? data.errorCode : null,
     transcript: toTranscript(data.transcript),
     transcriptConfirmedAt: toDate(data.transcriptConfirmedAt),
+    analysisStartedAt: toDate(data.analysisStartedAt),
+    analysis: isStoredCoding(data.analysis) ? data.analysis : null,
+    reflectionQuestions: isStoredQuestions(data.reflectionQuestions)
+      ? data.reflectionQuestions
+      : null,
   };
+}
+
+// Results stored in a shape this version doesn't know are treated as absent, so
+// the analysis is simply done again.
+function isStoredCoding(value: unknown): value is StoredCoding {
+  return (
+    hasArrays(value, "prompts", "sequences") &&
+    (value as StoredCoding).prompts.every((prompt) =>
+      Array.isArray(prompt?.codes),
+    )
+  );
+}
+
+function isStoredQuestions(value: unknown): value is StoredReflectionQuestions {
+  return (
+    hasArrays(value, "items") &&
+    (value as StoredReflectionQuestions).items.every(
+      (item) =>
+        typeof item?.intro === "string" && Array.isArray(item?.questions),
+    )
+  );
+}
+
+function hasArrays(value: unknown, ...keys: string[]): boolean {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    keys.every((key) => Array.isArray((value as Record<string, unknown>)[key]))
+  );
 }
 
 function transcriptSizeBytes(transcript: Transcript): number {

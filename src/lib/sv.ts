@@ -54,6 +54,16 @@ export const sv = {
     sessionExpired: "Sessionen har gått ut. Logga in igen.",
     transcriptRetry: (errorCode: string) =>
       `Det förra försöket misslyckades. Kontrollera länken och försök igen. Felkod: ${errorCode}.`,
+    analysisFailed: (errorCode: string) =>
+      `Något gick fel under analysen. Försök igen. Felkod: ${errorCode}.`,
+    analysisInterrupted: (errorCode: string) =>
+      `Analysen blev avbruten innan den var klar. Försök igen. Felkod: ${errorCode}.`,
+    analysisTooLong: (errorCode: string) =>
+      `Chatten är för lång för att analyseras. Be din lärare om hjälp. Felkod: ${errorCode}.`,
+    analysisUnavailable: (errorCode: string) =>
+      `Analysen går inte att köra just nu. Be din lärare om hjälp. Felkod: ${errorCode}.`,
+    analysisNotRetryable:
+      "Analysen kan inte startas om just nu. Ladda om sidan och försök igen.",
   },
   session: {
     heading: "Sessionen är igång",
@@ -85,9 +95,36 @@ export const sv = {
     reject: "Nej, välj en annan länk",
     rejecting: "Öppnar formuläret …",
     confirmedHeading: "Transkriptet är bekräftat",
-    confirmedIntro:
-      "Transkriptet är sparat. Analys- och reflektionssteget byggs härnäst.",
+    confirmedIntro: "Transkriptet är sparat.",
     submittedSuccess: "Tack! Ditt transkript har lämnats in.",
     logout: "Logga ut",
+    statusAnalysing: "Analyseras",
+    statusAnalysisFailed: "Analysen avbröts",
+    statusAwaitingReflection: "Väntar på dina svar",
+    analysingHeading: "Vi analyserar din chatt",
+    analysingIntro:
+      "Det kan ta en stund. Du kan stänga sidan och logga in igen senare, analysen fortsätter ändå.",
+    analysingProgress: "Analyserar …",
+    analysisFailedHeading: "Analysen blev inte klar",
+    analysisFailedIntro:
+      "Ditt transkript är sparat. Starta analysen igen, så fortsätter den där den slutade.",
+    analysisRetry: "Försök igen",
+    analysisRetrying: "Startar …",
+    reflectionHeading: "Dags att reflektera",
+    reflectionIntro:
+      "Här är några exempel från din chatt. Skriv ett svar med egna ord till varje. Frågorna är förslag, inget du måste svara på i tur och ordning.",
+    reflectionIntroGeneral:
+      "Skriv ett svar med egna ord. Frågorna är förslag, inget du måste svara på i tur och ordning.",
+    reflectionExample: (position: number) => `Exempel ${position}`,
+    reflectionGeneral: "Reflektion",
+    reflectionQuestions: "Frågor för att sätta igång tankarna",
+    reflectionTip: (tip: string) => `Tips: ${tip}`,
+    contextShowMore: "Visa mer",
+    contextShowLess: "Visa mindre",
+    reflectionAnswerLabel: "Ditt svar",
+    reflectionAnswerSoon:
+      "Här skriver du ditt svar. Den delen öppnas i nästa steg av bygget.",
+    reflectionTest: "TEST: ramverket är inte studiens slutliga version.",
+    reflectionFake: "Testanalys utan AI: kodningen är påhittad.",
   },
 } as const;

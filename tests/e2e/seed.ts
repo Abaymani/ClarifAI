@@ -41,6 +41,33 @@ export async function seedCompletedSession(
   });
 }
 
+function transcript(title: string) {
+  return {
+    source: {
+      submittedLink: "https://gemini.google.com/share/abc123def456",
+      shareUrl: "https://gemini.google.com/share/abc123def456",
+      title,
+      model: "Gemini",
+      sharedAt: null,
+    },
+    retrievedAt: new Date().toISOString(),
+    parserVersion: 1,
+    messages: [
+      {
+        index: 1,
+        role: "student",
+        text: "Hur kopplar jag en lysdiod?",
+      },
+      {
+        index: 2,
+        role: "gemini",
+        text: "Använd ett seriemotstånd och kontrollera polariteten.",
+      },
+    ],
+    warnings: [],
+  };
+}
+
 export async function seedTranscriptForConfirmation(
   code: string,
   lesson: number,
@@ -59,29 +86,30 @@ export async function seedTranscriptForConfirmation(
       completedAt: null,
       errorCode: null,
       transcriptConfirmedAt: null,
-      transcript: {
-        source: {
-          submittedLink: "https://gemini.google.com/share/abc123def456",
-          shareUrl: "https://gemini.google.com/share/abc123def456",
-          title,
-          model: "Gemini",
-          sharedAt: null,
-        },
-        retrievedAt: new Date().toISOString(),
-        parserVersion: 1,
-        messages: [
-          {
-            index: 1,
-            role: "student",
-            text: "Hur kopplar jag en lysdiod?",
-          },
-          {
-            index: 2,
-            role: "gemini",
-            text: "Använd ett seriemotstånd och kontrollera polariteten.",
-          },
-        ],
-        warnings: [],
-      },
+      transcript: transcript(title),
+    });
+}
+
+// A confirmed lesson 2 or 3 session whose analysis failed.
+export async function seedFailedAnalysis(
+  code: string,
+  lesson: number,
+  errorCode: string,
+): Promise<void> {
+  await db
+    .collection("sessions")
+    .doc(`${code}_${lesson}`)
+    .set({
+      participantCode: code,
+      lesson,
+      status: "failed",
+      sessionTokenHash: "replaced-at-login",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      errorCode,
+      transcriptConfirmedAt: new Date(),
+      analysisStartedAt: new Date(),
+      transcript: transcript("Lysdiod och Arduino"),
     });
 }

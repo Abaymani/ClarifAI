@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
+import { defaultRunDependencies, runAnalysis } from "@/lib/analysis/run";
 import {
   parseShareLink,
   shareLinkForStorage,
@@ -15,10 +17,12 @@ import { redactTranscript } from "@/lib/scraping/redact-transcript";
 import { ScrapeError, type ScrapeErrorCode } from "@/lib/scraping/scrape-error";
 import { SESSION_COOKIE } from "@/lib/session/session-token";
 import {
+  analysisStore,
   beginTranscriptSubmission,
   confirmTranscript,
   failTranscriptSubmission,
   rejectTranscript,
+  retryAnalysis,
   saveTranscriptSubmission,
   TranscriptTooLargeError,
 } from "@/lib/session/store";
@@ -104,11 +108,16 @@ export async function confirmTranscriptAction(
 ): Promise<ConfirmationState> {
   void _previous;
   const token = await requireSessionToken();
+  const analysisAttemptId = randomUUID();
   let completed = false;
+  let analysedSessionId: string | null = null;
   try {
-    const result = await confirmTranscript(token);
+    const result = await confirmTranscript(token, analysisAttemptId);
     if (!result.ok) return { error: mutationProblemMessage(result.reason) };
     completed = result.session.status === "completed";
+    if (result.session.status === "processing") {
+      analysedSessionId = result.session.id;
+    }
   } catch (error) {
     logSafeError("S1-CONFIRM-DB", error);
     return { error: sv.errors.unexpected("S1-CONFIRM-DB") };
@@ -118,8 +127,43 @@ export async function confirmTranscriptAction(
     (await cookies()).delete(SESSION_COOKIE);
     redirect("/?submitted=1");
   }
+  if (analysedSessionId) startAnalysis(analysedSessionId, analysisAttemptId);
   revalidatePath("/session");
   return { error: null };
+}
+
+export async function retryAnalysisAction(
+  _previous: ConfirmationState,
+): Promise<ConfirmationState> {
+  void _previous;
+  const token = await requireSessionToken();
+  const attemptId = randomUUID();
+  try {
+    const result = await retryAnalysis(token, attemptId);
+    if (!result.ok) {
+      return {
+        error:
+          result.reason === "NOT_READY"
+            ? sv.errors.analysisNotRetryable
+            : mutationProblemMessage(result.reason),
+      };
+    }
+    startAnalysis(result.session.id, attemptId);
+  } catch (error) {
+    logSafeError("S2-RETRY-DB", error);
+    return { error: sv.errors.unexpected("S2-RETRY-DB") };
+  }
+
+  revalidatePath("/session");
+  return { error: null };
+}
+
+// The student's request returns at once and the page polls for the result. The
+// analysis keeps running after the response, within the page's maxDuration.
+function startAnalysis(sessionId: string, attemptId: string): void {
+  after(() =>
+    runAnalysis(sessionId, attemptId, defaultRunDependencies(analysisStore)),
+  );
 }
 
 export async function rejectTranscriptAction(

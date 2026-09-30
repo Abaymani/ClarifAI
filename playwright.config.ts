@@ -28,5 +28,8 @@ export default defineConfig({
       : `pnpm exec next dev --port ${port}`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
+    // Browser tests use the fake analyser even when .env.local has an OpenAI key.
+    // An already running dev server is reused as it is, so stop it first.
+    env: { CLARIFAI_FAKE_ANALYSIS: "1" },
   },
 });
