@@ -130,6 +130,36 @@ describe("buildTranscript", () => {
     expect(transcript.warnings.join(" ")).not.toContain("What does this show");
   });
 
+  test("ignores scalar prompt metadata while preserving rich-content warnings", () => {
+    const transcript = buildTranscript(
+      sharePayload([
+        {
+          prompt: "Plain text with current Gemini metadata",
+          sentAt: 1788941958,
+          drafts: ["Plain answer"],
+          promptFields: { 5: 2, 8: true },
+        },
+        {
+          prompt: "Prompt with an attachment",
+          sentAt: 1788941989,
+          drafts: ["Answer about the attachment"],
+          promptFields: { 8: true, 10: [["attachment"]] },
+        },
+      ]),
+      context,
+    );
+
+    expect(transcript.messages[0].text).toBe(
+      "Plain text with current Gemini metadata",
+    );
+    expect(transcript.messages[2].text).toBe(
+      "Prompt with an attachment\n[UNSUPPORTED CONTENT]",
+    );
+    expect(transcript.warnings).toEqual([
+      "Message 3: the prompt contains something the scraper does not recognise yet (probably an uploaded image or file).",
+    ]);
+  });
+
   test("reads the title, model and share time", () => {
     const transcript = buildTranscript(sharePayload(twoTurns), context);
     expect(transcript.source).toEqual({

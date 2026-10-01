@@ -35,7 +35,7 @@ export function sharePayload(
       null,
       null,
       null,
-      null,
+      true,
       null,
       [],
     ];

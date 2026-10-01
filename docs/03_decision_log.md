@@ -315,3 +315,9 @@
 - **Decision:** One at a time (`workers: 1` in `playwright.config.ts`). Chromium and Firefox run the same tests with the same participant codes against one emulator, and each test starts by deleting its participant's sessions. Run together, one browser removed the session the other was using: two or three of the 34 tests failed on every local run, while CI passed thanks to different timing and its retries.
 - **Risks/consequences:** A run takes about half a minute longer. The browsers still share participant codes, so the tests have to keep running one after the other unless each browser gets codes of its own.
 - **Decided by:** Proposed by Claude (agent); approved by Armin Baymani (human), 2026-09-30.
+
+### DL-051: Scalar Gemini prompt metadata is not unsupported content
+- **Options:** Treat every non-empty undocumented prompt field as unsupported content; special-case the observed field; distinguish scalar metadata from values that can carry content.
+- **Decision:** The share parser treats strings, objects and non-empty arrays in Gemini's candidate content fields as content it cannot yet convert. Boolean and numeric values are treated as metadata and do not add an `[UNSUPPORTED CONTENT]` marker. Parser version 2 records the changed interpretation. A regression fixture includes the observed boolean field on every ordinary text prompt.
+- **Risks/consequences:** Gemini's endpoint remains undocumented. A future attachment encoded only as a number or boolean would not be marked, but treating ordinary metadata flags as content pollutes every downstream analysis. Structured attachment data continues to produce a visible marker and warning.
+- **Decided by:** Armin Baymani (human) requested that the confirmed false positive be prevented in future analyses; implementation by Codex (agent), 2026-10-01.
