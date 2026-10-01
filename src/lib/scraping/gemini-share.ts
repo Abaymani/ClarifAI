@@ -17,15 +17,15 @@ const ENDPOINT = "https://gemini.google.com/_/BardChatUi/data/batchexecute";
 const RPC_ID = "ujx1Bf";
 const MAX_RESPONSE_CHARS = 5_000_000;
 // Stored with each transcript so records parsed by older code can be found again.
-export const PARSER_VERSION = 1;
+export const PARSER_VERSION = 2;
 
 // gRPC status codes that batchexecute reports for failed calls.
 const GRPC_NOT_FOUND = 5;
 const GRPC_PERMISSION_DENIED = 7;
 
-// Fields of a student prompt that are empty for plain text. Anything found there
-// (presumably an uploaded image or file) is not understood yet.
-const PROMPT_EMPTY_FIELDS = [2, 5, 6, 7, 8, 9, 10];
+// Gemini mixes scalar metadata flags with rich content in these undocumented fields.
+// Only structured values or strings can represent content that would otherwise be lost.
+const PROMPT_CONTENT_FIELDS = [2, 5, 6, 7, 8, 9, 10];
 
 type ScrapeOptions = { fetch?: typeof fetch; now?: () => Date };
 
@@ -257,8 +257,8 @@ function parseTurn(raw: unknown, position: number): ParsedTurn {
   return {
     sentAtMs: toMillis(at(raw, 4)),
     prompt: promptText,
-    promptHasUnknownContent: PROMPT_EMPTY_FIELDS.some(
-      (i) => !isEmpty(prompt[i]),
+    promptHasUnknownContent: PROMPT_CONTENT_FIELDS.some((i) =>
+      isPotentialContent(prompt[i]),
     ),
     answer: answerText,
     otherDrafts,
@@ -292,8 +292,10 @@ function unexpectedFormat(what: string): ScrapeError {
   );
 }
 
-function isEmpty(value: unknown): boolean {
-  return value == null || (Array.isArray(value) && value.length === 0);
+function isPotentialContent(value: unknown): boolean {
+  if (typeof value === "string") return value.length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return typeof value === "object" && value !== null;
 }
 
 // Gemini stores times as [seconds, nanoseconds].
