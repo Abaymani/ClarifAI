@@ -1,7 +1,7 @@
 {
   "status": "ACTIVE",
   "notice": "Copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29.",
-  "version": "2026-09-30.2",
+  "version": "2026-10-01",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
