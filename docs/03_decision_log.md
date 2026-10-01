@@ -316,7 +316,13 @@
 - **Risks/consequences:** A run takes about half a minute longer. The browsers still share participant codes, so the tests have to keep running one after the other unless each browser gets codes of its own.
 - **Decided by:** Proposed by Claude (agent); approved by Armin Baymani (human), 2026-09-30.
 
-### DL-051: Scalar Gemini prompt metadata is not unsupported content
+### DL-051: A C code needs the student's own reasoning, and a missing part gets no code
+- **Options:** Ask the model for a confidence score and drop low ones; put a threshold rule in our own prompt code; put it in the analysis guidelines that human coders use too; add an A code for a student who points out a missing part.
+- **Decision:** A section "Threshold for constructive codes" in `framework/analysis_guidelines.md`. A C code needs the student's own reasoning in the prompt itself. Facts about the student's own situation are not constructive, even when they contradict Gemini, and Gemini's reaction (for example an apology) does not show that the student reasoned. A prompt that only states such a fact, like a part missing from the kit, gets no code. A prompt that passes the test still gets every code that clearly applies. The framework version is raised to `2026-10-01`.
+- **Risks/consequences:** In a test chat, "jag har ingen 4x4 keypad i kitet som jag har" was coded C7 in 3 of 3 runs, apparently because Gemini apologised. With the rule it got no code in 3 of 3 runs, while two genuine critiques in another test chat stayed C7 in 3 of 3. Those critiques got a second C code less often than before (2 of 6 against 6 of 6). The rule raises the bar for every C code, so other borderline prompts may be coded differently too.
+- **Decided by:** Armin Baymani (human), 2026-10-01; wording proposed and tested by Claude (agent).
+
+### DL-052: Scalar Gemini prompt metadata is not unsupported content
 - **Options:** Treat every non-empty undocumented prompt field as unsupported content; special-case the observed field; distinguish scalar metadata from values that can carry content.
 - **Decision:** The share parser treats strings, objects and non-empty arrays in Gemini's candidate content fields as content it cannot yet convert. Boolean and numeric values are treated as metadata and do not add an `[UNSUPPORTED CONTENT]` marker. Parser version 2 records the changed interpretation. A regression fixture includes the observed boolean field on every ordinary text prompt.
 - **Risks/consequences:** Gemini's endpoint remains undocumented. A future attachment encoded only as a number or boolean would not be marked, but treating ordinary metadata flags as content pollutes every downstream analysis. Structured attachment data continues to produce a visible marker and warning.
