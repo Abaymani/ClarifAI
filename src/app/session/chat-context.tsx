@@ -31,7 +31,11 @@ export function ChatContext({
     <ChatThread label={sv.session.reflectionChatExcerpt} className="text-sm">
       {around.before ? <Neighbour message={around.before} /> : null}
       <ChatBubble message={around.focus} className="ring-1 ring-foreground/10">
-        <MessageContent text={focusText} highlight={focus.match} />
+        <ExpandableText
+          text={focusText}
+          highlight={focus.match}
+          collapsible={around.focus.role === "gemini"}
+        />
       </ChatBubble>
       {around.after ? <Neighbour message={around.after} /> : null}
     </ChatThread>
@@ -41,7 +45,10 @@ export function ChatContext({
 function Neighbour({ message }: { message: TranscriptMessage }) {
   return (
     <ChatBubble message={message}>
-      <ExpandableText text={message.text} />
+      <ExpandableText
+        text={message.text}
+        collapsible={message.role === "gemini"}
+      />
     </ChatBubble>
   );
 }
