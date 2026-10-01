@@ -283,6 +283,13 @@ test("shows the transcript preview and lets the student reject it", async ({
   ).toBeVisible();
   await expect(page.getByText("Hur kopplar jag en lysdiod?")).toBeVisible();
   await expect(page.getByText("Använd ett seriemotstånd")).toBeVisible();
+  const studentBubble = page.locator('[data-chat-role="student"]').first();
+  const geminiBubble = page.locator('[data-chat-role="gemini"]').first();
+  await expect(studentBubble).toBeVisible();
+  await expect(geminiBubble).toBeVisible();
+  const studentBox = await studentBubble.boundingBox();
+  const geminiBox = await geminiBubble.boundingBox();
+  expect(studentBox?.x).toBeGreaterThan(geminiBox?.x ?? Number.MAX_VALUE);
   await expect(
     page.getByRole("heading", { level: 3, name: "Koppla lysdioden" }),
   ).toBeVisible();
@@ -338,6 +345,7 @@ test("confirmation analyses lesson 3 and shows the reflection questions", async 
   await expect(example).toContainText("Hur kopplar jag en lysdiod?");
   await expect(example).toContainText("2. Gemini");
   await expect(example).toContainText("Använd ett seriemotstånd");
+  await expect(example.getByText("Utdrag ur din Gemini-chatt")).toBeVisible();
   // The intro and the questions come from the behaviour group's texts.
   await expect(example).toContainText("FAKE:");
   await expect(example.getByRole("listitem").first()).toBeVisible();
