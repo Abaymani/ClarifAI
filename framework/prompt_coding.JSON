@@ -1,7 +1,7 @@
 {
   "status": "ACTIVE",
-  "notice": "Copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29.",
-  "version": "2026-10-01",
+  "notice": "Copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29. A6 and the wider notes for C10 were added on 2026-10-01 (DL-055).",
+  "version": "2026-10-01.2",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
@@ -310,6 +310,19 @@
       "notes": "AI skapar uppsättning av förslag för vägen fram, där eleven får välja bland alternativen. Det kan också vara att AI skapar \"förhör\"-uppgift som eleven får svara på. I dessa fall är eleven inte engagerad konstruktivt utan endast aktivt."
     },
     {
+      "code": "A6",
+      "name": "Precis rapportering",
+      "level": "A",
+      "categorisation": "Positive, active",
+      "examplePrompts": [
+        "Ultraljudssensorn visar 0 cm hela tiden, även när jag håller handen 10 cm framför den. Seriella monitorn visar samma värde varje gång.",
+        "Servomotorn rycker till när programmet startar men står sedan still, även när sensorn känner av något.",
+        "När jag trycker på knappen tänds lysdioden bara ibland, ungefär var tredje gång. Knappen sitter på pin 2.",
+        "Uppladdningen gick bra, men buzzern piper hela tiden, även när ingen står framför sensorn. Jag använder Arduino Cloud Editor."
+      ],
+      "notes": "Eleven beskriver noggrant vad som händer: vad hen har gjort, vad hen ser (beteende, värden, när det sker) och förutsättningar som kan spela roll, till exempel kopplingar eller vilken programmeringsmiljö hen använder. Beskrivningen ger AI konkret underlag att arbeta med, men eleven drar ingen egen slutsats om orsaken. Med en egen hypotes blir det C4 eller C5. En vag beskrivning som \"det fungerar inte\" räcker inte, då är det P3. Ber eleven samtidigt AI att hitta felet, till exempel med \"vad är fel?\", kodas även P3. Att bara konstatera att en del saknas i kitet är ingen rapport av en observation och får ingen kod."
+    },
+    {
       "code": "C1",
       "name": "AI-stöttad planering",
       "level": "C",
@@ -437,7 +450,7 @@
         "Kan du ställa en fråga som hjälper oss lista ut varför LED-lampan inte tänds, utan att säga felet direkt?",
         "Vi vill felsöka själva. Vilken mätning skulle ge oss mest information om huruvida felet ligger i sensorn eller buzzern?"
       ],
-      "notes": "Stora kännetecken på eftersökan efter lärande, vill inte ha lösningen men vill ha the scaffolding av AI:n."
+      "notes": "Stora kännetecken på eftersökan efter lärande, vill inte ha lösningen men vill ha the scaffolding av AI:n. Hit hör också ett medvetet val att dela upp arbetet så att eleven behåller sin egen handlingskraft: eleven säger vad hen själv ska göra och lära sig och vad AI ska bidra med, till exempel att AI skriver koden medan eleven själv kopplar kretsen och lär sig hur komponenterna fungerar. Det räcker inte att be AI om hjälp eller att be AI skriva koden; uppdelningen ska tydligt lämna en del av arbetet eller lärandet åt eleven."
     },
     {
       "code": "C11",

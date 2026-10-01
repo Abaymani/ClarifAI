@@ -1,7 +1,7 @@
 {
   "status": "ACTIVE",
-  "notice": "The groups were copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29, and the intros, questions and tips from the researchers' document \"Reflektionsfrågor\" on 2026-09-30.",
-  "version": "2026-10-01",
+  "notice": "The groups were copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29, and the intros, questions and tips from the researchers' document \"Reflektionsfrågor\" on 2026-09-30. Group F11, for A6, was added on 2026-10-01 (DL-055).",
+  "version": "2026-10-01.2",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
@@ -303,6 +303,20 @@
         "Hur bestämde du när det var läge att fråga Gemini?"
       ],
       "tip": "Jag frågade först när …, innan dess försökte jag …"
+    },
+    {
+      "code": "F11",
+      "kind": "reinforce",
+      "name": "Beskrev noggrant",
+      "behaviourCodes": [
+        "A6"
+      ],
+      "description": "Reported precisely what happened, so the help could build on real observations",
+      "intro": "Här beskrev du noggrant vad som hände: [vad du såg och vad du hade gjort]. En tydlig beskrivning gör det lättare att hitta felet, både för dig och för Gemini. Du visar även att du är aktivt engagerad.",
+      "questions": [
+        "Hur kom du fram till vilka detaljer som var viktiga att ta med?"
+      ],
+      "tip": "Jag tog med… eftersom…"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "status": "ACTIVE",
   "notice": "Copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29. On 2026-09-30 the note that S4 is high priority in the reflection was removed; the reflection guidelines say which patterns weigh more.",
-  "version": "2026-10-01",
+  "version": "2026-10-01.2",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
