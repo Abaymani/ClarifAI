@@ -6,6 +6,7 @@ import {
   confirmTranscriptAction,
   rejectTranscriptAction,
 } from "@/app/session/actions";
+import { ChatBubble, ChatThread } from "@/app/session/chat-thread";
 import { MessageContent } from "@/app/session/message-content";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -51,22 +52,13 @@ export function TranscriptPreview({ transcript }: { transcript: Transcript }) {
         </Alert>
       ) : null}
 
-      <div className="max-h-[32rem] space-y-3 overflow-y-auto rounded-xl border bg-muted/30 p-3">
+      <ChatThread className="max-h-[32rem] overflow-y-auto">
         {transcript.messages.map((message) => (
-          <article
-            key={message.index}
-            className="rounded-lg border bg-background p-4 shadow-xs"
-          >
-            <div className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {message.index}.{" "}
-              {message.role === "student"
-                ? sv.session.previewStudent
-                : sv.session.previewGemini}
-            </div>
+          <ChatBubble key={message.index} message={message}>
             <MessageContent text={message.text} className="text-sm" />
-          </article>
+          </ChatBubble>
         ))}
-      </div>
+      </ChatThread>
 
       {error ? (
         <Alert variant="destructive">

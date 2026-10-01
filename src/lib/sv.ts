@@ -157,6 +157,7 @@ export const sv = {
     reflectionAnalysisLabel: "Så här tolkar analysen exemplet",
     reflectionAnalysisCaveat:
       "Det här är en möjlig tolkning utifrån chatten. Analysen kan ha missat vad du tänkte eller gjorde utanför Gemini.",
+    reflectionChatExcerpt: "Utdrag ur din Gemini-chatt",
     reflectionAgreementLegend: "Känner du igen dig i analysen?",
     reflectionAgreement: (agreement: "yes" | "partly" | "no") =>
       ({ yes: "Ja", partly: "Delvis", no: "Nej" })[agreement],
