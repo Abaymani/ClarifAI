@@ -1,7 +1,7 @@
 {
   "status": "ACTIVE",
-  "notice": "Copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29. A6 and the wider notes for C10 were added on 2026-10-01 (DL-055).",
-  "version": "2026-10-01.2",
+  "notice": "Copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29. A6 and the wider notes for C10 were added on 2026-10-01 (DL-055). NA8 and the scope note in A6 were added later the same day (DL-056).",
+  "version": "2026-10-01.3",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
@@ -126,6 +126,19 @@
         "Vi får meddelandet “was not declared in this scope”. Vad säger det om problemet?"
       ],
       "notes": "Not a part of the ILOs, faktamässig fråga."
+    },
+    {
+      "code": "NA8",
+      "name": "Problem med verktyg och uppladdning",
+      "level": "NA",
+      "categorisation": "CO, Not relevant",
+      "examplePrompts": [
+        "Uppladdningsknappen försvinner när jag väljer Arduino Nano i editorn. Vad ska jag göra?",
+        "Datorn hittar inte kortet. Vilken port ska jag välja?",
+        "Arduino Cloud Agent säger att inget kort är anslutet fast USB-kabeln sitter i.",
+        "Jag bytte USB-kabel och nu fungerar uppladdningen."
+      ],
+      "notes": "Problem med programvara, editor, drivrutiner, portar, USB-kablar eller uppladdning hör inte till lärandemålen. Det gäller oavsett hur eleven formulerar sig: en noggrann beskrivning, ett eget försök eller en överlämnad felsökning av ett sådant problem kodas NA8 och inte A6, C2 eller P3. Felmeddelanden som eleven klistrar in eller ber om en tolkning av kodas NA7."
     },
     {
       "code": "P1",
@@ -320,7 +333,7 @@
         "När jag trycker på knappen tänds lysdioden bara ibland, ungefär var tredje gång. Knappen sitter på pin 2.",
         "Uppladdningen gick bra, men buzzern piper hela tiden, även när ingen står framför sensorn. Jag använder Arduino Cloud Editor."
       ],
-      "notes": "Eleven beskriver noggrant vad som händer: vad hen har gjort, vad hen ser (beteende, värden, när det sker) och förutsättningar som kan spela roll, till exempel kopplingar eller vilken programmeringsmiljö hen använder. Beskrivningen ger AI konkret underlag att arbeta med, men eleven drar ingen egen slutsats om orsaken. Med en egen hypotes blir det C4 eller C5. En vag beskrivning som \"det fungerar inte\" räcker inte, då är det P3. Ber eleven samtidigt AI att hitta felet, till exempel med \"vad är fel?\", kodas även P3. Att bara konstatera att en del saknas i kitet är ingen rapport av en observation och får ingen kod."
+      "notes": "Eleven beskriver noggrant vad som händer: vad hen har gjort, vad hen ser (beteende, värden, när det sker) och förutsättningar som kan spela roll, till exempel kopplingar eller vilken programmeringsmiljö hen använder. Beskrivningen ger AI konkret underlag att arbeta med, men eleven drar ingen egen slutsats om orsaken. Med en egen hypotes blir det C4 eller C5. En vag beskrivning som \"det fungerar inte\" räcker inte, då är det P3. Ber eleven samtidigt AI att hitta felet, till exempel med \"vad är fel?\", kodas även P3. Att bara konstatera att en del saknas i kitet är ingen rapport av en observation och får ingen kod. A6 gäller beskrivningar av kretsen och komponenterna. Rapporter om kod, editor eller uppladdning kodas med NA-koderna."
     },
     {
       "code": "C1",

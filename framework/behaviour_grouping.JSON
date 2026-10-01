@@ -1,7 +1,7 @@
 {
   "status": "ACTIVE",
-  "notice": "The groups were copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29, and the intros, questions and tips from the researchers' document \"Reflektionsfrågor\" on 2026-09-30. Group F11, for A6, was added on 2026-10-01 (DL-055).",
-  "version": "2026-10-01.2",
+  "notice": "The groups were copied from the working version of the Google Sheet \"Framework for scaffolding\" on 2026-09-29, and the intros, questions and tips from the researchers' document \"Reflektionsfrågor\" on 2026-09-30. Group F11, for A6, was added on 2026-10-01 (DL-055). NA8 joined group RN later the same day (DL-056).",
+  "version": "2026-10-01.3",
   "source": {
     "sheet": "https://docs.google.com/spreadsheets/d/12OUXa-XpweYKM4uvMmOlhg1jXZQECHLFONirIVrHtmI",
     "tabs": [
@@ -139,7 +139,8 @@
         "NA4",
         "NA5",
         "NA6",
-        "NA7"
+        "NA7",
+        "NA8"
       ],
       "description": "Not relevant according to the framework",
       "intro": null,

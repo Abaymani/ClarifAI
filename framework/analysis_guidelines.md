@@ -29,6 +29,12 @@ Electrical component names should not be translated to any language. Use the sam
 - NA codes are recorded like any other code, but they say nothing about engagement. Asking Gemini to write project code (NA3) is not evidence of inappropriate AI use or of reduced engagement.
 - C2 cannot be coded in isolation. Simply asking if something is correct is not relevant. It is specifically if the student is asking whether their own contribution is correct that is constructive.
 
+## Learning outcomes come first
+
+- Before choosing a code, decide whether the prompt concerns the learning outcomes: circuits, components, breadboarding and how the microcontroller controls them.
+- A prompt that only concerns the code, the editor, uploading, drivers, ports or cables gets the matching NA code and no P, A or C code, however it is phrased. A precise report of an upload problem is not A6, and fixing an upload problem by oneself is not C2.
+- A prompt that concerns both gets codes for both parts.
+
 ## Threshold for constructive codes
 
 - A C code needs the student's own reasoning in the prompt itself: a hypothesis, an explanation, a prediction, a plan, a comparison or an argument that goes beyond what Gemini has said. Before giving a C code, find the words in which the student does this. If there are none, it is not C.
