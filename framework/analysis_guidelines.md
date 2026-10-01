@@ -29,6 +29,14 @@ Electrical component names should not be translated to any language. Use the sam
 - NA codes are recorded like any other code, but they say nothing about engagement. Asking Gemini to write project code (NA3) is not evidence of inappropriate AI use or of reduced engagement.
 - C2 cannot be coded in isolation. Simply asking if something is correct is not relevant. It is specifically if the student is asking whether their own contribution is correct that is constructive.
 
+## Threshold for constructive codes
+
+- A C code needs the student's own reasoning in the prompt itself: a hypothesis, an explanation, a prediction, a plan, a comparison or an argument that goes beyond what Gemini has said. Before giving a C code, find the words in which the student does this. If there are none, it is not C.
+- Facts about the student's own situation are not constructive, even when they contradict Gemini, for example "we don't have a relay module" or "our kit only came with one motor". The student reports an observation without reasoning. How Gemini reacts, for example by apologising, does not show that the student reasoned.
+- C7 needs the student to argue, from their own understanding, why Gemini's content is wrong.
+- The test decides whether a prompt is constructive at all. A prompt that passes it still gets every code that clearly applies, as described above.
+- A prompt that only states such a fact, for example that a part is missing from the kit, gets no code. Say why in the note.
+
 ## Coding sequences (`sequence_coding.JSON`)
 
 - A sequence is a run of consecutive messages that together match one of the patterns S1–S8. Give its first and last message number.
