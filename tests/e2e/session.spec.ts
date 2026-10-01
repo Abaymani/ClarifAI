@@ -290,6 +290,12 @@ test("shows the transcript preview and lets the student reject it", async ({
   const studentBox = await studentBubble.boundingBox();
   const geminiBox = await geminiBubble.boundingBox();
   expect(studentBox?.x).toBeGreaterThan(geminiBox?.x ?? Number.MAX_VALUE);
+  const showMore = geminiBubble.getByRole("button", { name: "Visa mer" });
+  await expect(showMore).toBeVisible();
+  await showMore.click();
+  await expect(
+    geminiBubble.getByRole("button", { name: "Visa mindre" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 3, name: "Koppla lysdioden" }),
   ).toBeVisible();

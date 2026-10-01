@@ -7,7 +7,7 @@ import {
   rejectTranscriptAction,
 } from "@/app/session/actions";
 import { ChatBubble, ChatThread } from "@/app/session/chat-thread";
-import { MessageContent } from "@/app/session/message-content";
+import { ExpandableText } from "@/app/session/expandable-text";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { Transcript } from "@/lib/scraping/transcript";
@@ -55,7 +55,10 @@ export function TranscriptPreview({ transcript }: { transcript: Transcript }) {
       <ChatThread className="max-h-[32rem] overflow-y-auto">
         {transcript.messages.map((message) => (
           <ChatBubble key={message.index} message={message}>
-            <MessageContent text={message.text} className="text-sm" />
+            <ExpandableText
+              text={message.text}
+              collapsible={message.role === "gemini"}
+            />
           </ChatBubble>
         ))}
       </ChatThread>
