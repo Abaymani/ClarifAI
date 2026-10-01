@@ -64,7 +64,7 @@ function transcript(title: string) {
       sharedAt: null,
     },
     retrievedAt: new Date().toISOString(),
-    parserVersion: 1,
+    parserVersion: 2,
     messages: [
       {
         index: 1,
@@ -74,7 +74,18 @@ function transcript(title: string) {
       {
         index: 2,
         role: "gemini",
-        text: "Använd ett seriemotstånd och kontrollera polariteten.",
+        text: [
+          "# Koppla lysdioden",
+          "",
+          "## Du behöver",
+          "",
+          "- En lysdiod",
+          "- Ett `seriemotstånd`",
+          "",
+          "[PICTURE]",
+          "",
+          "Använd ett seriemotstånd och kontrollera polariteten.",
+        ].join("\n"),
       },
     ],
     warnings: [],

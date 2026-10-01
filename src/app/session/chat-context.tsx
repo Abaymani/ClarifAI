@@ -1,4 +1,5 @@
 import { ExpandableText } from "@/app/session/expandable-text";
+import { MessageContent } from "@/app/session/message-content";
 import { highlightExcerpt, surroundingMessages } from "@/lib/analysis/context";
 import type { TranscriptMessage } from "@/lib/scraping/transcript";
 import { sv } from "@/lib/sv";
@@ -16,28 +17,19 @@ export function ChatContext({
   if (!around) {
     return (
       <blockquote className="border-l-2 pl-3 text-sm break-words whitespace-pre-wrap italic">
-        {excerpt.text}
+        <MessageContent text={excerpt.text} />
       </blockquote>
     );
   }
   const focus = highlightExcerpt(around.focus.text, excerpt.text);
+  const focusText = `${focus.clippedStart ? "… " : ""}${focus.before}${focus.match ?? ""}${focus.after}${focus.clippedEnd ? " …" : ""}`;
 
   return (
     <div className="flex flex-col gap-2 text-sm">
       {around.before ? <Neighbour message={around.before} /> : null}
       <article className="rounded-lg border bg-background p-3 shadow-xs">
         <Speaker message={around.focus} />
-        <p className="break-words whitespace-pre-wrap">
-          {focus.clippedStart ? "… " : null}
-          {focus.before}
-          {focus.match ? (
-            <mark className="rounded-sm bg-foreground/10 px-0.5 font-medium text-inherit">
-              {focus.match}
-            </mark>
-          ) : null}
-          {focus.after}
-          {focus.clippedEnd ? " …" : null}
-        </p>
+        <MessageContent text={focusText} highlight={focus.match} />
       </article>
       {around.after ? <Neighbour message={around.after} /> : null}
     </div>

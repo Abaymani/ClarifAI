@@ -149,7 +149,7 @@ export default async function SessionPage() {
   }[view.kind];
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-4 p-6">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-4 p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
           {sv.session.participant(session.participantCode, session.lesson)}
