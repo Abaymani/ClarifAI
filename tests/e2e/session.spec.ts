@@ -283,6 +283,11 @@ test("shows the transcript preview and lets the student reject it", async ({
   ).toBeVisible();
   await expect(page.getByText("Hur kopplar jag en lysdiod?")).toBeVisible();
   await expect(page.getByText("Använd ett seriemotstånd")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 3, name: "Koppla lysdioden" }),
+  ).toBeVisible();
+  await expect(page.getByRole("img", { name: "Bild borttagen" })).toBeVisible();
+  await expect(page.locator("img")).toHaveCount(0);
   // The line under the page heading describes this step, not the hand-in.
   const handInIntro = page.getByText("Välj hur du arbetade under lektionen.");
   await expect(

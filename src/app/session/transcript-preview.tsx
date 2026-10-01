@@ -6,6 +6,7 @@ import {
   confirmTranscriptAction,
   rejectTranscriptAction,
 } from "@/app/session/actions";
+import { MessageContent } from "@/app/session/message-content";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { Transcript } from "@/lib/scraping/transcript";
@@ -62,9 +63,7 @@ export function TranscriptPreview({ transcript }: { transcript: Transcript }) {
                 ? sv.session.previewStudent
                 : sv.session.previewGemini}
             </div>
-            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-              {message.text}
-            </p>
+            <MessageContent text={message.text} className="text-sm" />
           </article>
         ))}
       </div>

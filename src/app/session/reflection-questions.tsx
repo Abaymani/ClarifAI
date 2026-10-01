@@ -107,9 +107,9 @@ export function ReflectionQuestions({
                     </p>
                     <p className="border-l-2 pl-3 text-sm">{item.intro}</p>
                   </div>
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/60 dark:bg-blue-950/30">
+                  <p className="text-xs leading-relaxed text-muted-foreground italic">
                     {sv.session.reflectionAnalysisCaveat}
-                  </div>
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm">{item.intro}</p>

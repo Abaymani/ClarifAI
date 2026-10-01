@@ -111,6 +111,7 @@ export const sv = {
     previewMessages: (count: number) =>
       `${count} meddelande${count === 1 ? "" : "n"}`,
     previewWarnings: "En del innehåll kunde inte visas i transkriptet.",
+    transcriptImageRemoved: "Bild borttagen",
     confirm: "Ja, fortsätt",
     confirming: "Bekräftar …",
     reject: "Nej, välj en annan länk",

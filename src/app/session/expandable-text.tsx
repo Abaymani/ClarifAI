@@ -3,6 +3,7 @@
 import { cn } from "cn";
 import { useState } from "react";
 
+import { MessageContent } from "@/app/session/message-content";
 import { sv } from "@/lib/sv";
 
 // Gemini's answers can run to many paragraphs; the first lines are usually enough
@@ -13,14 +14,9 @@ export function ExpandableText({ text }: { text: string }) {
 
   return (
     <div>
-      <p
-        className={cn(
-          "break-words whitespace-pre-wrap",
-          long && !open && "line-clamp-3",
-        )}
-      >
-        {text}
-      </p>
+      <div className={cn("break-words", long && !open && "line-clamp-3")}>
+        <MessageContent text={text} />
+      </div>
       {long ? (
         <button
           type="button"
