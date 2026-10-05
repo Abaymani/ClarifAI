@@ -10,6 +10,7 @@ export type AdminSessionSummary = {
   state: Exclude<AdminSessionState, "missing">;
   status: SessionStatus;
   transcriptSubmission: TranscriptSubmission;
+  codedBy: ResearcherId[];
 };
 
 export type AdminParticipantOverview = {

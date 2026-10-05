@@ -9,11 +9,9 @@ export default async function AdminOverviewPage() {
   return (
     <main className="mx-auto flex w-full max-w-[96rem] flex-1 flex-col gap-6 p-5 lg:p-8">
       <div>
-        <h1 className="font-heading text-3xl font-semibold">
-          Sessionsöversikt
-        </h1>
+        <h1 className="font-heading text-3xl font-semibold">Översikt</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Välj en lektion för att läsa transkript och forskarkodning.
+          Se sessionsstatus eller forskarnas kodningsarbete per lektion.
         </p>
       </div>
       <OverviewTable participants={participants} />

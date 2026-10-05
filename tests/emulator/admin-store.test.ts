@@ -47,12 +47,17 @@ describe("admin store", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    await db
+      .doc("sessions/951_1/researcherCoding/R1/entries/prompt-1")
+      .set({ kind: "prompt" });
 
     const participant = (await listAdminOverview()).find(
       (entry) => entry.participantCode === "951",
     );
     expect(participant?.sessions[1]?.state).toBe("completed");
+    expect(participant?.sessions[1]?.codedBy).toEqual(["R1"]);
     expect(participant?.sessions[2]?.state).toBe("started");
+    expect(participant?.sessions[2]?.codedBy).toEqual([]);
     expect(participant?.sessions[3]).toBeUndefined();
   });
 

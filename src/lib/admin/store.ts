@@ -24,10 +24,25 @@ export const MAX_RESEARCHER_NOTE_LENGTH = 5_000;
 
 export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
   const db = getDb();
-  const [participants, sessions] = await Promise.all([
+  const [participants, sessions, codingEntries] = await Promise.all([
     db.collection(PARTICIPANTS).get(),
     db.collection(SESSIONS).get(),
+    db.collectionGroup(ENTRIES).select("researcherId").get(),
   ]);
+
+  const codingBySession = new Map<string, Set<ResearcherId>>();
+  for (const doc of codingEntries.docs) {
+    const match =
+      /^sessions\/([^/]+)\/researcherCoding\/(R1|R2)\/entries\/[^/]+$/.exec(
+        doc.ref.path,
+      );
+    if (!match) continue;
+    const sessionId = match[1];
+    const researcherId = match[2] as ResearcherId;
+    const researchers = codingBySession.get(sessionId) ?? new Set();
+    researchers.add(researcherId);
+    codingBySession.set(sessionId, researchers);
+  }
 
   const byParticipant = new Map<string, AdminParticipantOverview>();
   for (const doc of participants.docs) {
@@ -46,6 +61,9 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
       state: session.status === "completed" ? "completed" : "started",
       status: session.status,
       transcriptSubmission: session.transcriptSubmission,
+      codedBy: (["R1", "R2"] as const).filter((researcherId) =>
+        codingBySession.get(session.id)?.has(researcherId),
+      ),
     };
     byParticipant.set(session.participantCode, participant);
   }

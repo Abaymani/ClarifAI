@@ -159,7 +159,7 @@ Enable Google as a sign-in provider under Firebase Authentication and put the Fi
 
 For local development, `pnpm dev` starts the Firebase Authentication emulator. Put two non-real test addresses in the admin email variables in `.env.local`, visit `/admin`, and use the emulator's mock Google sign-in screen. Production and Preview need their own Firebase Authentication configuration, matching their separate Firebase projects.
 
-The overview shows every participant and lesson as started, completed or missing. A transcript view exposes the already stored AI prompt and sequence coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. The portal never calls an AI API, regenerates analysis or consumes model tokens.
+The overview defaults to session status and has a separate researcher-coding matrix that shows Armin's and Frida's coding coverage for every transcript. A view-only filter can hide participants with no session in any of the four lessons; it never changes stored data. A transcript view exposes the already stored AI prompt and sequence coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. The portal never calls an AI API, regenerates analysis or consumes model tokens.
 
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
