@@ -58,11 +58,12 @@ The approved choice is **a protected portal in the existing application**, with 
 
 The portal should be separated logically from the student interface even if it shares the same deployment. Participant codes and PINs must never authorize admin access, and browsers must continue to have no direct Firestore access. A separate hostname or deployment can still be introduced later if operational or institutional security requirements demand stronger isolation.
 
-The decision is recorded as DL-058 in the decision log.
+Researchers authenticate with Google. Access is granted only when Google has verified the account email and it exactly matches one of the two addresses configured on the server. Those accounts are mapped to the stable research labels `R1` and `R2`; researcher emails are not stored with transcripts, notes, or coding. The portal has no link from the participant interface and is reached through its direct `/admin` address.
+
+The portal and authentication decisions are recorded as DL-058 and DL-059 in the decision log.
 
 ## Decisions required before implementation
 
-- Researcher identity provider and account lifecycle, including how the two researcher accounts are created and revoked.
 - The exact meaning and display treatment of failed and processing sessions in the three-state matrix.
 - Whether researcher coding uses the framework version stored with the session, the current framework, or a selectable version.
 - How simultaneous edits and unsaved changes are handled when two researchers work on the same lesson.
