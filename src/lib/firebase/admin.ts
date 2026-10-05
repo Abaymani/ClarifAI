@@ -7,6 +7,7 @@ import {
   initializeApp,
   type App,
 } from "firebase-admin/app";
+import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { z } from "zod";
 
@@ -43,4 +44,8 @@ function getAdminApp(): App {
 
 export function getDb(): Firestore {
   return getFirestore(getAdminApp());
+}
+
+export function getAdminAuth(): Auth {
+  return getAuth(getAdminApp());
 }

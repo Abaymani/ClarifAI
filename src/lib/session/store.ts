@@ -128,7 +128,7 @@ export async function startSession(
     tx.update(participantRef, { failedAttempts: 0, lockedUntil: null });
 
     const existing = sessionSnap.exists
-      ? toSession(id, sessionSnap.data() ?? {})
+      ? sessionFromDocument(id, sessionSnap.data() ?? {})
       : null;
     if (existing?.status === "completed") {
       return { ok: false, reason: "ALREADY_COMPLETED" };
@@ -188,7 +188,7 @@ export async function getSessionByToken(
     .get();
 
   const doc = snapshot.docs[0];
-  return doc ? toSession(doc.id, doc.data()) : null;
+  return doc ? sessionFromDocument(doc.id, doc.data()) : null;
 }
 
 export async function beginTranscriptSubmission(
@@ -225,7 +225,7 @@ export async function beginTranscriptSubmission(
     return {
       ok: true,
       session: {
-        ...toSession(snapshot.id, data),
+        ...sessionFromDocument(snapshot.id, data),
         status: "processing",
         errorCode: null,
         updatedAt: now,
@@ -281,7 +281,7 @@ export async function saveTranscriptSubmission(
     return {
       ok: true,
       session: {
-        ...toSession(snapshot.id, data),
+        ...sessionFromDocument(snapshot.id, data),
         transcriptSubmission: "transcript",
         transcript,
         transcriptConfirmedAt: null,
@@ -331,7 +331,7 @@ export async function failTranscriptSubmission(
     return {
       ok: true,
       session: {
-        ...toSession(snapshot.id, data),
+        ...sessionFromDocument(snapshot.id, data),
         status: "failed",
         errorCode,
         updatedAt: now,
@@ -534,7 +534,7 @@ export async function completeReflection(
       return { ok: false, reason: "ALREADY_COMPLETED" };
     }
 
-    const current = toSession(snapshot.id, data);
+    const current = sessionFromDocument(snapshot.id, data);
     if (
       current.status !== "awaiting_reflection" ||
       !current.reflectionQuestions
@@ -668,7 +668,7 @@ export const analysisStore: AnalysisStore = {
       .get();
     const data = snapshot.data();
     if (!data || !isCurrentAnalysis(data, attemptId)) return null;
-    const session = toSession(snapshot.id, data);
+    const session = sessionFromDocument(snapshot.id, data);
     if (!session.transcript || !session.transcriptConfirmedAt) return null;
     return { transcript: session.transcript, coding: session.analysis };
   },
@@ -759,7 +759,10 @@ function toDate(value: unknown): Date | null {
   return value instanceof Timestamp ? value.toDate() : null;
 }
 
-function toSession(id: string, data: Record<string, unknown>): Session {
+export function sessionFromDocument(
+  id: string,
+  data: Record<string, unknown>,
+): Session {
   const lesson = Number(data.lesson);
   return {
     id,
@@ -907,6 +910,6 @@ async function updateAuthenticatedSession(
     ) {
       return { ok: false, reason: "UNAUTHENTICATED" };
     }
-    return update(toSession(snapshot.id, data), tx, ref);
+    return update(sessionFromDocument(snapshot.id, data), tx, ref);
   });
 }
