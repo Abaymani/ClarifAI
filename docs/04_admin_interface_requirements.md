@@ -2,7 +2,7 @@
 
 This document records the established functional scope for the researcher-facing admin interface. It is a shared reference for future design and implementation work; it does not change the student workflow described in the product brief and system architecture.
 
-**Status:** Functional scope established; architecture and access-control decisions pending human approval.
+**Status:** Functional scope and the integrated portal architecture are approved. Access-control details remain to be decided.
 
 ## Terminology
 
@@ -40,18 +40,18 @@ The definitions of started and missing make the requested three-state overview t
 | --- | --- | --- |
 | ADMIN-FR-008 | When coding a prompt-level behaviour or a sequence, the system shall provide a compact search popup for finding an appropriate code. | The researcher can search by code identifier, description, or example and select a result without leaving the transcript. The chosen code is added to the intended prompt or sequence only. |
 
-## Architecture decision to approve
+## Approved architecture
 
-Two deployment shapes are under consideration:
+Two deployment shapes were considered:
 
 1. Add a protected researcher portal to the existing Next.js application.
 2. Build and deploy a separate admin website that uses the same research database.
 
-The current recommendation is **a protected portal in the existing application**, with researcher-only routes, separate researcher authentication, and server-side authorization on every admin read and write. This keeps one data model and one implementation of transcript rendering, analysis types, framework codes, and Firestore access. It also avoids duplicating deployment configuration and database integration for a small number of researchers.
+The approved choice is **a protected portal in the existing application**, with researcher-only routes, separate researcher authentication, and server-side authorization on every admin read and write. This keeps one data model and one implementation of transcript rendering, analysis types, framework codes, and Firestore access. It also avoids duplicating deployment configuration and database integration for a small number of researchers.
 
 The portal should be separated logically from the student interface even if it shares the same deployment. Participant codes and PINs must never authorize admin access, and browsers must continue to have no direct Firestore access. A separate hostname or deployment can still be introduced later if operational or institutional security requirements demand stronger isolation.
 
-No architecture change is approved by this document. Record the final human-approved choice in the decision log before implementation.
+The decision is recorded as DL-058 in the decision log.
 
 ## Decisions required before implementation
 
@@ -61,4 +61,3 @@ No architecture change is approved by this document. Record the final human-appr
 - How simultaneous edits and unsaved changes are handled when two researchers work on the same lesson.
 - Whether a researcher may edit or delete submitted notes and codes, and what audit history must be retained.
 - Whether researchers need a side-by-side comparison view in addition to selecting one researcher's coding.
-
