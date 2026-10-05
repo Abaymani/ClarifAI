@@ -4,6 +4,7 @@ AI tool used to scaffold students' reflection on their own AI use.
 - Product: [docs/00_product_brief.md](docs/00_product_brief.md)
 - Architecture and session lifecycle: [docs/01_architecture.md](docs/01_architecture.md)
 - Requirements: [docs/02_functional_requirements.md](docs/02_functional_requirements.md)
+- Admin interface requirements: [docs/04_admin_interface_requirements.md](docs/04_admin_interface_requirements.md)
 - Decisions: [docs/03_decision_log.md](docs/03_decision_log.md)
 - Rules for coding agents: [AGENTS.md](AGENTS.md)
 
