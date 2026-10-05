@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  jwks-rsa@4.1.0: 97b831efef134bdec32dc1a6fe89cc52a365d07fdf6f8219d489c2487f327534
+
 importers:
 
   .:
@@ -9563,7 +9566,7 @@ snapshots:
       fast-deep-equal: 3.1.3
       google-auth-library: 10.9.1(supports-color@7.2.0)
       jsonwebtoken: 9.0.3
-      jwks-rsa: 4.1.0(supports-color@7.2.0)
+      jwks-rsa: 4.1.0(patch_hash=97b831efef134bdec32dc1a6fe89cc52a365d07fdf6f8219d489c2487f327534)(supports-color@7.2.0)
     optionalDependencies:
       '@google-cloud/firestore': 9.2.0(supports-color@7.2.0)
       '@google-cloud/storage': 8.2.0(supports-color@7.2.0)
@@ -10543,7 +10546,7 @@ snapshots:
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
 
-  jwks-rsa@4.1.0(supports-color@7.2.0):
+  jwks-rsa@4.1.0(patch_hash=97b831efef134bdec32dc1a6fe89cc52a365d07fdf6f8219d489c2487f327534)(supports-color@7.2.0):
     dependencies:
       '@types/jsonwebtoken': 9.0.10
       debug: 4.4.3(supports-color@7.2.0)

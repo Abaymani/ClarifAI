@@ -1,0 +1,99 @@
+diff --git a/src/integrations/passport.js b/src/integrations/passport.js
+index f666d07..ae95c69 100644
+--- a/src/integrations/passport.js
++++ b/src/integrations/passport.js
+@@ -1,6 +1,6 @@
+-const jose = require('jose');
+ const { ArgumentError } = require('../errors');
+ const { JwksClient } = require('../JwksClient');
++const { getJose } = require('../jose');
+ const supportedAlg = require('./config');
+ 
+ const handleSigningKeyError = (err, cb) => {
+@@ -28,25 +28,30 @@ module.exports.passportJwtSecret = function (options) {
+   const onError = options.handleSigningKeyError || handleSigningKeyError;
+ 
+   return function secretProvider(req, rawJwtToken, cb) {
+-    let decoded;
+-    try {
+-      decoded = {
+-        payload: jose.decodeJwt(rawJwtToken),
+-        header: jose.decodeProtectedHeader(rawJwtToken)
+-      };
+-    } catch (err) {
+-      decoded = null;
+-    }
+-
+-    if (!decoded || !supportedAlg.includes(decoded.header.alg)) {
+-      return cb(null, null);
+-    }
+-
+-    client.getSigningKey(decoded.header.kid)
+-      .then(key => {
+-        cb(null, key.publicKey || key.rsaPublicKey);
++    getJose()
++      .then(jose => {
++        let decoded;
++        try {
++          decoded = {
++            payload: jose.decodeJwt(rawJwtToken),
++            header: jose.decodeProtectedHeader(rawJwtToken)
++          };
++        } catch (err) {
++          decoded = null;
++        }
++
++        if (!decoded || !supportedAlg.includes(decoded.header.alg)) {
++          return cb(null, null);
++        }
++
++        client.getSigningKey(decoded.header.kid)
++          .then(key => {
++            cb(null, key.publicKey || key.rsaPublicKey);
++          }).catch(err => {
++            onError(err, (newError) => cb(newError, null));
++          });
+       }).catch(err => {
+-        onError(err, (newError) => cb(newError, null));
++        cb(err, null);
+       });
+   };
+ };
+diff --git a/src/jose.js b/src/jose.js
+new file mode 100644
+index 0000000..484437b
+--- /dev/null
++++ b/src/jose.js
+@@ -0,0 +1,14 @@
++let jose;
++const dynamicImport = new Function('specifier', 'return import(specifier)');
++
++function getJose() {
++  if (!jose) {
++    jose = dynamicImport('jose');
++  }
++
++  return jose;
++}
++
++module.exports = {
++  getJose
++};
+diff --git a/src/utils.js b/src/utils.js
+index 7bb805e..6a81801 100644
+--- a/src/utils.js
++++ b/src/utils.js
+@@ -1,4 +1,4 @@
+-const jose = require('jose');
++const { getJose } = require('./jose');
+ const JwksError = require('./errors/JwksError');
+ 
+ function resolveAlg(jwk) {
+@@ -33,6 +33,7 @@ function resolveAlg(jwk) {
+ }
+ 
+ async function retrieveSigningKeys(jwks) {
++  const jose = await getJose();
+   const results = [];
+ 
+   jwks = jwks

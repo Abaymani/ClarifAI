@@ -159,6 +159,8 @@ Enable Google as a sign-in provider under Firebase Authentication and put the Fi
 
 For local development, `pnpm dev` starts the Firebase Authentication emulator. Put two non-real test addresses in the admin email variables in `.env.local`, visit `/admin`, and use the emulator's mock Google sign-in screen. Production and Preview need their own Firebase Authentication configuration, matching their separate Firebase projects.
 
+`firebase-admin` currently needs the repository patch for `jwks-rsa` recorded in DL-062 so its authentication module can load in Vercel's CommonJS server runtime while continuing to use supported `jose` 6. `pnpm test:firebase-admin-runtime` guards the exact failure. Remove the patch when the upstream lazy-import fix ships in a released `jwks-rsa` version.
+
 The overview defaults to session status and has a separate researcher-coding matrix that shows Armin's and Frida's coding coverage for every transcript. A view-only filter can hide participants with no session in any of the four lessons; it never changes stored data. A transcript view exposes the already stored AI prompt and sequence coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. The portal never calls an AI API, regenerates analysis or consumes model tokens.
 
 ## Environment variables

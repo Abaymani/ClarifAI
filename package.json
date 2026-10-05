@@ -11,12 +11,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --project unit",
+    "test:firebase-admin-runtime": "node --no-experimental-require-module -e \"require('firebase-admin/auth')\"",
     "test:watch": "vitest --project unit",
     "test:emulator": "firebase emulators:exec --only firestore --project demo-clarifai \"vitest run --project emulator\"",
     "test:e2e": "firebase emulators:exec --only firestore --project demo-clarifai \"playwright test\"",
     "scrape": "tsx scripts/scrape.ts",
     "codes:generate": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/generate-codes.ts",
-    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm test:emulator",
+    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm test:firebase-admin-runtime && pnpm test:emulator",
     "prepare": "husky"
   },
   "dependencies": {
