@@ -17,6 +17,12 @@ This document records the established functional scope for the researcher-facing
 
 The definitions of started and missing make the requested three-state overview testable. They should be confirmed during interface design, particularly for failed and currently processing sessions.
 
+## Overall constraint
+
+| ID | Requirement | Acceptance criteria |
+| --- | --- | --- |
+| ADMIN-FR-010 | The admin interface shall not generate, regenerate, transform, or request any AI output. | No action in the admin interface calls an AI API or consumes model tokens. The interface only reads already stored transcripts and AI analysis, and reads or writes researcher-authored notes and coding. Search, filtering, navigation, and presentation are deterministic application functions. |
+
 ## Session overview and transcript navigation
 
 | ID | Requirement | Acceptance criteria |
@@ -33,6 +39,7 @@ The definitions of started and missing make the requested three-state overview t
 | ADMIN-FR-005 | The system shall allow a researcher to add notes and researcher coding for each participant prompt. | Notes and selected codes are stored against the relevant participant, lesson, prompt, and researcher. Editing one prompt does not alter another prompt or the AI coding. |
 | ADMIN-FR-006 | The system shall keep each researcher's activity separate so that both researchers can independently code the same lesson. | Each saved note and code identifies its researcher. One researcher's work neither overwrites nor implicitly changes the other researcher's work. |
 | ADMIN-FR-007 | The system shall allow a researcher to choose whose researcher coding is displayed for a lesson. | The view clearly identifies the selected researcher and displays only that researcher's coding unless a future comparison view is explicitly selected. |
+| ADMIN-FR-009 | The system shall allow a researcher to expand an AI-assigned prompt or sequence code to inspect why it was assigned. | Each AI code is compact by default. Expanding it shows the stored justification and supporting transcript excerpt; collapsing it hides those details again. Viewing the explanation does not recompute or modify the AI coding. |
 
 ## Coding tool
 
