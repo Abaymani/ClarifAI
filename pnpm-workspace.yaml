@@ -3,6 +3,12 @@
 minimumReleaseAge: 1440
 blockExoticSubdeps: true
 
+# firebase-admin 14 pulls CommonJS jwks-rsa 4, which synchronously requires the
+# ESM-only jose 6 and crashes in Vercel's server runtime. This is the minimal
+# upstream fix from auth0/node-jwks-rsa#508; remove it after that fix is released.
+patchedDependencies:
+  jwks-rsa@4.1.0: patches/jwks-rsa@4.1.0.patch
+
 # Dependency install scripts are denied unless explicitly allowed here. None of these
 # are needed: Firebase App Hosting auto-config, a version warning, a native regex engine
 # that only the Hosting emulator uses (it falls back without it), and esbuild's binary

@@ -7,7 +7,6 @@ import {
   initializeApp,
   type App,
 } from "firebase-admin/app";
-import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { z } from "zod";
 
@@ -18,7 +17,7 @@ const serviceAccountEnv = z.object({
 });
 
 // Initialised lazily so importing this module never needs credentials (e.g. during `next build`).
-function getAdminApp(): App {
+export function getAdminApp(): App {
   if (getApps().length > 0) return getApp();
 
   // The emulator takes precedence so local runs can never write to the research database.
@@ -44,8 +43,4 @@ function getAdminApp(): App {
 
 export function getDb(): Firestore {
   return getFirestore(getAdminApp());
-}
-
-export function getAdminAuth(): Auth {
-  return getAuth(getAdminApp());
 }

@@ -4,7 +4,7 @@ import { cache } from "react";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { cookies } from "next/headers";
 
-import { getAdminAuth } from "@/lib/firebase/admin";
+import { getAdminAuth } from "@/lib/firebase/auth";
 
 export const ADMIN_SESSION_COOKIE = "clarifai_admin_session";
 export const ADMIN_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
