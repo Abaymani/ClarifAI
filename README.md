@@ -65,7 +65,7 @@ pnpm.cmd exec playwright install chromium firefox
 pnpm.cmd dev
 ```
 
-`pnpm dev` runs the app against a local Firestore emulator, so local work never touches the research database. Emulator data is discarded when it stops.
+`pnpm dev` runs the app against local Firestore and Authentication emulators, so local work never touches the research database or real researcher accounts. Emulator data is discarded when it stops.
 
 ## Scripts
 | Command | What it does |
@@ -150,6 +150,16 @@ For every concrete analysed example, the student chooses **Ja**, **Delvis**, or 
 Students can state on the transcript screen that they did not use Gemini. Lessons 1 and 4 then record `no_gemini` and show a reversible confirmation before completion. Lessons 2 and 3 skip scraping and analysis, show R01, and complete after its answer is saved. Before completion, both paths let the student return to transcript submission; doing so clears the no-Gemini choice and any generated R01 questions. Reflection answers are redacted before storage and saved atomically with their agreement choices, then followed by a dedicated completion page.
 
 Until the reflection is handed in, what the student has written is kept in that browser tab (`sessionStorage`), so a reload brings it back, and the browser asks before a page with unsent text is left (DL-049). The copy never leaves the computer; it is removed at hand-in and disappears when the tab closes.
+
+## Researcher portal
+
+The researcher portal is intentionally absent from the participant interface. Researchers open `/admin` directly and sign in with Google. Only the two verified addresses configured as `ADMIN_RESEARCHER_1_EMAIL` and `ADMIN_RESEARCHER_2_EMAIL` are accepted; they are stored in Vercel and `.env.local`, never in Git. Their work is stored under the stable identifiers `R1` and `R2`, while the interface consistently displays those researchers as Armin and Frida. Email addresses are not copied into research records (DL-059, DL-060).
+
+Enable Google as a sign-in provider under Firebase Authentication and put the Firebase project's Web API key in `FIREBASE_WEB_API_KEY`. The portal exchanges the Google/Firebase ID token for an eight-hour secure server cookie and verifies the exact allowlist on every admin read and write. Firestore remains inaccessible from browsers.
+
+For local development, `pnpm dev` starts the Firebase Authentication emulator. Put two non-real test addresses in the admin email variables in `.env.local`, visit `/admin`, and use the emulator's mock Google sign-in screen. Production and Preview need their own Firebase Authentication configuration, matching their separate Firebase projects.
+
+The overview defaults to session status and has a separate researcher-coding matrix that shows Armin's and Frida's coding coverage for every transcript. A view-only filter can hide participants with no session in any of the four lessons; it never changes stored data. A transcript view exposes the already stored AI prompt and sequence coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. The portal never calls an AI API, regenerates analysis or consumes model tokens.
 
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.

@@ -36,10 +36,14 @@ export function ChatBubble({
   message,
   children,
   className,
+  headerActions,
+  headerLabel,
 }: {
   message: TranscriptMessage;
   children: ReactNode;
   className?: string;
+  headerActions?: ReactNode;
+  headerLabel?: string;
 }) {
   const student = message.role === "student";
 
@@ -57,11 +61,21 @@ export function ChatBubble({
       <div
         className={cn(
           "mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase",
-          student && "text-right text-blue-700 dark:text-blue-300",
+          student && "text-blue-700 dark:text-blue-300",
+          headerActions
+            ? "flex items-start justify-between gap-2"
+            : student && "text-right",
         )}
       >
-        {message.index}.{" "}
-        {student ? sv.session.previewStudent : sv.session.previewGemini}
+        <span>
+          {headerLabel ?? (
+            <>
+              {message.index}.{" "}
+              {student ? sv.session.previewStudent : sv.session.previewGemini}
+            </>
+          )}
+        </span>
+        {headerActions}
       </div>
       {children}
     </article>
