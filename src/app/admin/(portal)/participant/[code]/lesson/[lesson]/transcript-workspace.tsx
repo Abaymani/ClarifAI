@@ -140,6 +140,9 @@ export function TranscriptWorkspace({
               <ChatBubble
                 key={message.index}
                 message={message}
+                headerLabel={
+                  selectable ? `Deltagare ${message.index}` : undefined
+                }
                 headerActions={
                   badges.length > 0 ? (
                     <div className="flex flex-wrap justify-end gap-1 normal-case">

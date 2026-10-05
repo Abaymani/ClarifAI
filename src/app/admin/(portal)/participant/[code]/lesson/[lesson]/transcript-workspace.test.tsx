@@ -108,6 +108,9 @@ describe("TranscriptWorkspace", () => {
   test("shows AI, Armin, and Frida prompt codes only when opted in", () => {
     render(<TranscriptWorkspace {...props} />);
 
+    expect(screen.getByText("Deltagare 1")).toBeTruthy();
+    expect(screen.queryByText("1. Du")).toBeNull();
+
     const ai = screen.getByRole("button", {
       name: "Visa AI-koder i transkriptet",
     });

@@ -67,6 +67,9 @@ describe("admin store", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    const participantSubmission = (
+      await db.collection("sessions").doc("952_2").get()
+    ).data();
 
     await savePromptCoding({
       sessionId: "952_2",
@@ -106,6 +109,9 @@ describe("admin store", () => {
     expect(coding.R2).toEqual([
       expect.objectContaining({ kind: "prompt", note: "R2 note" }),
     ]);
+    expect((await db.collection("sessions").doc("952_2").get()).data()).toEqual(
+      participantSubmission,
+    );
 
     await deleteSequenceCoding({
       sessionId: "952_2",
@@ -115,5 +121,8 @@ describe("admin store", () => {
     expect((await listResearcherCoding("952_2")).R1).toEqual([
       expect.objectContaining({ kind: "prompt" }),
     ]);
+    expect((await db.collection("sessions").doc("952_2").get()).data()).toEqual(
+      participantSubmission,
+    );
   });
 });

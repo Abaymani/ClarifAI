@@ -37,11 +37,13 @@ export function ChatBubble({
   children,
   className,
   headerActions,
+  headerLabel,
 }: {
   message: TranscriptMessage;
   children: ReactNode;
   className?: string;
   headerActions?: ReactNode;
+  headerLabel?: string;
 }) {
   const student = message.role === "student";
 
@@ -66,8 +68,12 @@ export function ChatBubble({
         )}
       >
         <span>
-          {message.index}.{" "}
-          {student ? sv.session.previewStudent : sv.session.previewGemini}
+          {headerLabel ?? (
+            <>
+              {message.index}.{" "}
+              {student ? sv.session.previewStudent : sv.session.previewGemini}
+            </>
+          )}
         </span>
         {headerActions}
       </div>
