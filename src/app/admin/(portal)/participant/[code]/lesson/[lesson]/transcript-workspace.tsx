@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Search, Trash2, X } from "lucide-react";
+import { Plus, Search, Sparkles, Trash2, UserRound, X } from "lucide-react";
 
 import {
   deleteSequenceCodingAction,
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ResearcherId } from "@/lib/admin/auth";
+import { researcherName } from "@/lib/admin/researchers";
 import type {
   AdminCodeOption,
   ResearcherCoding,
@@ -29,6 +30,7 @@ import type { TranscriptMessage } from "@/lib/scraping/transcript";
 type CodingByResearcher = Record<ResearcherId, ResearcherCoding[]>;
 type Panel = "ai" | "researcher";
 type ManualTarget = "prompt" | "sequence";
+type TranscriptCodingVisibility = Record<"ai" | ResearcherId, boolean>;
 
 export function TranscriptWorkspace({
   sessionId,
@@ -54,6 +56,8 @@ export function TranscriptWorkspace({
   const [selectedResearcher, setSelectedResearcher] =
     useState<ResearcherId>(currentResearcher);
   const [coding, setCoding] = useState(initialCoding);
+  const [transcriptCoding, setTranscriptCoding] =
+    useState<TranscriptCodingVisibility>({ ai: false, R1: false, R2: false });
 
   function toggleAi(checked: boolean) {
     setShowAi(checked);
@@ -81,17 +85,73 @@ export function TranscriptWorkspace({
     }));
   }
 
+  function toggleTranscriptCoding(source: keyof TranscriptCodingVisibility) {
+    setTranscriptCoding((current) => ({
+      ...current,
+      [source]: !current[source],
+    }));
+  }
+
   return (
     <section className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(22rem,2fr)]">
       <div className="min-w-0 rounded-xl border bg-background p-3 sm:p-4">
+        <div className="mb-4 flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold">Kodning i transkriptet</h2>
+            <p className="text-xs text-muted-foreground">Av som standard</p>
+          </div>
+          <div
+            className="flex flex-wrap gap-2"
+            aria-label="Kodning i transkriptet"
+          >
+            <TranscriptCodingToggle
+              label="AI"
+              source="ai"
+              pressed={transcriptCoding.ai}
+              onClick={() => toggleTranscriptCoding("ai")}
+            />
+            <TranscriptCodingToggle
+              label={researcherName("R1")}
+              source="R1"
+              pressed={transcriptCoding.R1}
+              onClick={() => toggleTranscriptCoding("R1")}
+            />
+            <TranscriptCodingToggle
+              label={researcherName("R2")}
+              source="R2"
+              pressed={transcriptCoding.R2}
+              onClick={() => toggleTranscriptCoding("R2")}
+            />
+          </div>
+        </div>
         <ChatThread className="border-0 bg-transparent p-0">
           {messages.map((message) => {
             const selectable = message.role === "student";
             const selected = selectable && message.index === selectedMessage;
+            const badges = selectable
+              ? transcriptCodeBadges(
+                  message.index,
+                  analysis,
+                  coding,
+                  transcriptCoding,
+                )
+              : [];
             return (
               <ChatBubble
                 key={message.index}
                 message={message}
+                headerActions={
+                  badges.length > 0 ? (
+                    <div className="flex flex-wrap justify-end gap-1 normal-case">
+                      {badges.map((badge) => (
+                        <TranscriptCodeBadge
+                          key={`${badge.source}-${badge.code}`}
+                          {...badge}
+                        />
+                      ))}
+                    </div>
+                  ) : null
+                }
                 className={
                   selected
                     ? "ring-2 ring-foreground/30 ring-offset-2 ring-offset-background"
@@ -181,6 +241,99 @@ export function TranscriptWorkspace({
         </div>
       </aside>
     </section>
+  );
+}
+
+type TranscriptCodeBadgeData = {
+  source: "ai" | ResearcherId;
+  label: string;
+  code: string;
+};
+
+function transcriptCodeBadges(
+  message: number,
+  analysis: StoredCoding | null,
+  coding: CodingByResearcher,
+  visibility: TranscriptCodingVisibility,
+): TranscriptCodeBadgeData[] {
+  const badges: TranscriptCodeBadgeData[] = [];
+  if (visibility.ai) {
+    const prompt = analysis?.prompts.find(
+      (candidate) => candidate.message === message,
+    );
+    badges.push(
+      ...(prompt?.codes.map((entry) => ({
+        source: "ai" as const,
+        label: "AI",
+        code: entry.code,
+      })) ?? []),
+    );
+  }
+  for (const researcherId of ["R1", "R2"] as const) {
+    if (!visibility[researcherId]) continue;
+    const prompt = coding[researcherId].find(
+      (entry): entry is ResearcherPromptCoding =>
+        entry.kind === "prompt" && entry.message === message,
+    );
+    badges.push(
+      ...(prompt?.codes.map((code) => ({
+        source: researcherId,
+        label: researcherName(researcherId),
+        code,
+      })) ?? []),
+    );
+  }
+  return badges;
+}
+
+function TranscriptCodingToggle({
+  label,
+  source,
+  pressed,
+  onClick,
+}: {
+  label: string;
+  source: "ai" | ResearcherId;
+  pressed: boolean;
+  onClick: () => void;
+}) {
+  const tone =
+    source === "ai"
+      ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100"
+      : source === "R1"
+        ? "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
+        : "border-violet-300 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100";
+  const Icon = source === "ai" ? Sparkles : UserRound;
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      aria-label={`Visa ${label}-koder i transkriptet`}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-opacity ${tone} ${pressed ? "opacity-100 shadow-xs" : "opacity-45 grayscale"}`}
+    >
+      <Icon aria-hidden="true" className="size-3.5" />
+      {label}
+      <span aria-hidden="true">{pressed ? "På" : "Av"}</span>
+    </button>
+  );
+}
+
+function TranscriptCodeBadge({ source, label, code }: TranscriptCodeBadgeData) {
+  const tone =
+    source === "ai"
+      ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
+      : source === "R1"
+        ? "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100"
+        : "border-violet-300 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-100";
+  const Icon = source === "ai" ? Sparkles : UserRound;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.6875rem] leading-4 font-semibold tracking-normal whitespace-nowrap ${tone}`}
+    >
+      <Icon aria-hidden="true" className="size-3" />
+      {label} · {code}
+    </span>
   );
 }
 
@@ -347,7 +500,7 @@ function ResearcherCodingPanel({
               onClick={() => onResearcherChange(researcher)}
               className={`rounded-md px-3 py-2 text-sm font-medium ${selectedResearcher === researcher ? "bg-background shadow-xs" : "text-muted-foreground"}`}
             >
-              {researcher}
+              {researcherName(researcher)}
               {researcher === currentResearcher ? " (du)" : ""}
             </button>
           ))}
@@ -373,8 +526,8 @@ function ResearcherCodingPanel({
 
       {!editable ? (
         <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-          Du visar {selectedResearcher}:s kodning. Byt till {currentResearcher}{" "}
-          för att redigera din egen.
+          Du visar {researcherName(selectedResearcher)}s kodning. Byt till{" "}
+          {researcherName(currentResearcher)} för att redigera din egen.
         </p>
       ) : null}
 

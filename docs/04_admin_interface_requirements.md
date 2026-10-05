@@ -2,7 +2,7 @@
 
 This document records the established functional scope for the researcher-facing admin interface. It is a shared reference for future design and implementation work; it does not change the student workflow described in the product brief and system architecture.
 
-**Status:** Functional scope and the integrated portal architecture are approved. Access-control details remain to be decided.
+**Status:** Functional scope, integrated portal architecture, and access-control approach are approved.
 
 ## Terminology
 
@@ -35,10 +35,10 @@ The definitions of started and missing make the requested three-state overview t
 
 | ID | Requirement | Acceptance criteria |
 | --- | --- | --- |
-| ADMIN-FR-004 | While viewing a transcript, the researcher shall be able to toggle the visibility of the AI coding beside the transcript. | AI coding is hidden by default. Enabling it shows prompt codes and sequence codes aligned with the relevant transcript content; disabling it hides them without changing the stored result. |
+| ADMIN-FR-004 | While viewing a transcript, the researcher shall be able to toggle the visibility of the AI coding beside the transcript and directly on participant prompts. | AI coding is hidden by default in both locations. Independent transcript controls for AI, Armin, and Frida show compact source-labelled prompt codes in the top-right of participant prompts. The source remains clear without relying only on colour, Gemini messages have no prompt-code labels, and toggling visibility never changes stored results. |
 | ADMIN-FR-005 | The system shall allow a researcher to add notes and researcher coding for each participant prompt. | Notes and selected codes are stored against the relevant participant, lesson, prompt, and researcher. Editing one prompt does not alter another prompt or the AI coding. |
 | ADMIN-FR-006 | The system shall keep each researcher's activity separate so that both researchers can independently code the same lesson. | Each saved note and code identifies its researcher. One researcher's work neither overwrites nor implicitly changes the other researcher's work. |
-| ADMIN-FR-007 | The system shall allow a researcher to choose whose researcher coding is displayed for a lesson. | The view clearly identifies the selected researcher and displays only that researcher's coding unless a future comparison view is explicitly selected. |
+| ADMIN-FR-007 | The system shall allow a researcher to choose whose researcher coding is displayed for a lesson. | The view consistently names `R1` as Armin and `R2` as Frida, clearly identifies the selected researcher, and displays only that researcher's coding unless the independent transcript overlays are enabled or a future comparison view is explicitly selected. |
 | ADMIN-FR-009 | The system shall allow a researcher to expand an AI-assigned prompt or sequence code to inspect why it was assigned. | Each AI code is compact by default. Expanding it shows the stored justification and supporting transcript excerpt; collapsing it hides those details again. Viewing the explanation does not recompute or modify the AI coding. |
 
 ## Coding tool
@@ -58,9 +58,9 @@ The approved choice is **a protected portal in the existing application**, with 
 
 The portal should be separated logically from the student interface even if it shares the same deployment. Participant codes and PINs must never authorize admin access, and browsers must continue to have no direct Firestore access. A separate hostname or deployment can still be introduced later if operational or institutional security requirements demand stronger isolation.
 
-Researchers authenticate with Google. Access is granted only when Google has verified the account email and it exactly matches one of the two addresses configured on the server. Those accounts are mapped to the stable research labels `R1` and `R2`; researcher emails are not stored with transcripts, notes, or coding. The portal has no link from the participant interface and is reached through its direct `/admin` address.
+Researchers authenticate with Google. Access is granted only when Google has verified the account email and it exactly matches one of the two addresses configured on the server. Those accounts are stored under the stable research identifiers `R1` and `R2` and displayed as Armin and Frida respectively; researcher emails are not stored with transcripts, notes, or coding. The portal has no link from the participant interface and is reached through its direct `/admin` address.
 
-The portal and authentication decisions are recorded as DL-058 and DL-059 in the decision log.
+The portal, authentication, and researcher-display decisions are recorded as DL-058 through DL-060 in the decision log.
 
 ## Decisions required before implementation
 

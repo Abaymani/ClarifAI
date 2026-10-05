@@ -39,7 +39,32 @@ const props = {
     ],
     sequences: [],
   },
-  coding: { R1: [], R2: [] },
+  coding: {
+    R1: [
+      {
+        id: "prompt-1",
+        kind: "prompt" as const,
+        researcherId: "R1" as const,
+        message: 1,
+        note: "Armins anteckning",
+        codes: ["C2"],
+        frameworkVersion: "test",
+        updatedAt: "2026-10-05T00:00:00.000Z",
+      },
+    ],
+    R2: [
+      {
+        id: "prompt-1",
+        kind: "prompt" as const,
+        researcherId: "R2" as const,
+        message: 1,
+        note: "Fridas anteckning",
+        codes: ["A6"],
+        frameworkVersion: "test",
+        updatedAt: "2026-10-05T00:00:00.000Z",
+      },
+    ],
+  },
   currentResearcher: "R1" as const,
   codeOptions: [
     {
@@ -78,5 +103,34 @@ describe("TranscriptWorkspace", () => {
       { target: { value: "noggrann" } },
     );
     expect(screen.getByText("A6 · Precis rapportering")).toBeTruthy();
+  });
+
+  test("shows AI, Armin, and Frida prompt codes only when opted in", () => {
+    render(<TranscriptWorkspace {...props} />);
+
+    const ai = screen.getByRole("button", {
+      name: "Visa AI-koder i transkriptet",
+    });
+    const armin = screen.getByRole("button", {
+      name: "Visa Armin-koder i transkriptet",
+    });
+    const frida = screen.getByRole("button", {
+      name: "Visa Frida-koder i transkriptet",
+    });
+    expect(ai.getAttribute("aria-pressed")).toBe("false");
+    expect(armin.getAttribute("aria-pressed")).toBe("false");
+    expect(frida.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByText("AI · A6")).toBeNull();
+    expect(screen.queryByText("Armin · C2")).toBeNull();
+    expect(screen.queryByText("Frida · A6")).toBeNull();
+
+    fireEvent.click(ai);
+    fireEvent.click(armin);
+    fireEvent.click(frida);
+    expect(screen.getByText("AI · A6")).toBeTruthy();
+    expect(screen.getByText("Armin · C2")).toBeTruthy();
+    expect(screen.getByText("Frida · A6")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Armin (du)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Frida" })).toBeTruthy();
   });
 });

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { logoutAdminAction } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { getCurrentResearcher } from "@/lib/admin/auth";
+import { researcherName } from "@/lib/admin/researchers";
 
 export default async function AdminPortalLayout({
   children,
@@ -28,7 +29,7 @@ export default async function AdminPortalLayout({
           </div>
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
-              {researcher.id}
+              {researcherName(researcher.id)}
             </span>
             <form action={logoutAdminAction}>
               <Button type="submit" variant="outline" size="sm">

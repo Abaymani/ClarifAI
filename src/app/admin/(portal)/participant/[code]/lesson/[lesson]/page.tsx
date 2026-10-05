@@ -51,6 +51,7 @@ export default async function AdminTranscriptPage({
           {previous ? (
             <Button
               variant="outline"
+              nativeButton={false}
               render={
                 <Link href={`/admin/participant/${code}/lesson/${previous}`} />
               }
@@ -66,6 +67,7 @@ export default async function AdminTranscriptPage({
           )}
           {next ? (
             <Button
+              nativeButton={false}
               render={
                 <Link href={`/admin/participant/${code}/lesson/${next}`} />
               }

@@ -153,7 +153,7 @@ Until the reflection is handed in, what the student has written is kept in that 
 
 ## Researcher portal
 
-The researcher portal is intentionally absent from the participant interface. Researchers open `/admin` directly and sign in with Google. Only the two verified addresses configured as `ADMIN_RESEARCHER_1_EMAIL` and `ADMIN_RESEARCHER_2_EMAIL` are accepted; they are stored in Vercel and `.env.local`, never in Git. Their work is attributed as `R1` and `R2`, so email addresses are not copied into research records (DL-059).
+The researcher portal is intentionally absent from the participant interface. Researchers open `/admin` directly and sign in with Google. Only the two verified addresses configured as `ADMIN_RESEARCHER_1_EMAIL` and `ADMIN_RESEARCHER_2_EMAIL` are accepted; they are stored in Vercel and `.env.local`, never in Git. Their work is stored under the stable identifiers `R1` and `R2`, while the interface consistently displays those researchers as Armin and Frida. Email addresses are not copied into research records (DL-059, DL-060).
 
 Enable Google as a sign-in provider under Firebase Authentication and put the Firebase project's Web API key in `FIREBASE_WEB_API_KEY`. The portal exchanges the Google/Firebase ID token for an eight-hour secure server cookie and verifies the exact allowlist on every admin read and write. Firestore remains inaccessible from browsers.
 
