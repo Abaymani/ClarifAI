@@ -90,7 +90,7 @@ Against the local emulator:
 pnpm exec firebase emulators:exec --only firestore --project demo-clarifai "pnpm codes:generate 5"
 ```
 
-To try the login while `pnpm dev` is running, seed that emulator from a second terminal:
+To try the participant flow while `pnpm dev` is running, seed that emulator from a second terminal:
 
 ```bash
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 pnpm codes:generate 5
@@ -157,7 +157,7 @@ The researcher portal is intentionally absent from the participant interface. Re
 
 Enable Google as a sign-in provider under Firebase Authentication and put the Firebase project's Web API key in `FIREBASE_WEB_API_KEY`. The portal exchanges the Google/Firebase ID token for an eight-hour secure server cookie and verifies the exact allowlist on every admin read and write. Firestore remains inaccessible from browsers.
 
-For local development, `pnpm dev` starts the Firebase Authentication emulator. Put two non-real test addresses in the admin email variables in `.env.local`, visit `/admin`, and use the emulator's mock Google sign-in screen. Production and Preview need their own Firebase Authentication configuration, matching their separate Firebase projects.
+For local development, `pnpm dev` starts both Firebase emulators and `/admin` opens directly as Armin (`R1`), without a login step. The bypass requires development mode, both emulator hosts and the exact demo project `demo-clarifai`; it cannot activate in a production build or against the research project. Production and Preview still require their own Firebase Authentication configuration and exact researcher allowlist.
 
 `firebase-admin` currently needs the repository patch for `jwks-rsa` recorded in DL-062 so its authentication module can load in Vercel's CommonJS server runtime while continuing to use supported `jose` 6. `pnpm test:firebase-admin-runtime` guards the exact failure. Remove the patch when the upstream lazy-import fix ships in a released `jwks-rsa` version.
 
