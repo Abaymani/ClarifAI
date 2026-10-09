@@ -177,6 +177,7 @@
 - **Decision:** The project supports both Windows and Linux. Text files use repository-controlled line endings, setup instructions cover both platforms, and the main CI checks run on Ubuntu and Windows. Package scripts and emulator safeguards remain shared across platforms.
 - **Risks/consequences:** CI takes longer because the full check suite runs twice. Windows PowerShell can block npm-generated `.ps1` launchers under a restrictive execution policy, so the Windows instructions document the equivalent `.cmd` launchers without weakening that policy.
 - **Decided by:** Requested and approved by Armin Baymani (human), 2026-09-22. Implemented by Codex (agent).
+- **Implementation note (2026-10-09):** The Linux setup now documents Ubuntu and Debian separately from Arch. Ubuntu 26.04 packages Node.js 22, so its instructions use `.nvmrc` to install the required Node.js 24 instead of suggesting the incompatible distribution package. Playwright's Linux system dependencies are also documented. The pre-commit hook accepts both Ubuntu's gitleaks 8.16 `protect --staged` syntax and newer gitleaks versions' `git --pre-commit --staged` syntax, with the same staged-secret protection. This does not change the cross-platform support decision.
 
 ### DL-028: Separate Firebase project for previews
 - **Options:** Previews keep using the production project (DL-027); a second database inside the production project (needs the paid Blaze plan); a second Firebase project (free on Spark, which allows several projects).
