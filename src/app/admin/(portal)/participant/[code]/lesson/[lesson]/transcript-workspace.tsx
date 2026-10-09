@@ -4,6 +4,10 @@ import { useMemo, useState, useTransition } from "react";
 import { Plus, Search, Sparkles, Trash2, UserRound, X } from "lucide-react";
 
 import {
+  CodingSourceBadge,
+  type CodingSourceBadgeData,
+} from "@/app/admin/(portal)/coding-source-badge";
+import {
   deleteSequenceCodingAction,
   savePromptCodingAction,
   saveSequenceCodingAction,
@@ -147,7 +151,7 @@ export function TranscriptWorkspace({
                   badges.length > 0 ? (
                     <div className="flex flex-wrap justify-end gap-1 normal-case">
                       {badges.map((badge) => (
-                        <TranscriptCodeBadge
+                        <CodingSourceBadge
                           key={`${badge.source}-${badge.code}`}
                           {...badge}
                         />
@@ -247,19 +251,13 @@ export function TranscriptWorkspace({
   );
 }
 
-type TranscriptCodeBadgeData = {
-  source: "ai" | ResearcherId;
-  label: string;
-  code: string;
-};
-
 function transcriptCodeBadges(
   message: number,
   analysis: StoredCoding | null,
   coding: CodingByResearcher,
   visibility: TranscriptCodingVisibility,
-): TranscriptCodeBadgeData[] {
-  const badges: TranscriptCodeBadgeData[] = [];
+): CodingSourceBadgeData[] {
+  const badges: CodingSourceBadgeData[] = [];
   if (visibility.ai) {
     const prompt = analysis?.prompts.find(
       (candidate) => candidate.message === message,
@@ -319,24 +317,6 @@ function TranscriptCodingToggle({
       {label}
       <span aria-hidden="true">{pressed ? "På" : "Av"}</span>
     </button>
-  );
-}
-
-function TranscriptCodeBadge({ source, label, code }: TranscriptCodeBadgeData) {
-  const tone =
-    source === "ai"
-      ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
-      : source === "R1"
-        ? "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100"
-        : "border-violet-300 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-100";
-  const Icon = source === "ai" ? Sparkles : UserRound;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.6875rem] leading-4 font-semibold tracking-normal whitespace-nowrap ${tone}`}
-    >
-      <Icon aria-hidden="true" className="size-3" />
-      {label} · {code}
-    </span>
   );
 }
 

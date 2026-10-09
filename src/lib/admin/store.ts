@@ -3,10 +3,13 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 
 import type { ResearcherId } from "@/lib/admin/auth";
+import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
 import type {
   AdminParticipantOverview,
+  ReflectionCommentsByResearcher,
   ResearcherCoding,
   ResearcherPromptCoding,
+  ResearcherReflectionComment,
   ResearcherSequenceCoding,
 } from "@/lib/admin/types";
 import { loadFramework } from "@/lib/analysis/framework";
@@ -19,6 +22,7 @@ import type { Session } from "@/lib/session/types";
 const PARTICIPANTS = "participants";
 const SESSIONS = "sessions";
 const RESEARCHER_CODING = "researcherCoding";
+const RESEARCHER_REFLECTION_COMMENTS = "researcherReflectionComments";
 const ENTRIES = "entries";
 export const MAX_RESEARCHER_NOTE_LENGTH = 5_000;
 
@@ -96,6 +100,63 @@ export async function listResearcherCoding(
   return {
     R1: r1.docs.flatMap((doc) => parseEntry(doc.id, doc.data(), "R1")),
     R2: r2.docs.flatMap((doc) => parseEntry(doc.id, doc.data(), "R2")),
+  };
+}
+
+export async function listReflectionComments(
+  sessionId: string,
+): Promise<ReflectionCommentsByResearcher> {
+  const [r1, r2] = await Promise.all([
+    reflectionCommentEntries(sessionId, "R1").get(),
+    reflectionCommentEntries(sessionId, "R2").get(),
+  ]);
+  return {
+    R1: r1.docs.flatMap((doc) =>
+      parseReflectionComment(doc.id, doc.data(), "R1"),
+    ),
+    R2: r2.docs.flatMap((doc) =>
+      parseReflectionComment(doc.id, doc.data(), "R2"),
+    ),
+  };
+}
+
+export async function saveReflectionComment(input: {
+  sessionId: string;
+  researcherId: ResearcherId;
+  itemId: string;
+  comment: string;
+  now?: Date;
+}): Promise<ResearcherReflectionComment | null> {
+  const session = await requiredSession(input.sessionId);
+  const item = session.reflectionQuestions?.items.find(
+    (candidate) => candidate.id === input.itemId,
+  );
+  if (!item) throw new AdminCodingError("INVALID_REFLECTION_ITEM");
+
+  const comment = input.comment.trim();
+  if (comment.length > MAX_REFLECTION_COMMENT_LENGTH) {
+    throw new AdminCodingError("INVALID_COMMENT");
+  }
+  const ref = reflectionCommentEntries(session.id, input.researcherId).doc(
+    item.id,
+  );
+  if (!comment) {
+    await ref.delete();
+    return null;
+  }
+
+  const now = input.now ?? new Date();
+  await ref.set({
+    researcherId: input.researcherId,
+    itemId: item.id,
+    comment,
+    updatedAt: Timestamp.fromDate(now),
+  });
+  return {
+    researcherId: input.researcherId,
+    itemId: item.id,
+    comment,
+    updatedAt: now.toISOString(),
   };
 }
 
@@ -222,7 +283,9 @@ export class AdminCodingError extends Error {
       | "INVALID_SEQUENCE"
       | "INVALID_NOTE"
       | "INVALID_CODE"
-      | "EMPTY_ENTRY",
+      | "EMPTY_ENTRY"
+      | "INVALID_REFLECTION_ITEM"
+      | "INVALID_COMMENT",
   ) {
     super(code);
     this.name = "AdminCodingError";
@@ -234,6 +297,18 @@ function codingEntries(sessionId: string, researcherId: ResearcherId) {
     .collection(SESSIONS)
     .doc(sessionId)
     .collection(RESEARCHER_CODING)
+    .doc(researcherId)
+    .collection(ENTRIES);
+}
+
+function reflectionCommentEntries(
+  sessionId: string,
+  researcherId: ResearcherId,
+) {
+  return getDb()
+    .collection(SESSIONS)
+    .doc(sessionId)
+    .collection(RESEARCHER_REFLECTION_COMMENTS)
     .doc(researcherId)
     .collection(ENTRIES);
 }
@@ -332,4 +407,27 @@ function parseEntry(
     ];
   }
   return [];
+}
+
+function parseReflectionComment(
+  id: string,
+  data: Record<string, unknown>,
+  researcherId: ResearcherId,
+): ResearcherReflectionComment[] {
+  if (
+    data.researcherId !== researcherId ||
+    data.itemId !== id ||
+    typeof data.comment !== "string" ||
+    !(data.updatedAt instanceof Timestamp)
+  ) {
+    return [];
+  }
+  return [
+    {
+      researcherId,
+      itemId: id,
+      comment: data.comment,
+      updatedAt: data.updatedAt.toDate().toISOString(),
+    },
+  ];
 }

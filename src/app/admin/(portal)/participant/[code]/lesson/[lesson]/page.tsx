@@ -2,11 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { TranscriptWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/transcript-workspace";
+import { SessionWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/session-workspace";
 import { Button } from "@/components/ui/button";
 import { adminCodeOptions } from "@/lib/admin/codes";
 import { getCurrentResearcher } from "@/lib/admin/auth";
-import { getAdminSession, listResearcherCoding } from "@/lib/admin/store";
+import {
+  getAdminSession,
+  listReflectionComments,
+  listResearcherCoding,
+} from "@/lib/admin/store";
 import { loadFramework } from "@/lib/analysis/framework";
 import { LESSONS, type Lesson } from "@/lib/session/credentials";
 
@@ -23,12 +27,17 @@ export default async function AdminTranscriptPage({
   if (!researcher) notFound();
 
   const session = await getAdminSession(code, lesson);
-  const [coding, codeOptions] = session
+  const [coding, codeOptions, reflectionComments] = session
     ? await Promise.all([
         listResearcherCoding(session.id),
         Promise.resolve(adminCodeOptions(loadFramework())),
+        listReflectionComments(session.id),
       ])
-    : [{ R1: [], R2: [] }, adminCodeOptions(loadFramework())];
+    : [
+        { R1: [], R2: [] },
+        adminCodeOptions(loadFramework()),
+        { R1: [], R2: [] },
+      ];
   const previous = lesson > 1 ? ((lesson - 1) as Lesson) : null;
   const next = lesson < 4 ? ((lesson + 1) as Lesson) : null;
 
@@ -86,18 +95,24 @@ export default async function AdminTranscriptPage({
 
       {!session ? (
         <EmptyState text="Deltagaren har inte startat den här lektionen." />
-      ) : session.transcriptSubmission === "no_gemini" ? (
-        <EmptyState text="Deltagaren uppgav att Gemini inte användes under den här lektionen." />
-      ) : !session.transcript ? (
-        <EmptyState text="Lektionen är påbörjad men har inget sparat transkript ännu." />
       ) : (
-        <TranscriptWorkspace
+        <SessionWorkspace
           sessionId={session.id}
-          messages={session.transcript.messages}
+          messages={session.transcript?.messages ?? []}
           analysis={session.analysis}
           coding={coding}
           currentResearcher={researcher.id}
           codeOptions={codeOptions}
+          reflectionQuestions={session.reflectionQuestions}
+          reflectionResponses={session.reflectionResponses}
+          reflectionComments={reflectionComments}
+          transcriptEmptyText={
+            session.transcriptSubmission === "no_gemini"
+              ? "Deltagaren uppgav att Gemini inte användes under den här lektionen."
+              : !session.transcript
+                ? "Lektionen är påbörjad men har inget sparat transkript ännu."
+                : null
+          }
         />
       )}
     </main>
