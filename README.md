@@ -19,10 +19,42 @@ Prerequisites:
 - gitleaks, which the pre-commit hook needs
 - GitHub CLI (`gh`), for the issue workflow
 
-### Linux (Arch)
+### Linux
+
+#### Arch
 
 ```bash
 sudo pacman -S --needed nodejs-lts-krypton npm pnpm jdk21-openjdk github-cli gitleaks
+```
+
+#### Ubuntu and Debian
+
+Ubuntu 26.04 currently packages Node.js 22, while this project requires Node.js
+24. Install the system tools from `apt`, then use a Node version manager such as
+[nvm](https://github.com/nvm-sh/nvm#installing-and-updating) so `.nvmrc` selects
+the project version:
+
+```bash
+sudo apt update
+sudo apt install --yes curl git openjdk-21-jdk gh gitleaks
+```
+
+Install nvm using its linked official instructions and open a new terminal. Then,
+from this repository, install the pinned Node.js and pnpm versions:
+
+```bash
+nvm install
+npm install --global pnpm@11.26.0
+```
+
+Verify the versions before continuing:
+
+```bash
+node --version      # v24.x
+pnpm --version      # 11.26.0
+java -version       # 21.x
+gitleaks version
+gh --version
 ```
 
 ### Windows
@@ -57,6 +89,13 @@ On Linux, use `pnpm`. On Windows PowerShell, use `pnpm.cmd` if `pnpm` is blocked
 pnpm install                              # also activates the git hooks
 pnpm exec playwright install chromium firefox # browsers for the end-to-end tests
 pnpm dev                                  # app on :3000, Firestore emulator UI on :4000
+```
+
+On Ubuntu or Debian, replace the Playwright command above with this one so its
+browser system libraries are installed as well:
+
+```bash
+pnpm exec playwright install --with-deps chromium firefox
 ```
 
 ```powershell
