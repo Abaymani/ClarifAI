@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { firebaseWebAuthConfig, researcherForClaims } from "@/lib/admin/auth";
+import {
+  firebaseWebAuthConfig,
+  localEmulatorResearcher,
+  researcherForClaims,
+} from "@/lib/admin/auth";
 
 const env = {
   ADMIN_RESEARCHER_1_EMAIL: "one@example.test",
@@ -55,5 +59,41 @@ describe("firebaseWebAuthConfig", () => {
       projectId: "demo-clarifai",
       emulatorUrl: "http://127.0.0.1:9099",
     });
+  });
+});
+
+describe("localEmulatorResearcher", () => {
+  test("opens the local demo emulators as R1 without a login", () => {
+    expect(
+      localEmulatorResearcher({
+        NODE_ENV: "development",
+        GCLOUD_PROJECT: "demo-clarifai",
+        FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
+        FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+        ADMIN_RESEARCHER_1_EMAIL: "local-armin@example.test",
+      }),
+    ).toEqual({ id: "R1", email: "local-armin@example.test" });
+  });
+
+  test("fails closed outside the complete non-production demo setup", () => {
+    const complete = {
+      NODE_ENV: "development",
+      GCLOUD_PROJECT: "demo-clarifai",
+      FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+    };
+
+    expect(
+      localEmulatorResearcher({ ...complete, NODE_ENV: "production" }),
+    ).toBeNull();
+    expect(
+      localEmulatorResearcher({ ...complete, GCLOUD_PROJECT: "clarifai" }),
+    ).toBeNull();
+    expect(
+      localEmulatorResearcher({
+        ...complete,
+        FIRESTORE_EMULATOR_HOST: undefined,
+      }),
+    ).toBeNull();
   });
 });

@@ -72,6 +72,26 @@ export function firebaseWebAuthConfig(
   };
 }
 
+export function localEmulatorResearcher(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Researcher | null {
+  if (
+    env.NODE_ENV === "production" ||
+    !env.FIREBASE_AUTH_EMULATOR_HOST?.trim() ||
+    !env.FIRESTORE_EMULATOR_HOST?.trim() ||
+    env.GCLOUD_PROJECT?.trim() !== "demo-clarifai"
+  ) {
+    return null;
+  }
+
+  return {
+    id: "R1",
+    email: normaliseEmail(
+      env.ADMIN_RESEARCHER_1_EMAIL || "local-r1@demo.invalid",
+    ),
+  };
+}
+
 export async function createResearcherSession(
   idToken: string,
   now: Date = new Date(),
@@ -96,6 +116,9 @@ export async function createResearcherSession(
 
 export const getCurrentResearcher = cache(
   async (): Promise<Researcher | null> => {
+    const localResearcher = localEmulatorResearcher();
+    if (localResearcher) return localResearcher;
+
     const sessionCookie = (await cookies()).get(ADMIN_SESSION_COOKIE)?.value;
     if (!sessionCookie) return null;
 

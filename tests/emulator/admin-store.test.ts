@@ -3,8 +3,10 @@ import { describe, expect, test } from "vitest";
 import {
   deleteSequenceCoding,
   listAdminOverview,
+  listReflectionComments,
   listResearcherCoding,
   savePromptCoding,
+  saveReflectionComment,
   saveSequenceCoding,
 } from "@/lib/admin/store";
 import { getDb } from "@/lib/firebase/admin";
@@ -128,6 +130,89 @@ describe("admin store", () => {
     ]);
     expect((await db.collection("sessions").doc("952_2").get()).data()).toEqual(
       participantSubmission,
+    );
+  });
+
+  test("stores researcher reflection comments separately without changing the session record", async () => {
+    const db = getDb();
+    await db
+      .collection("sessions")
+      .doc("953_2")
+      .set({
+        participantCode: "953",
+        lesson: 2,
+        status: "completed",
+        transcriptSubmission: "transcript",
+        transcript,
+        reflectionQuestions: {
+          frameworkVersion: "test",
+          frameworkStatus: "ACTIVE",
+          analyser: "fake",
+          model: null,
+          reasoningEffort: null,
+          createdAt: "2026-10-09T00:00:00.000Z",
+          durationMs: 1,
+          usage: null,
+          outcome: "observations",
+          items: [
+            {
+              id: "q1",
+              group: "F11",
+              groupKind: "reinforce",
+              basedOn: {
+                kind: "prompt",
+                code: "A6",
+                firstMessage: 1,
+                lastMessage: 1,
+              },
+              excerpt: { message: 1, text: "Jag testade lysdioden." },
+              intro: "Du beskrev försöket noggrant.",
+              questions: ["Vad gjorde beskrivningen tydlig?"],
+              tip: null,
+              template: {
+                intro: "Du beskrev [försöket] noggrant.",
+                questions: ["Vad gjorde [beskrivningen] tydlig?"],
+              },
+            },
+          ],
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    const sessionBefore = (
+      await db.collection("sessions").doc("953_2").get()
+    ).data();
+
+    await saveReflectionComment({
+      sessionId: "953_2",
+      researcherId: "R1",
+      itemId: "q1",
+      comment: "Armins kommentar",
+    });
+    await saveReflectionComment({
+      sessionId: "953_2",
+      researcherId: "R2",
+      itemId: "q1",
+      comment: "Fridas kommentar",
+    });
+
+    const comments = await listReflectionComments("953_2");
+    expect(comments.R1).toEqual([
+      expect.objectContaining({
+        itemId: "q1",
+        researcherId: "R1",
+        comment: "Armins kommentar",
+      }),
+    ]);
+    expect(comments.R2).toEqual([
+      expect.objectContaining({
+        itemId: "q1",
+        researcherId: "R2",
+        comment: "Fridas kommentar",
+      }),
+    ]);
+    expect((await db.collection("sessions").doc("953_2").get()).data()).toEqual(
+      sessionBefore,
     );
   });
 });

@@ -2,6 +2,8 @@ import type { ResearcherId } from "@/lib/admin/auth";
 import type { Lesson } from "@/lib/session/credentials";
 import type { SessionStatus, TranscriptSubmission } from "@/lib/session/types";
 
+export const MAX_REFLECTION_COMMENT_LENGTH = 5_000;
+
 export type AdminSessionState = "started" | "completed" | "missing";
 
 export type AdminSessionSummary = {
@@ -43,6 +45,18 @@ export type ResearcherSequenceCoding = {
 
 export type ResearcherCoding =
   ResearcherPromptCoding | ResearcherSequenceCoding;
+
+export type ResearcherReflectionComment = {
+  itemId: string;
+  researcherId: ResearcherId;
+  comment: string;
+  updatedAt: string;
+};
+
+export type ReflectionCommentsByResearcher = Record<
+  ResearcherId,
+  ResearcherReflectionComment[]
+>;
 
 export type AdminCodeOption = {
   code: string;

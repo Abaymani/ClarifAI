@@ -129,7 +129,7 @@ Against the local emulator:
 pnpm exec firebase emulators:exec --only firestore --project demo-clarifai "pnpm codes:generate 5"
 ```
 
-To try the login while `pnpm dev` is running, seed that emulator from a second terminal:
+To try the participant flow while `pnpm dev` is running, seed that emulator from a second terminal:
 
 ```bash
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 pnpm codes:generate 5
@@ -196,11 +196,11 @@ The researcher portal is intentionally absent from the participant interface. Re
 
 Enable Google as a sign-in provider under Firebase Authentication and put the Firebase project's Web API key in `FIREBASE_WEB_API_KEY`. The portal exchanges the Google/Firebase ID token for an eight-hour secure server cookie and verifies the exact allowlist on every admin read and write. Firestore remains inaccessible from browsers.
 
-For local development, `pnpm dev` starts the Firebase Authentication emulator. Put two non-real test addresses in the admin email variables in `.env.local`, visit `/admin`, and use the emulator's mock Google sign-in screen. Production and Preview need their own Firebase Authentication configuration, matching their separate Firebase projects.
+For local development, `pnpm dev` starts both Firebase emulators and `/admin` opens directly as Armin (`R1`), without a login step. The bypass requires development mode, both emulator hosts and the exact demo project `demo-clarifai`; it cannot activate in a production build or against the research project. Production and Preview still require their own Firebase Authentication configuration and exact researcher allowlist.
 
 `firebase-admin` currently needs the repository patch for `jwks-rsa` recorded in DL-062 so its authentication module can load in Vercel's CommonJS server runtime while continuing to use supported `jose` 6. `pnpm test:firebase-admin-runtime` guards the exact failure. Remove the patch when the upstream lazy-import fix ships in a released `jwks-rsa` version.
 
-The overview defaults to session status and has a separate researcher-coding matrix that shows Armin's and Frida's coding coverage for every transcript. A view-only filter can hide participants with no session in any of the four lessons; it never changes stored data. A transcript view exposes the already stored AI prompt and sequence coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. The portal never calls an AI API, regenerates analysis or consumes model tokens.
+The overview defaults to session status and has a separate researcher-coding matrix that shows Armin's and Frida's coding coverage for every transcript. A view-only filter can hide participants with no session in any of the four lessons; it never changes stored data. A session detail view exposes the already stored transcript and AI coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. Its `Reflektion` tab shows all stored reflection moments, answers and agreement choices together with the same AI, Armin and Frida code badges. Both researchers' comments are visible for each moment, while only the signed-in researcher's own comment is editable. The portal never calls an AI API, regenerates analysis or consumes model tokens, and never changes student or AI records; its only writes are researcher-authored coding and comments (DL-063).
 
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
