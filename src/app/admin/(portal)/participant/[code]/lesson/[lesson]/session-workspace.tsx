@@ -21,6 +21,7 @@ type View = "transcript" | "reflection";
 
 export function SessionWorkspace({
   sessionId,
+  participantCode,
   messages,
   analysis,
   coding,
@@ -33,6 +34,7 @@ export function SessionWorkspace({
   initialView = "transcript",
 }: {
   sessionId: string;
+  participantCode: string;
   messages: TranscriptMessage[];
   analysis: StoredCoding | null;
   coding: Record<ResearcherId, ResearcherCoding[]>;
@@ -90,6 +92,7 @@ export function SessionWorkspace({
         ) : (
           <TranscriptWorkspace
             sessionId={sessionId}
+            participantCode={participantCode}
             messages={messages}
             analysis={analysis}
             coding={coding}
