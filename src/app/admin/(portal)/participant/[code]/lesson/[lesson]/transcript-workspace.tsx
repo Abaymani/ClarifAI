@@ -12,7 +12,7 @@ import {
   savePromptCodingAction,
   saveSequenceCodingAction,
 } from "@/app/admin/(portal)/coding-actions";
-import { ChatBubble, ChatThread } from "@/app/session/chat-thread";
+import { ChatBubble } from "@/app/session/chat-thread";
 import { ExpandableText } from "@/app/session/expandable-text";
 import { MessageContent } from "@/app/session/message-content";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,8 +36,22 @@ type Panel = "ai" | "researcher";
 type ManualTarget = "prompt" | "sequence";
 type TranscriptCodingVisibility = Record<"ai" | ResearcherId, boolean>;
 
+type TranscriptSequence = {
+  key: string;
+  source: "ai" | ResearcherId;
+  sourceLabel: string;
+  codes: string[];
+  names: string[];
+  firstMessage: number;
+  lastMessage: number;
+  researcherEntryId: string | null;
+};
+
+type PositionedTranscriptSequence = TranscriptSequence & { lane: number };
+
 export function TranscriptWorkspace({
   sessionId,
+  participantCode,
   messages,
   analysis,
   coding: initialCoding,
@@ -45,6 +59,7 @@ export function TranscriptWorkspace({
   codeOptions,
 }: {
   sessionId: string;
+  participantCode: string;
   messages: TranscriptMessage[];
   analysis: StoredCoding | null;
   coding: CodingByResearcher;
@@ -59,9 +74,29 @@ export function TranscriptWorkspace({
   const [panel, setPanel] = useState<Panel>("researcher");
   const [selectedResearcher, setSelectedResearcher] =
     useState<ResearcherId>(currentResearcher);
+  const [researcherTarget, setResearcherTarget] =
+    useState<ManualTarget>("prompt");
   const [coding, setCoding] = useState(initialCoding);
   const [transcriptCoding, setTranscriptCoding] =
     useState<TranscriptCodingVisibility>({ ai: false, R1: false, R2: false });
+  const [hoveredSequence, setHoveredSequence] = useState<string | null>(null);
+  const [selectedSequence, setSelectedSequence] = useState<string | null>(null);
+  const codeNames = useMemo(
+    () => new Map(codeOptions.map((option) => [option.code, option.name])),
+    [codeOptions],
+  );
+  const sequences = useMemo(
+    () => transcriptSequences(analysis, coding, transcriptCoding, codeNames),
+    [analysis, codeNames, coding, transcriptCoding],
+  );
+  const positionedSequences = useMemo(
+    () => positionTranscriptSequences(sequences),
+    [sequences],
+  );
+  const highlightedSequence =
+    sequences.find(
+      (sequence) => sequence.key === (hoveredSequence ?? selectedSequence),
+    ) ?? null;
 
   function toggleAi(checked: boolean) {
     setShowAi(checked);
@@ -96,6 +131,24 @@ export function TranscriptWorkspace({
     }));
   }
 
+  function selectTranscriptSequence(sequence: TranscriptSequence) {
+    setSelectedSequence(sequence.key);
+    if (sequence.source === "ai") {
+      setShowAi(true);
+      setPanel("ai");
+      return;
+    }
+    setPanel("researcher");
+    setSelectedResearcher(sequence.source);
+    setResearcherTarget("sequence");
+  }
+
+  function selectTranscriptMessage(message: number) {
+    setSelectedMessage(message);
+    setSelectedSequence(null);
+    setResearcherTarget("prompt");
+  }
+
   return (
     <section className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(22rem,2fr)]">
       <div className="min-w-0 rounded-xl border bg-background p-3 sm:p-4">
@@ -128,62 +181,21 @@ export function TranscriptWorkspace({
             />
           </div>
         </div>
-        <ChatThread className="border-0 bg-transparent p-0">
-          {messages.map((message) => {
-            const selectable = message.role === "student";
-            const selected = selectable && message.index === selectedMessage;
-            const badges = selectable
-              ? transcriptCodeBadges(
-                  message.index,
-                  analysis,
-                  coding,
-                  transcriptCoding,
-                )
-              : [];
-            return (
-              <ChatBubble
-                key={message.index}
-                message={message}
-                headerLabel={
-                  selectable ? `Deltagare ${message.index}` : undefined
-                }
-                headerActions={
-                  badges.length > 0 ? (
-                    <div className="flex flex-wrap justify-end gap-1 normal-case">
-                      {badges.map((badge) => (
-                        <CodingSourceBadge
-                          key={`${badge.source}-${badge.code}`}
-                          {...badge}
-                        />
-                      ))}
-                    </div>
-                  ) : null
-                }
-                className={
-                  selected
-                    ? "ring-2 ring-foreground/30 ring-offset-2 ring-offset-background"
-                    : undefined
-                }
-              >
-                {message.role === "gemini" ? (
-                  <ExpandableText text={message.text} />
-                ) : (
-                  <MessageContent text={message.text} />
-                )}
-                {selectable ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMessage(message.index)}
-                    className="mt-3 text-xs font-medium underline-offset-2 hover:underline"
-                    aria-pressed={selected}
-                  >
-                    {selected ? "Vald prompt" : "Välj prompt"}
-                  </button>
-                ) : null}
-              </ChatBubble>
-            );
-          })}
-        </ChatThread>
+        <TranscriptSequenceGrid
+          participantCode={participantCode}
+          messages={messages}
+          analysis={analysis}
+          coding={coding}
+          visibility={transcriptCoding}
+          codeNames={codeNames}
+          sequences={positionedSequences}
+          highlightedSequence={highlightedSequence}
+          selectedSequence={selectedSequence}
+          selectedMessage={selectedMessage}
+          onMessageSelect={selectTranscriptMessage}
+          onSequenceHover={setHoveredSequence}
+          onSequenceSelect={selectTranscriptSequence}
+        />
       </div>
 
       <aside className="min-w-0 self-start rounded-xl border bg-background p-4 xl:sticky xl:top-4">
@@ -230,6 +242,7 @@ export function TranscriptWorkspace({
               analysis={analysis}
               selectedMessage={selectedMessage}
               codeOptions={codeOptions}
+              selectedSequence={selectedSequence}
             />
           ) : (
             <ResearcherCodingPanel
@@ -239,10 +252,17 @@ export function TranscriptWorkspace({
               selectedResearcher={selectedResearcher}
               currentResearcher={currentResearcher}
               onResearcherChange={setSelectedResearcher}
+              target={researcherTarget}
+              onTargetChange={setResearcherTarget}
               entries={coding[selectedResearcher]}
               codeOptions={codeOptions}
               onSaved={replaceEntry}
               onDeleted={(id) => removeEntry(selectedResearcher, id)}
+              selectedSequenceEntry={highlightedResearcherSequenceId(
+                selectedSequence,
+                sequences,
+                selectedResearcher,
+              )}
             />
           )}
         </div>
@@ -251,11 +271,219 @@ export function TranscriptWorkspace({
   );
 }
 
+function TranscriptSequenceGrid({
+  participantCode,
+  messages,
+  analysis,
+  coding,
+  visibility,
+  codeNames,
+  sequences,
+  highlightedSequence,
+  selectedSequence,
+  selectedMessage,
+  onMessageSelect,
+  onSequenceHover,
+  onSequenceSelect,
+}: {
+  participantCode: string;
+  messages: TranscriptMessage[];
+  analysis: StoredCoding | null;
+  coding: CodingByResearcher;
+  visibility: TranscriptCodingVisibility;
+  codeNames: Map<string, string>;
+  sequences: PositionedTranscriptSequence[];
+  highlightedSequence: TranscriptSequence | null;
+  selectedSequence: string | null;
+  selectedMessage: number;
+  onMessageSelect: (message: number) => void;
+  onSequenceHover: (key: string | null) => void;
+  onSequenceSelect: (sequence: TranscriptSequence) => void;
+}) {
+  const laneCount = Math.max(
+    0,
+    ...sequences.map((sequence) => sequence.lane + 1),
+  );
+  const rowByMessage = new Map(
+    messages.map((message, index) => [message.index, index + 1]),
+  );
+  const gridTemplateColumns = `${laneCount ? `repeat(${laneCount}, 2.25rem) ` : ""}minmax(0, 1fr)`;
+
+  return (
+    <div>
+      {laneCount ? (
+        <p className="mb-1 text-xs font-medium text-muted-foreground">
+          Sekvenser
+        </p>
+      ) : null}
+      <div className="grid gap-x-1 gap-y-3" style={{ gridTemplateColumns }}>
+        {sequences.map((sequence) => {
+          const firstRow = rowByMessage.get(sequence.firstMessage);
+          const lastRow = rowByMessage.get(sequence.lastMessage);
+          if (!firstRow || !lastRow) return null;
+          return (
+            <SequenceTrack
+              key={sequence.key}
+              sequence={sequence}
+              selected={selectedSequence === sequence.key}
+              style={{
+                gridColumn: sequence.lane + 1,
+                gridRow: `${firstRow} / ${lastRow + 1}`,
+              }}
+              onHover={onSequenceHover}
+              onSelect={onSequenceSelect}
+            />
+          );
+        })}
+
+        {messages.map((message, index) => {
+          const selectable = message.role === "student";
+          const selected = selectable && message.index === selectedMessage;
+          const highlighted =
+            highlightedSequence &&
+            message.index >= highlightedSequence.firstMessage &&
+            message.index <= highlightedSequence.lastMessage;
+          const badges = selectable
+            ? transcriptCodeBadges(
+                message.index,
+                analysis,
+                coding,
+                visibility,
+                codeNames,
+              )
+            : [];
+          return (
+            <div
+              key={message.index}
+              data-sequence-highlighted={highlighted ? "true" : undefined}
+              className="flex min-w-0 flex-col"
+              style={{
+                gridColumn: laneCount + 1,
+                gridRow: index + 1,
+              }}
+            >
+              <ChatBubble
+                message={message}
+                headerLabel={`${message.index}. ${
+                  selectable ? `Deltagare ${participantCode}` : "Gemini"
+                }`}
+                headerActions={
+                  badges.length > 0 ? (
+                    <div className="flex flex-wrap justify-end gap-1 normal-case">
+                      {badges.map((badge) => (
+                        <CodingSourceBadge
+                          key={`${badge.source}-${badge.code}`}
+                          {...badge}
+                        />
+                      ))}
+                    </div>
+                  ) : null
+                }
+                className={`${
+                  selected
+                    ? "ring-2 ring-foreground/30 ring-offset-2 ring-offset-background"
+                    : ""
+                } ${
+                  highlighted
+                    ? sequenceMessageHighlight(highlightedSequence.source)
+                    : ""
+                }`}
+              >
+                {message.role === "gemini" ? (
+                  <ExpandableText text={message.text} />
+                ) : (
+                  <MessageContent text={message.text} />
+                )}
+                {selectable ? (
+                  <button
+                    type="button"
+                    onClick={() => onMessageSelect(message.index)}
+                    className="mt-3 text-xs font-medium underline-offset-2 hover:underline"
+                    aria-pressed={selected}
+                  >
+                    {selected ? "Vald prompt" : "Välj prompt"}
+                  </button>
+                ) : null}
+              </ChatBubble>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SequenceTrack({
+  sequence,
+  selected,
+  style,
+  onHover,
+  onSelect,
+}: {
+  sequence: PositionedTranscriptSequence;
+  selected: boolean;
+  style: { gridColumn: number; gridRow: string };
+  onHover: (key: string | null) => void;
+  onSelect: (sequence: TranscriptSequence) => void;
+}) {
+  const tone = sequenceTrackTone(sequence.source);
+  const codes = sequence.codes.join(" + ") || "—";
+  const names = sequence.names.join(" · ") || "Ingen sekvenskod";
+  return (
+    <button
+      type="button"
+      style={style}
+      aria-pressed={selected}
+      aria-label={`${sequence.sourceLabel}: ${codes}, ${names}, meddelande ${sequence.firstMessage}–${sequence.lastMessage}`}
+      onMouseEnter={() => onHover(sequence.key)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(sequence.key)}
+      onBlur={() => onHover(null)}
+      onClick={() => onSelect(sequence)}
+      className={`group relative mx-auto min-h-16 w-8 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 ${selected ? tone.selected : ""}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`absolute top-2 bottom-2 left-1/2 w-px -translate-x-1/2 ${tone.line}`}
+      />
+      <span
+        aria-hidden="true"
+        className={`absolute top-1.5 left-1/2 size-2.5 -translate-x-1/2 rounded-full border-2 border-background ${tone.line}`}
+      />
+      <span
+        aria-hidden="true"
+        className={`absolute bottom-1.5 left-1/2 size-2.5 -translate-x-1/2 rounded-full border-2 border-background ${tone.line}`}
+      />
+      <span
+        aria-hidden="true"
+        className={`relative mt-5 inline-flex min-w-7 flex-col rounded-md border px-1 py-1 text-[0.625rem] leading-3 font-semibold shadow-xs ${tone.label}`}
+      >
+        <span>{sequence.source === "ai" ? "AI" : sequence.sourceLabel[0]}</span>
+        <span>{codes}</span>
+      </span>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute top-4 left-full z-30 ml-2 flex w-56 flex-col rounded-lg border bg-popover p-3 text-left text-xs text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus:opacity-100"
+      >
+        <strong>
+          {sequence.sourceLabel} · {codes}
+        </strong>
+        <span className="mt-1">{names}</span>
+        <span className="mt-1 text-muted-foreground">
+          Meddelande {sequence.firstMessage}–{sequence.lastMessage}
+        </span>
+        <span className="mt-2 font-medium text-foreground">Visa i panelen</span>
+      </span>
+    </button>
+  );
+}
+
 function transcriptCodeBadges(
   message: number,
   analysis: StoredCoding | null,
   coding: CodingByResearcher,
   visibility: TranscriptCodingVisibility,
+  codeNames: Map<string, string>,
 ): CodingSourceBadgeData[] {
   const badges: CodingSourceBadgeData[] = [];
   if (visibility.ai) {
@@ -267,6 +495,7 @@ function transcriptCodeBadges(
         source: "ai" as const,
         label: "AI",
         code: entry.code,
+        name: codeNames.get(entry.code),
       })) ?? []),
     );
   }
@@ -281,10 +510,122 @@ function transcriptCodeBadges(
         source: researcherId,
         label: researcherName(researcherId),
         code,
+        name: codeNames.get(code),
       })) ?? []),
     );
   }
   return badges;
+}
+
+function transcriptSequences(
+  analysis: StoredCoding | null,
+  coding: CodingByResearcher,
+  visibility: TranscriptCodingVisibility,
+  codeNames: Map<string, string>,
+): TranscriptSequence[] {
+  const sequences: TranscriptSequence[] = [];
+  if (visibility.ai) {
+    analysis?.sequences.forEach((sequence, index) => {
+      sequences.push({
+        key: aiSequenceKey(sequence, index),
+        source: "ai",
+        sourceLabel: "AI",
+        codes: [sequence.pattern],
+        names: [codeNames.get(sequence.pattern) ?? sequence.pattern],
+        firstMessage: sequence.firstMessage,
+        lastMessage: sequence.lastMessage,
+        researcherEntryId: null,
+      });
+    });
+  }
+  for (const researcherId of ["R1", "R2"] as const) {
+    if (!visibility[researcherId]) continue;
+    for (const entry of coding[researcherId]) {
+      if (entry.kind !== "sequence") continue;
+      sequences.push({
+        key: `${researcherId}-${entry.id}`,
+        source: researcherId,
+        sourceLabel: researcherName(researcherId),
+        codes: entry.codes,
+        names: entry.codes.map((code) => codeNames.get(code) ?? code),
+        firstMessage: entry.firstMessage,
+        lastMessage: entry.lastMessage,
+        researcherEntryId: entry.id,
+      });
+    }
+  }
+  return sequences;
+}
+
+function aiSequenceKey(
+  sequence: StoredCoding["sequences"][number],
+  index: number,
+) {
+  return `ai-${index}-${sequence.pattern}-${sequence.firstMessage}-${sequence.lastMessage}`;
+}
+
+function positionTranscriptSequences(
+  sequences: TranscriptSequence[],
+): PositionedTranscriptSequence[] {
+  const laneEnds: number[] = [];
+  return [...sequences]
+    .sort(
+      (a, b) =>
+        a.firstMessage - b.firstMessage ||
+        a.lastMessage - b.lastMessage ||
+        a.key.localeCompare(b.key),
+    )
+    .map((sequence) => {
+      let lane = laneEnds.findIndex(
+        (lastMessage) => lastMessage < sequence.firstMessage,
+      );
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = sequence.lastMessage;
+      return { ...sequence, lane };
+    });
+}
+
+function highlightedResearcherSequenceId(
+  selectedKey: string | null,
+  sequences: TranscriptSequence[],
+  researcherId: ResearcherId,
+) {
+  const sequence = sequences.find(
+    (candidate) =>
+      candidate.key === selectedKey && candidate.source === researcherId,
+  );
+  return sequence?.researcherEntryId ?? null;
+}
+
+function sequenceTrackTone(source: "ai" | ResearcherId) {
+  return source === "ai"
+    ? {
+        line: "bg-emerald-400 dark:bg-emerald-600",
+        label:
+          "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100",
+        selected: "ring-2 ring-emerald-400/60",
+      }
+    : source === "R1"
+      ? {
+          line: "bg-blue-400 dark:bg-blue-600",
+          label:
+            "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100",
+          selected: "ring-2 ring-blue-400/60",
+        }
+      : {
+          line: "bg-violet-400 dark:bg-violet-600",
+          label:
+            "border-violet-300 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-100",
+          selected: "ring-2 ring-violet-400/60",
+        };
+}
+
+function sequenceMessageHighlight(source: "ai" | ResearcherId) {
+  return source === "ai"
+    ? "outline-2 outline-emerald-300/60 dark:outline-emerald-700/60"
+    : source === "R1"
+      ? "outline-2 outline-blue-300/60 dark:outline-blue-700/60"
+      : "outline-2 outline-violet-300/60 dark:outline-violet-700/60";
 }
 
 function TranscriptCodingToggle({
@@ -324,10 +665,12 @@ function AiCodingPanel({
   analysis,
   selectedMessage,
   codeOptions,
+  selectedSequence,
 }: {
   analysis: StoredCoding | null;
   selectedMessage: number;
   codeOptions: AdminCodeOption[];
+  selectedSequence: string | null;
 }) {
   const names = new Map(
     codeOptions.map((option) => [option.code, option.name]),
@@ -395,7 +738,15 @@ function AiCodingPanel({
             analysis.sequences.map((sequence, index) => (
               <details
                 key={`${sequence.pattern}-${sequence.firstMessage}-${index}`}
-                className="group rounded-lg border p-3"
+                open={
+                  selectedSequence === aiSequenceKey(sequence, index) ||
+                  undefined
+                }
+                className={`group rounded-lg border p-3 ${
+                  selectedSequence === aiSequenceKey(sequence, index)
+                    ? "ring-2 ring-emerald-400/60"
+                    : ""
+                }`}
               >
                 <summary className="cursor-pointer list-none font-medium marker:hidden">
                   <span className="mr-2 inline-flex rounded-md bg-violet-100 px-2 py-1 text-xs text-violet-900">
@@ -446,10 +797,13 @@ function ResearcherCodingPanel({
   selectedResearcher,
   currentResearcher,
   onResearcherChange,
+  target,
+  onTargetChange,
   entries,
   codeOptions,
   onSaved,
   onDeleted,
+  selectedSequenceEntry,
 }: {
   sessionId: string;
   messages: TranscriptMessage[];
@@ -457,12 +811,14 @@ function ResearcherCodingPanel({
   selectedResearcher: ResearcherId;
   currentResearcher: ResearcherId;
   onResearcherChange: (researcher: ResearcherId) => void;
+  target: ManualTarget;
+  onTargetChange: (target: ManualTarget) => void;
   entries: ResearcherCoding[];
   codeOptions: AdminCodeOption[];
   onSaved: (entry: ResearcherCoding) => void;
   onDeleted: (id: string) => void;
+  selectedSequenceEntry: string | null;
 }) {
-  const [target, setTarget] = useState<ManualTarget>("prompt");
   const editable = selectedResearcher === currentResearcher;
   const prompt = entries.find(
     (entry): entry is ResearcherPromptCoding =>
@@ -493,14 +849,14 @@ function ResearcherCodingPanel({
       <div className="grid grid-cols-2 border-b text-sm">
         <button
           type="button"
-          onClick={() => setTarget("prompt")}
+          onClick={() => onTargetChange("prompt")}
           className={`border-b-2 px-3 py-2 font-medium ${target === "prompt" ? "border-foreground" : "border-transparent text-muted-foreground"}`}
         >
           Prompt
         </button>
         <button
           type="button"
-          onClick={() => setTarget("sequence")}
+          onClick={() => onTargetChange("sequence")}
           className={`border-b-2 px-3 py-2 font-medium ${target === "sequence" ? "border-foreground" : "border-transparent text-muted-foreground"}`}
         >
           Sekvenser
@@ -533,6 +889,7 @@ function ResearcherCodingPanel({
         <SequencePanel
           key={selectedResearcher}
           sessionId={sessionId}
+          researcherId={selectedResearcher}
           messages={messages}
           entries={entries.filter(
             (entry): entry is ResearcherSequenceCoding =>
@@ -544,6 +901,7 @@ function ResearcherCodingPanel({
           )}
           onSaved={onSaved}
           onDeleted={onDeleted}
+          highlightedId={selectedSequenceEntry}
         />
       )}
     </div>
@@ -610,20 +968,24 @@ function PromptEditor({
 
 function SequencePanel({
   sessionId,
+  researcherId,
   messages,
   entries,
   editable,
   codeOptions,
   onSaved,
   onDeleted,
+  highlightedId,
 }: {
   sessionId: string;
+  researcherId: ResearcherId;
   messages: TranscriptMessage[];
   entries: ResearcherSequenceCoding[];
   editable: boolean;
   codeOptions: AdminCodeOption[];
   onSaved: (entry: ResearcherSequenceCoding) => void;
   onDeleted: (id: string) => void;
+  highlightedId: string | null;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -664,7 +1026,13 @@ function SequencePanel({
             key={entry.id}
             type="button"
             onClick={() => editable && setSelectedId(entry.id)}
-            className="rounded-lg border p-3 text-left hover:bg-muted/50 disabled:cursor-default"
+            className={`rounded-lg border p-3 text-left hover:bg-muted/50 disabled:cursor-default ${
+              highlightedId === entry.id
+                ? researcherId === "R1"
+                  ? "ring-2 ring-blue-400/60"
+                  : "ring-2 ring-violet-400/60"
+                : ""
+            }`}
             disabled={!editable}
           >
             <span className="text-sm font-medium">

@@ -100,6 +100,7 @@ export default async function AdminTranscriptPage({
       ) : (
         <SessionWorkspace
           sessionId={session.id}
+          participantCode={code}
           messages={session.transcript?.messages ?? []}
           analysis={session.analysis}
           coding={coding}

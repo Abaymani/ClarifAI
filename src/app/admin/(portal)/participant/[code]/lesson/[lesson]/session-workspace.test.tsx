@@ -14,6 +14,7 @@ import { SessionWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson
 
 const props = {
   sessionId: "12_2",
+  participantCode: "12",
   messages: [],
   analysis: null,
   coding: { R1: [], R2: [] },

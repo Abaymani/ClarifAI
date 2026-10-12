@@ -11,6 +11,7 @@ import { TranscriptWorkspace } from "@/app/admin/(portal)/participant/[code]/les
 
 const props = {
   sessionId: "12_2",
+  participantCode: "12",
   messages: [
     { index: 1, role: "student" as const, text: "Jag testade pin 8." },
     { index: 2, role: "gemini" as const, text: "Bra, vad hände?" },
@@ -37,7 +38,16 @@ const props = {
         note: null,
       },
     ],
-    sequences: [],
+    sequences: [
+      {
+        pattern: "S3",
+        firstMessage: 1,
+        lastMessage: 2,
+        excerptMessage: 1,
+        excerpt: "Jag testade pin 8.",
+        justification: "Meddelandena bildar ett sammanhängande förlopp.",
+      },
+    ],
   },
   coding: {
     R1: [
@@ -48,6 +58,17 @@ const props = {
         message: 1,
         note: "Armins anteckning",
         codes: ["C2"],
+        frameworkVersion: "test",
+        updatedAt: "2026-10-05T00:00:00.000Z",
+      },
+      {
+        id: "sequence-12345678",
+        kind: "sequence" as const,
+        researcherId: "R1" as const,
+        firstMessage: 1,
+        lastMessage: 2,
+        note: "Armins sekvens",
+        codes: ["S7"],
         frameworkVersion: "test",
         updatedAt: "2026-10-05T00:00:00.000Z",
       },
@@ -73,6 +94,27 @@ const props = {
       description: "Noggrann beskrivning",
       examples: ["Exempel"],
       kind: "prompt" as const,
+    },
+    {
+      code: "C2",
+      name: "Egen hypotes",
+      description: "Eleven formulerar en hypotes",
+      examples: ["Exempel"],
+      kind: "prompt" as const,
+    },
+    {
+      code: "S3",
+      name: "Direkt-svarssökande förlopp",
+      description: "Eleven följer AI:s svar",
+      examples: ["Exempel"],
+      kind: "sequence" as const,
+    },
+    {
+      code: "S7",
+      name: "Produktiv samkonstruktion",
+      description: "Eleven och AI utvecklar resonemanget tillsammans",
+      examples: ["Exempel"],
+      kind: "sequence" as const,
     },
   ],
 };
@@ -102,13 +144,16 @@ describe("TranscriptWorkspace", () => {
       screen.getByPlaceholderText("Sök kod, beskrivning eller exempel"),
       { target: { value: "noggrann" } },
     );
-    expect(screen.getByText("A6 · Precis rapportering")).toBeTruthy();
+    expect(
+      screen.getAllByText("A6 · Precis rapportering").length,
+    ).toBeGreaterThan(0);
   });
 
   test("shows AI, Armin, and Frida prompt codes only when opted in", () => {
     render(<TranscriptWorkspace {...props} />);
 
-    expect(screen.getByText("Deltagare 1")).toBeTruthy();
+    expect(screen.getByText("1. Deltagare 12")).toBeTruthy();
+    expect(screen.getByText("2. Gemini")).toBeTruthy();
     expect(screen.queryByText("1. Du")).toBeNull();
 
     const ai = screen.getByRole("button", {
@@ -133,7 +178,52 @@ describe("TranscriptWorkspace", () => {
     expect(screen.getByText("AI · A6")).toBeTruthy();
     expect(screen.getByText("Armin · C2")).toBeTruthy();
     expect(screen.getByText("Frida · A6")).toBeTruthy();
+    expect(
+      screen.getAllByText("A6 · Precis rapportering").length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Armin (du)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Frida" })).toBeTruthy();
+  });
+
+  test("places overlapping sequences in separate lanes and opens their stored details", async () => {
+    render(<TranscriptWorkspace {...props} />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Visa AI-koder i transkriptet",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Visa Armin-koder i transkriptet",
+      }),
+    );
+
+    const aiSequence = screen.getByRole("button", {
+      name: /AI: S3, Direkt-svarssökande förlopp, meddelande 1–2/,
+    });
+    const arminSequence = screen.getByRole("button", {
+      name: /Armin: S7, Produktiv samkonstruktion, meddelande 1–2/,
+    });
+    expect(aiSequence.style.gridColumn).toBe("1");
+    expect(arminSequence.style.gridColumn).toBe("2");
+
+    fireEvent.mouseEnter(aiSequence);
+    expect(
+      document.querySelectorAll('[data-sequence-highlighted="true"]'),
+    ).toHaveLength(2);
+    fireEvent.click(aiSequence);
+    expect(
+      (screen.getByLabelText("Visa AI-kodning") as HTMLInputElement).checked,
+    ).toBe(true);
+    const aiDetails = screen
+      .getAllByText("Direkt-svarssökande förlopp")
+      .map((element) => element.closest("details"))
+      .find(Boolean);
+    expect(aiDetails?.open).toBe(true);
+
+    fireEvent.click(arminSequence);
+    expect(screen.getByRole("button", { name: "Sekvenser" })).toBeTruthy();
+    expect(await screen.findByText(/Armins sekvens/)).toBeTruthy();
   });
 });
