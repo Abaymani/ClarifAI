@@ -18,8 +18,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminTranscriptPage({
   params,
+  searchParams,
 }: PageProps<"/admin/participant/[code]/lesson/[lesson]">) {
   const { code, lesson: lessonText } = await params;
+  const { view } = await searchParams;
   const lesson = Number(lessonText) as Lesson;
   if (!/^\d{1,3}$/.test(code) || !LESSONS.includes(lesson)) notFound();
 
@@ -106,6 +108,7 @@ export default async function AdminTranscriptPage({
           reflectionQuestions={session.reflectionQuestions}
           reflectionResponses={session.reflectionResponses}
           reflectionComments={reflectionComments}
+          initialView={view === "reflection" ? "reflection" : "transcript"}
           transcriptEmptyText={
             session.transcriptSubmission === "no_gemini"
               ? "Deltagaren uppgav att Gemini inte användes under den här lektionen."

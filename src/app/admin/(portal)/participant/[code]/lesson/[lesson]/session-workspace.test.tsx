@@ -79,4 +79,21 @@ describe("SessionWorkspace", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Reflektion · 1" }));
     expect(screen.getByText("Reflektionsinnehåll")).toBeTruthy();
   });
+
+  test("can open directly on the reflection tab", () => {
+    render(<SessionWorkspace {...props} initialView="reflection" />);
+
+    expect(
+      screen
+        .getByRole("tab", { name: "Reflektion · 1" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(screen.getByText("Reflektionsinnehåll")).toBeTruthy();
+    expect(
+      screen
+        .getByText("Transkriptinnehåll")
+        .closest('[role="tabpanel"]')
+        ?.hasAttribute("hidden"),
+    ).toBe(true);
+  });
 });
