@@ -11,7 +11,8 @@ export default async function AdminOverviewPage() {
       <div>
         <h1 className="font-heading text-3xl font-semibold">Översikt</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Se sessionsstatus eller forskarnas kodningsarbete per lektion.
+          Se sessionsstatus, forskarnas kodningsarbete eller studenternas
+          bedömning per lektion.
         </p>
       </div>
       <OverviewTable participants={participants} />

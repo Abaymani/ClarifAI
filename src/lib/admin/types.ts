@@ -1,10 +1,19 @@
 import type { ResearcherId } from "@/lib/admin/auth";
+import type { AnalysisAgreement } from "@/lib/session/types";
 import type { Lesson } from "@/lib/session/credentials";
 import type { SessionStatus, TranscriptSubmission } from "@/lib/session/types";
 
 export const MAX_REFLECTION_COMMENT_LENGTH = 5_000;
 
 export type AdminSessionState = "started" | "completed" | "missing";
+
+export type AdminReflectionAssessment =
+  | { state: "unavailable" }
+  | { state: "not_submitted" }
+  | {
+      state: "submitted";
+      agreements: (AnalysisAgreement | null)[];
+    };
 
 export type AdminSessionSummary = {
   participantCode: string;
@@ -13,6 +22,7 @@ export type AdminSessionSummary = {
   status: SessionStatus;
   transcriptSubmission: TranscriptSubmission;
   codedBy: ResearcherId[];
+  reflectionAssessment: AdminReflectionAssessment;
 };
 
 export type AdminParticipantOverview = {

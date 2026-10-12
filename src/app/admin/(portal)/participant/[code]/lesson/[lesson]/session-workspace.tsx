@@ -30,6 +30,7 @@ export function SessionWorkspace({
   reflectionResponses,
   reflectionComments,
   transcriptEmptyText,
+  initialView = "transcript",
 }: {
   sessionId: string;
   messages: TranscriptMessage[];
@@ -41,8 +42,9 @@ export function SessionWorkspace({
   reflectionResponses: StoredReflectionResponses | null;
   reflectionComments: ReflectionCommentsByResearcher;
   transcriptEmptyText: string | null;
+  initialView?: View;
 }) {
-  const [view, setView] = useState<View>("transcript");
+  const [view, setView] = useState<View>(initialView);
   const reflectionCount = reflectionQuestions?.items.length ?? 0;
 
   return (

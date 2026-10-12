@@ -2,18 +2,20 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Circle, FileX2, Search } from "lucide-react";
+import { Check, ChevronRight, Circle, FileX2, Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import type { ResearcherId } from "@/lib/admin/auth";
 import { researcherName } from "@/lib/admin/researchers";
 import type {
   AdminParticipantOverview,
+  AdminReflectionAssessment,
   AdminSessionSummary,
 } from "@/lib/admin/types";
+import type { AnalysisAgreement } from "@/lib/session/types";
 import { LESSONS } from "@/lib/session/credentials";
 
-type OverviewView = "status" | "coding";
+type OverviewView = "status" | "coding" | "assessment";
 
 export function OverviewTable({
   participants,
@@ -57,6 +59,13 @@ export function OverviewTable({
         >
           Forskarkodning
         </OverviewTab>
+        <OverviewTab
+          view="assessment"
+          selected={view === "assessment"}
+          onSelect={setView}
+        >
+          Studentbedömning
+        </OverviewTab>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -99,9 +108,11 @@ export function OverviewTable({
         </p>
       ) : null}
 
+      {view === "assessment" ? <AssessmentLegend /> : null}
+
       <div
         role="tabpanel"
-        aria-label={view === "status" ? "Sessionsstatus" : "Forskarkodning"}
+        aria-label={panelLabel(view)}
         className="overflow-x-auto rounded-xl border bg-background"
       >
         <table className="w-full min-w-5xl border-collapse text-left text-sm">
@@ -129,17 +140,25 @@ export function OverviewTable({
                   const state = session?.state ?? "missing";
                   return (
                     <td key={lesson} className="p-2 align-top">
-                      <Link
-                        href={`/admin/participant/${participant.participantCode}/lesson/${lesson}`}
-                        className="block min-w-44 rounded-lg px-2 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
-                        title={session?.status}
-                      >
-                        {view === "status" ? (
-                          <StatusBadge state={state} />
-                        ) : (
-                          <CodingCoverage session={session} />
-                        )}
-                      </Link>
+                      {view === "assessment" ? (
+                        <ReflectionAssessmentLink
+                          participantCode={participant.participantCode}
+                          lesson={lesson}
+                          assessment={session?.reflectionAssessment}
+                        />
+                      ) : (
+                        <Link
+                          href={`/admin/participant/${participant.participantCode}/lesson/${lesson}`}
+                          className="block min-w-44 rounded-lg px-2 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+                          title={session?.status}
+                        >
+                          {view === "status" ? (
+                            <StatusBadge state={state} />
+                          ) : (
+                            <CodingCoverage session={session} />
+                          )}
+                        </Link>
+                      )}
                     </td>
                   );
                 })}
@@ -157,6 +176,116 @@ export function OverviewTable({
       </div>
     </div>
   );
+}
+
+function panelLabel(view: OverviewView) {
+  return {
+    status: "Sessionsstatus",
+    coding: "Forskarkodning",
+    assessment: "Studentbedömning",
+  }[view];
+}
+
+function AssessmentLegend() {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-background px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-muted-foreground">
+        Varje cirkel motsvarar ett reflektionsmoment. Klicka för att öppna
+        studentens reflektion.
+      </p>
+      <div className="flex flex-wrap gap-x-4 gap-y-2" aria-label="Förklaring">
+        {(
+          [
+            [null, "Ej besvarad"],
+            ["yes", "Ja"],
+            ["partly", "Delvis"],
+            ["no", "Nej"],
+          ] as const
+        ).map(([agreement, label]) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <AgreementCircle agreement={agreement} />
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReflectionAssessmentLink({
+  participantCode,
+  lesson,
+  assessment,
+}: {
+  participantCode: string;
+  lesson: number;
+  assessment: AdminReflectionAssessment | undefined;
+}) {
+  if (!assessment || assessment.state === "not_submitted") {
+    return <AssessmentEmptyState label="Ej inskickad" />;
+  }
+  if (assessment.state === "unavailable") {
+    return <AssessmentEmptyState label="Ingen reflektion" />;
+  }
+
+  return (
+    <Link
+      href={`/admin/participant/${participantCode}/lesson/${lesson}?view=reflection`}
+      aria-label={`Öppna reflektionen för deltagare ${participantCode}, lektion ${lesson}`}
+      className="flex min-h-12 min-w-44 items-center justify-between gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+    >
+      <span className="flex items-center gap-2">
+        {assessment.agreements.map((agreement, index) => (
+          <span key={index} className="inline-flex">
+            <AgreementCircle agreement={agreement} />
+            <span className="sr-only">
+              Reflektionsmoment {index + 1}: {agreementLabel(agreement)}
+            </span>
+          </span>
+        ))}
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 text-muted-foreground"
+      />
+    </Link>
+  );
+}
+
+function AssessmentEmptyState({ label }: { label: string }) {
+  return (
+    <span className="flex min-h-12 min-w-44 items-center px-3 py-2 text-xs text-muted-foreground">
+      {label}
+    </span>
+  );
+}
+
+function AgreementCircle({
+  agreement,
+}: {
+  agreement: AnalysisAgreement | null;
+}) {
+  const tone = {
+    yes: "border-emerald-300 bg-emerald-200/80 dark:border-emerald-800 dark:bg-emerald-900/70",
+    partly:
+      "border-amber-300 bg-amber-200/80 dark:border-amber-800 dark:bg-amber-900/70",
+    no: "border-rose-300 bg-rose-200/80 dark:border-rose-800 dark:bg-rose-900/70",
+    unanswered:
+      "border-slate-300 bg-slate-200/80 dark:border-slate-700 dark:bg-slate-800",
+  }[agreement ?? "unanswered"];
+  return (
+    <span aria-hidden="true" className={`size-4 rounded-full border ${tone}`} />
+  );
+}
+
+function agreementLabel(agreement: AnalysisAgreement | null) {
+  return agreement === "yes"
+    ? "Ja"
+    : agreement === "partly"
+      ? "Delvis"
+      : agreement === "no"
+        ? "Nej"
+        : "Ej besvarad";
 }
 
 function OverviewTab({

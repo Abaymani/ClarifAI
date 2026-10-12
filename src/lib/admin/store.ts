@@ -6,6 +6,7 @@ import type { ResearcherId } from "@/lib/admin/auth";
 import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
 import type {
   AdminParticipantOverview,
+  AdminReflectionAssessment,
   ReflectionCommentsByResearcher,
   ResearcherCoding,
   ResearcherPromptCoding,
@@ -68,6 +69,7 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
       codedBy: (["R1", "R2"] as const).filter((researcherId) =>
         codingBySession.get(session.id)?.has(researcherId),
       ),
+      reflectionAssessment: reflectionAssessment(session),
     };
     byParticipant.set(session.participantCode, participant);
   }
@@ -77,6 +79,26 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
       numeric: true,
     }),
   );
+}
+
+function reflectionAssessment(session: Session): AdminReflectionAssessment {
+  const items =
+    session.reflectionQuestions?.items.filter((item) => item.basedOn) ?? [];
+  if (items.length === 0) return { state: "unavailable" };
+  if (!session.reflectionResponses) return { state: "not_submitted" };
+
+  const responseByItem = new Map(
+    session.reflectionResponses.items.map((response) => [
+      response.itemId,
+      response,
+    ]),
+  );
+  return {
+    state: "submitted",
+    agreements: items.map(
+      (item) => responseByItem.get(item.id)?.agreement ?? null,
+    ),
+  };
 }
 
 export async function getAdminSession(

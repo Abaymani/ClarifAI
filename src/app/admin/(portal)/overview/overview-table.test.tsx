@@ -18,6 +18,10 @@ describe("OverviewTable", () => {
                 status: "completed",
                 transcriptSubmission: "transcript",
                 codedBy: ["R1", "R2"],
+                reflectionAssessment: {
+                  state: "submitted",
+                  agreements: ["yes", "partly"],
+                },
               },
               2: {
                 participantCode: "12",
@@ -26,6 +30,7 @@ describe("OverviewTable", () => {
                 status: "processing",
                 transcriptSubmission: "transcript",
                 codedBy: [],
+                reflectionAssessment: { state: "not_submitted" },
               },
               3: {
                 participantCode: "12",
@@ -34,6 +39,7 @@ describe("OverviewTable", () => {
                 status: "completed",
                 transcriptSubmission: "no_gemini",
                 codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
               },
             },
           },
@@ -90,6 +96,7 @@ describe("OverviewTable", () => {
                 status: "awaiting_transcript",
                 transcriptSubmission: null,
                 codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
               },
             },
           },
@@ -107,5 +114,66 @@ describe("OverviewTable", () => {
     fireEvent.click(filter);
     expect(screen.queryByText("Deltagare 12")).toBeNull();
     expect(screen.getByText("Deltagare 34")).toBeTruthy();
+  });
+
+  test("shows dynamic student assessments and links only submitted reflections", () => {
+    render(
+      <OverviewTable
+        participants={[
+          {
+            participantCode: "12",
+            sessions: {
+              1: {
+                participantCode: "12",
+                lesson: 1,
+                state: "completed",
+                status: "completed",
+                transcriptSubmission: "transcript",
+                codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
+              },
+              2: {
+                participantCode: "12",
+                lesson: 2,
+                state: "completed",
+                status: "completed",
+                transcriptSubmission: "transcript",
+                codedBy: [],
+                reflectionAssessment: {
+                  state: "submitted",
+                  agreements: ["yes", "partly", "no", null],
+                },
+              },
+              3: {
+                participantCode: "12",
+                lesson: 3,
+                state: "started",
+                status: "awaiting_reflection",
+                transcriptSubmission: "transcript",
+                codedBy: [],
+                reflectionAssessment: { state: "not_submitted" },
+              },
+            },
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Studentbedömning" }));
+
+    expect(screen.getByText("Ingen reflektion")).toBeTruthy();
+    expect(screen.getAllByText("Ej inskickad")).toHaveLength(2);
+    expect(screen.getByText("Reflektionsmoment 1: Ja")).toBeTruthy();
+    expect(screen.getByText("Reflektionsmoment 2: Delvis")).toBeTruthy();
+    expect(screen.getByText("Reflektionsmoment 3: Nej")).toBeTruthy();
+    expect(screen.getByText("Reflektionsmoment 4: Ej besvarad")).toBeTruthy();
+
+    const reflectionLink = screen.getByRole("link", {
+      name: "Öppna reflektionen för deltagare 12, lektion 2",
+    });
+    expect(reflectionLink.getAttribute("href")).toBe(
+      "/admin/participant/12/lesson/2?view=reflection",
+    );
+    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 });
