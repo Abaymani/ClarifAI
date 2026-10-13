@@ -1,9 +1,19 @@
 import "server-only";
 
+import { cache } from "react";
 import { Timestamp } from "firebase-admin/firestore";
 
 import type { ResearcherId } from "@/lib/admin/auth";
 import { adminLessonAnalysisRequestFromDocument } from "@/lib/admin/analysis";
+import {
+  LESSON_ONE_CODES_COLLECTION,
+  LESSON_ONE_CODES_DOC,
+  codesToCheckForOwnLessonOne,
+  parseLessonOneCodes,
+  storedParticipantCode,
+  studyParticipantCode,
+  type LessonOneCodesState,
+} from "@/lib/admin/lesson-one-codes";
 import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
 import type {
   AdminParticipantOverview,
@@ -18,7 +28,6 @@ import type {
 import { loadFramework } from "@/lib/analysis/framework";
 import { getDb } from "@/lib/firebase/admin";
 import type { Lesson } from "@/lib/session/credentials";
-import { LESSONS } from "@/lib/session/credentials";
 import { sessionFromDocument } from "@/lib/session/store";
 import type { Session } from "@/lib/session/types";
 
@@ -29,13 +38,49 @@ const RESEARCHER_REFLECTION_COMMENTS = "researcherReflectionComments";
 const ENTRIES = "entries";
 export const MAX_RESEARCHER_NOTE_LENGTH = 5_000;
 
+// Read once per request. A mapping that cannot be applied safely is ignored as a
+// whole, so no lesson 1 is ever shown under two participants (DL-072).
+export const loadLessonOneCodes = cache(
+  async (): Promise<LessonOneCodesState> => {
+    const db = getDb();
+    const snapshot = await db
+      .collection(LESSON_ONE_CODES_COLLECTION)
+      .doc(LESSON_ONE_CODES_DOC)
+      .get();
+    if (!snapshot.exists) return { status: "none" };
+
+    const parsed = parseLessonOneCodes(snapshot.data()?.codes);
+    if (!parsed.ok) return { status: "ignored", problem: parsed.problem };
+
+    const toCheck = codesToCheckForOwnLessonOne(parsed.codes);
+    const own =
+      toCheck.length > 0
+        ? await db.getAll(
+            ...toCheck.map((code) => db.collection(SESSIONS).doc(`${code}_1`)),
+          )
+        : [];
+    const conflict = own.find((session) => session.exists);
+    if (conflict) {
+      return {
+        status: "ignored",
+        problem: { kind: "conflict", code: conflict.id.split("_")[0] },
+      };
+    }
+    return { status: "applied", codes: parsed.codes };
+  },
+);
+
 export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
   const db = getDb();
-  const [participants, sessions, codingEntries] = await Promise.all([
-    db.collection(PARTICIPANTS).get(),
-    db.collection(SESSIONS).get(),
-    db.collectionGroup(ENTRIES).select("researcherId").get(),
-  ]);
+  const [participants, sessions, codingEntries, lessonOneCodes] =
+    await Promise.all([
+      db.collection(PARTICIPANTS).get(),
+      db.collection(SESSIONS).get(),
+      db.collectionGroup(ENTRIES).select("researcherId").get(),
+      loadLessonOneCodes(),
+    ]);
+  const codes =
+    lessonOneCodes.status === "applied" ? lessonOneCodes.codes : null;
 
   const codingBySession = new Map<string, Set<ResearcherId>>();
   for (const doc of codingEntries.docs) {
@@ -58,12 +103,20 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
   }
   for (const doc of sessions.docs) {
     const session = sessionFromDocument(doc.id, doc.data());
-    const participant = byParticipant.get(session.participantCode) ?? {
-      participantCode: session.participantCode,
+    const participantCode = studyParticipantCode(
+      codes,
+      session.participantCode,
+      session.lesson,
+    );
+    const participant = byParticipant.get(participantCode) ?? {
+      participantCode,
       sessions: {},
     };
     participant.sessions[session.lesson] = {
-      participantCode: session.participantCode,
+      participantCode,
+      ...(participantCode !== session.participantCode
+        ? { submittedCode: session.participantCode }
+        : {}),
       lesson: session.lesson,
       state: session.status === "completed" ? "completed" : "started",
       status: session.status,
@@ -73,7 +126,7 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
       ),
       reflectionAssessment: reflectionAssessment(session),
     };
-    byParticipant.set(session.participantCode, participant);
+    byParticipant.set(participantCode, participant);
   }
 
   return [...byParticipant.values()].sort((a, b) =>
@@ -103,12 +156,45 @@ function reflectionAssessment(session: Session): AdminReflectionAssessment {
   };
 }
 
-export async function getAdminSession(
+export type AdminParticipantLesson = {
+  session: AdminSession | null;
+  // The code this lesson 1 was handed in under, when it is another code.
+  submittedCode: string | null;
+  // The participant whose lesson 1 is stored under this code instead.
+  shownUnder: string | null;
+  lessonOneCodes: LessonOneCodesState;
+};
+
+// A participant's session for a lesson, as the portal shows it: a lesson 1 handed
+// in under an earlier code is found through the mapping.
+export async function getAdminParticipantLesson(
   participantCode: string,
   lesson: Lesson,
+): Promise<AdminParticipantLesson> {
+  const lessonOneCodes = await loadLessonOneCodes();
+  const codes =
+    lessonOneCodes.status === "applied" ? lessonOneCodes.codes : null;
+  const storedCode = storedParticipantCode(codes, participantCode, lesson);
+  const session = storedCode
+    ? await getAdminSessionById(`${storedCode}_${lesson}`)
+    : null;
+  return {
+    session,
+    submittedCode:
+      session && storedCode !== participantCode ? storedCode : null,
+    shownUnder: storedCode
+      ? null
+      : (codes?.toStudyCode.get(participantCode) ?? null),
+    lessonOneCodes,
+  };
+}
+
+// Reading and writing always go by the session's own document, never through the
+// lesson 1 mapping, so coding and comments stay with the session they belong to.
+export async function getAdminSessionById(
+  sessionId: string,
 ): Promise<AdminSession | null> {
-  const id = `${participantCode}_${lesson}`;
-  const snapshot = await getDb().collection(SESSIONS).doc(id).get();
+  const snapshot = await getDb().collection(SESSIONS).doc(sessionId).get();
   if (!snapshot.exists) return null;
   const data = snapshot.data() ?? {};
   return {
@@ -344,12 +430,7 @@ async function requiredSession(sessionId: string): Promise<Session> {
   if (!/^\d{1,3}_[1-4]$/.test(sessionId)) {
     throw new AdminCodingError("SESSION_NOT_FOUND");
   }
-  const [participantCode, lessonText] = sessionId.split("_");
-  const lesson = Number(lessonText) as Lesson;
-  if (!LESSONS.includes(lesson)) {
-    throw new AdminCodingError("SESSION_NOT_FOUND");
-  }
-  const session = await getAdminSession(participantCode, lesson);
+  const session = await getAdminSessionById(sessionId);
   if (!session) throw new AdminCodingError("SESSION_NOT_FOUND");
   return session;
 }

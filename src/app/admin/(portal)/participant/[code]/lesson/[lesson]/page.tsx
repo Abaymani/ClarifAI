@@ -1,14 +1,16 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { LessonOneCodesNotice } from "@/app/admin/(portal)/lesson-one-codes-notice";
 import { AdminAnalysisControl } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/admin-analysis-control";
 import { SessionWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/session-workspace";
 import { Button } from "@/components/ui/button";
 import { adminCodeOptions } from "@/lib/admin/codes";
 import { getCurrentResearcher } from "@/lib/admin/auth";
 import {
-  getAdminSession,
+  getAdminParticipantLesson,
   listReflectionComments,
   listResearcherCoding,
 } from "@/lib/admin/store";
@@ -30,7 +32,8 @@ export default async function AdminTranscriptPage({
   const researcher = await getCurrentResearcher();
   if (!researcher) notFound();
 
-  const session = await getAdminSession(code, lesson);
+  const { session, submittedCode, shownUnder, lessonOneCodes } =
+    await getAdminParticipantLesson(code, lesson);
   const [coding, codeOptions, reflectionComments] = session
     ? await Promise.all([
         listResearcherCoding(session.id),
@@ -59,6 +62,12 @@ export default async function AdminTranscriptPage({
           <h1 className="font-heading text-3xl font-semibold">
             Lektion {lesson}
           </h1>
+          {submittedCode ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Lämnades in med kod {submittedCode}, innan deltagaren fick en ny
+              kod.
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-2">
           {previous ? (
@@ -97,8 +106,23 @@ export default async function AdminTranscriptPage({
         </div>
       </div>
 
-      {!session ? (
-        <EmptyState text="Deltagaren har inte startat den här lektionen." />
+      {lesson === 1 && lessonOneCodes.status === "ignored" ? (
+        <LessonOneCodesNotice state={lessonOneCodes} />
+      ) : null}
+
+      {shownUnder ? (
+        <EmptyState>
+          Lektion 1 som lämnades in med kod {code} visas under{" "}
+          <Link
+            href={`/admin/participant/${shownUnder}/lesson/1`}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            deltagare {shownUnder}
+          </Link>
+          .
+        </EmptyState>
+      ) : !session ? (
+        <EmptyState>Deltagaren har inte startat den här lektionen.</EmptyState>
       ) : (
         <>
           {lesson === 1 || lesson === 4 ? (
@@ -141,10 +165,10 @@ export default async function AdminTranscriptPage({
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+function EmptyState({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-xl border bg-background px-6 py-16 text-center text-sm text-muted-foreground">
-      {text}
+      {children}
     </div>
   );
 }

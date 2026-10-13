@@ -17,6 +17,7 @@
     "test:e2e": "firebase emulators:exec --only firestore --project demo-clarifai \"playwright test\"",
     "scrape": "tsx scripts/scrape.ts",
     "codes:generate": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/generate-codes.ts",
+    "codes:lesson-one": "tsx --conditions=react-server scripts/set-lesson-one-codes.ts",
     "db:backup": "tsx --conditions=react-server scripts/backup-firestore.ts",
     "db:restore": "tsx --conditions=react-server scripts/restore-backup.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test && pnpm test:firebase-admin-runtime && pnpm test:emulator",
