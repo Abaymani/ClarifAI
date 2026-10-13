@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@/app/admin/(portal)/coding-actions", () => ({
@@ -225,5 +225,28 @@ describe("TranscriptWorkspace", () => {
     fireEvent.click(arminSequence);
     expect(screen.getByRole("button", { name: "Sekvenser" })).toBeTruthy();
     expect(await screen.findByText(/Armins sekvens/)).toBeTruthy();
+  });
+
+  test("positions a sequence tooltip beside the pointer", () => {
+    render(<TranscriptWorkspace {...props} />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Visa AI-koder i transkriptet",
+      }),
+    );
+    const sequence = screen.getByRole("button", {
+      name: /AI: S3, Direkt-svarssökande förlopp, meddelande 1–2/,
+    });
+
+    fireEvent.mouseMove(sequence, { clientX: 100, clientY: 150 });
+
+    const tooltip = within(sequence).getByRole("tooltip");
+    expect(tooltip.className).toContain("fixed");
+    expect(tooltip.style.left).toBe("112px");
+    expect(tooltip.style.top).toBe("162px");
+
+    fireEvent.mouseLeave(sequence);
+    expect(tooltip.className).toContain("absolute");
   });
 });

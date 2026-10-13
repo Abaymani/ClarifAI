@@ -429,14 +429,45 @@ function SequenceTrack({
   const tone = sequenceTrackTone(sequence.source);
   const codes = sequence.codes.join(" + ") || "—";
   const names = sequence.names.join(" · ") || "Ingen sekvenskod";
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+
+  function moveTooltip(clientX: number, clientY: number) {
+    const width = 224;
+    const height = 120;
+    const gap = 12;
+    const edge = 8;
+    const left =
+      clientX + gap + width <= window.innerWidth - edge
+        ? clientX + gap
+        : clientX - gap - width;
+
+    setTooltipPosition({
+      left: Math.max(edge, left),
+      top: Math.max(
+        edge,
+        Math.min(clientY + gap, window.innerHeight - height - edge),
+      ),
+    });
+  }
+
   return (
     <button
       type="button"
       style={style}
       aria-pressed={selected}
       aria-label={`${sequence.sourceLabel}: ${codes}, ${names}, meddelande ${sequence.firstMessage}–${sequence.lastMessage}`}
-      onMouseEnter={() => onHover(sequence.key)}
-      onMouseLeave={() => onHover(null)}
+      onMouseEnter={(event) => {
+        onHover(sequence.key);
+        moveTooltip(event.clientX, event.clientY);
+      }}
+      onMouseMove={(event) => moveTooltip(event.clientX, event.clientY)}
+      onMouseLeave={() => {
+        onHover(null);
+        setTooltipPosition(null);
+      }}
       onFocus={() => onHover(sequence.key)}
       onBlur={() => onHover(null)}
       onClick={() => onSelect(sequence)}
@@ -463,7 +494,8 @@ function SequenceTrack({
       </span>
       <span
         role="tooltip"
-        className="pointer-events-none absolute top-4 left-full z-30 ml-2 flex w-56 flex-col rounded-lg border bg-popover p-3 text-left text-xs text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus:opacity-100"
+        style={tooltipPosition ?? undefined}
+        className={`pointer-events-none z-30 flex w-56 flex-col rounded-lg border bg-popover p-3 text-left text-xs text-popover-foreground opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus:opacity-100 ${tooltipPosition ? "fixed" : "absolute top-4 left-full ml-2"}`}
       >
         <strong>
           {sequence.sourceLabel} · {codes}
