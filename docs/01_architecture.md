@@ -13,7 +13,7 @@ For the use-case description, see [[00_product_brief]]
 |LLM Provider|OpenAI ChatGPT|Analysis will be done through API calls to ChatGPT. The scraped transcript, with names redacted, will be submitted together with the coding schemes and instructions. The transcript link is only stored as a fallback for researchers.|
 |Database|Google Firebase|Cloud Firestore is a document (NoSQL) database. There will be at most 60 users, with a maximum of 4 sessions each. Each session is self-contained. A document based system for storage is therefore likely more than enough for our purposes.|
 |Hosting|Vercel|Vercel makes it trivial to host NextJS projects and has a generous free hosting tier.|
-|Auth|N/A (Participant code + PIN)|Each student recieves a `participant_code` (pseudonym) and a 4-digit PIN from their teacher; both are generated together. No names, emails or any other identifiable information should be stored under any circumstance due to ethical concerns.|
+|Auth|Participant code + PIN (students); Google sign-in (researchers)|Each student recieves a `participant_code` (pseudonym) and a 4-digit PIN from their teacher; both are generated together. No names, emails or any other identifiable information should be stored under any circumstance due to ethical concerns. The two researchers sign in to the researcher portal with Google through Firebase Authentication. Only the two addresses configured on the server get in, and those addresses are never stored with the research data (DL-059).|
 
 ## Session Lifecycle
 Every submission and completed reflection is counted as one **session**.
@@ -92,6 +92,8 @@ In case of lesson **1** or lesson **4**, the session is considered completed as 
 **`Analysis (S2)`**
 As soon as a student in lesson **2** or **3** has confirmed their transcript, it is fed to the AI encoding agent through the API. The analysis runs in the background: the student sees that it is in progress and gets the result when it is done, also after closing the page and logging in again.
 
+For a completed lesson **1** or **4** transcript, a researcher can run the same analysis once from the researcher portal (DL-068). Its results are stored in the same way, but only as research data: the student's completed session is not changed, and the student never sees them.
+
 The analysis is done in two steps.
 
 1. **Coding.** The AI is prepared with the [[analysis_guidelines]] and the two coding schemas (prompt_coding.JSON, sequence_coding.JSON). It codes every student prompt and identifies sequences. A prompt can get several codes, in the priority order the guidelines define. The coding is **research data**: it is saved to the database in a format where it's apparent what prompt/sequence-level behaviour was observed, as well as what part of the transcript the observation was made. It is only saved if every code exists in the schemas and every quoted part really is in the transcript.
@@ -111,3 +113,8 @@ Once the student has answered all reflection questions and submitted the reflect
 
 ### Disconnection or unexpected faliures
 If a session has not been marked as completed but the user dissconnects, the session should be able to be resumed. A completed session cannot be resumed or viewed by the user again.
+
+## Researcher portal
+Researchers work in a protected portal at `/admin` within the same Next.js application (DL-058). Its requirements are in [[04_admin_interface_requirements]]. The student interface has no link to it, and participant codes and PINs never give access to it.
+
+The portal reads the stored sessions and shows their transcripts, AI coding and reflections. It writes only each researcher's own coding and comments, in records of their own next to the session, and the one-time analysis of a completed lesson 1 or 4 transcript. Browsers still have no direct access to the database.
