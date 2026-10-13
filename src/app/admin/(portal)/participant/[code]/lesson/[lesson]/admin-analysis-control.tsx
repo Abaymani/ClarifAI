@@ -2,12 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CheckCircle2,
-  LoaderCircle,
-  Sparkles,
-  TriangleAlert,
-} from "lucide-react";
+import { LoaderCircle, Sparkles, TriangleAlert } from "lucide-react";
 
 import { requestAdminLessonAnalysisAction } from "@/app/admin/(portal)/analysis-actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,11 +34,6 @@ export function AdminAnalysisControl({
   }, [request?.status, router]);
 
   function requestAnalysis() {
-    const confirmed = window.confirm(
-      "Beställ AI-analysen? Den kan bara beställas en gång för den här deltagaren och lektionen, oavsett forskare.",
-    );
-    if (!confirmed) return;
-
     setError(null);
     startTransition(async () => {
       const result = await requestAdminLessonAnalysisAction({ sessionId });
@@ -58,6 +48,8 @@ export function AdminAnalysisControl({
   }
 
   const status = request?.status;
+  if (status === "completed" || (!request && alreadyAnalysed)) return null;
+
   return (
     <section className="rounded-xl border bg-background p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -74,8 +66,6 @@ export function AdminAnalysisControl({
 
         {status === "processing" ? (
           <Status icon={LoaderCircle} spin text="AI-analys pågår" />
-        ) : status === "completed" || (alreadyAnalysed && !request) ? (
-          <Status icon={CheckCircle2} text="AI-analys skapad" />
         ) : status === "failed" ? (
           <Status icon={TriangleAlert} text="AI-analysen misslyckades" />
         ) : (
@@ -94,7 +84,7 @@ export function AdminAnalysisControl({
         )}
       </div>
 
-      {!eligible && !request && !alreadyAnalysed ? (
+      {!eligible && !request ? (
         <p className="mt-3 text-sm text-muted-foreground">
           Analysen kan beställas när lektionen är färdiginlämnad med ett
           transkript.
