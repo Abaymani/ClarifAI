@@ -118,6 +118,8 @@ pnpm.cmd dev
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`), in Chromium and Firefox, one test at a time (DL-050) |
 | `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
 | `pnpm codes:generate [count]` | Create participant codes with PINs and write the hand-out list to `private-data/` (named after the target database) |
+| `pnpm db:backup --env <file> --project <id>` | Read every Firestore document into `private-data/backups/` (DL-067) |
+| `pnpm db:restore <folder>` | Load a backup into the emulator and check it against the backup's checksum |
 | `pnpm build` | Production build |
 
 ## Participant codes
@@ -149,6 +151,30 @@ The list lands in `private-data/participant-codes-<project>.csv`, which is git-i
 Three wrong PINs block that code for 30 minutes, and a correct PIN is refused until the block expires. To let a student in sooner, open their document under `participants` in the Firebase console and set `lockedUntil` to null and `failedAttempts` to 0. Clearing only `lockedUntil` blocks them again on the next wrong attempt.
 
 The same document holds the student's `pin`, which is what to read out when someone forgets theirs.
+
+## Backing up the database
+Firestore's own export needs a billing account, so `pnpm db:backup` reads every document instead and writes them to `private-data/backups/<project>-<time>/` (DL-067). It only reads. It also finds the researchers' coding under `sessions/<id>/researcherCoding/R1` and `/R2`: those two parent documents never exist, so reading only a collection's documents would miss everything below them. Timestamps and Firestore's other value types are stored so they come back exactly.
+
+1. Put the production service account's `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` in a file of their own, for example `.env.production.local`. Like every `.env*` file it is git-ignored.
+2. Run the backup. `--project` must name the project the key belongs to, or nothing is read:
+
+   ```bash
+   pnpm db:backup --env .env.production.local --project clarifai-19445
+   ```
+
+3. Delete the key file.
+
+The folder holds `documents.ndjson`, one document per line, and `manifest.json` with the number of documents per collection and a SHA-256 checksum. Only your user can read them. Firebase Authentication accounts, such as the researchers' sign-ins, are not part of Firestore and are not in the backup.
+
+To check a backup, or to browse it, restore it into an empty emulator. Start `pnpm dev`, then from a second terminal:
+
+```bash
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 pnpm db:restore private-data/backups/<folder>
+```
+
+The restore refuses to run outside the emulator, into an emulator that already holds data, or from a backup whose checksum no longer matches. Afterwards it reads everything back and checks that the emulator holds exactly what the backup holds. The data can then be browsed at http://localhost:4000/firestore, or used by the app and the researcher portal.
+
+The backup holds every participant's PIN in plain text, the session token hashes and all research data. Keep it in `private-data/`, never in git or on a shared drive, and encrypt any copy that leaves this computer.
 
 ## Analysis framework
 `framework/` holds what the analysis (S2) gives the model. The files are read on every analysis, so edits apply without a restart.
