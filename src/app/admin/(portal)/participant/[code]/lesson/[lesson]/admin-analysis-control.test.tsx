@@ -26,10 +26,9 @@ const processingRequest = {
 describe("AdminAnalysisControl", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
-  test("starts the one-time analysis after explicit confirmation", async () => {
+  test("starts the one-time analysis directly from the button", async () => {
     requestAnalysis.mockResolvedValue({
       ok: true,
       request: processingRequest,
@@ -51,22 +50,7 @@ describe("AdminAnalysisControl", () => {
     expect(screen.getByText("AI-analys pågår")).toBeTruthy();
   });
 
-  test("does not consume the one-time request when confirmation is cancelled", () => {
-    vi.mocked(window.confirm).mockReturnValue(false);
-    render(
-      <AdminAnalysisControl
-        sessionId="12_4"
-        eligible
-        alreadyAnalysed={false}
-        initialRequest={null}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Skapa AI-analys" }));
-    expect(requestAnalysis).not.toHaveBeenCalled();
-  });
-
-  test("never offers another request after a result or failure", () => {
+  test("removes the card after success but keeps failure information", () => {
     const { rerender } = render(
       <AdminAnalysisControl
         sessionId="12_1"
@@ -75,7 +59,7 @@ describe("AdminAnalysisControl", () => {
         initialRequest={null}
       />,
     );
-    expect(screen.getByText("AI-analys skapad")).toBeTruthy();
+    expect(screen.queryByText("AI-analys")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Skapa AI-analys" }),
     ).toBeNull();
