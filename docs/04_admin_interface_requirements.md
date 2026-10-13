@@ -2,7 +2,7 @@
 
 This document records the established functional scope for the researcher-facing admin interface. It is a shared reference for future design and implementation work; it does not change the student workflow described in the product brief and system architecture.
 
-**Status:** Functional scope, integrated portal architecture, and access-control approach are approved.
+**Status:** Functional scope, integrated portal architecture, and access-control approach are approved and implemented.
 
 ## Terminology
 
@@ -15,7 +15,7 @@ This document records the established functional scope for the researcher-facing
 - **Completed:** The session has reached its completed state.
 - **Missing:** No session record exists for that participant and lesson.
 
-The definitions of started and missing make the requested three-state overview testable. They should be confirmed during interface design, particularly for failed and currently processing sessions.
+The definitions of started and missing make the requested three-state overview testable. Failed and processing sessions count as started; see the decisions at the end of this document.
 
 ## Overall constraint
 
@@ -67,10 +67,12 @@ Researchers authenticate with Google. Access is granted only when Google has ver
 
 The portal, authentication, and researcher-display decisions are recorded as DL-058 through DL-060 in the decision log.
 
-## Decisions required before implementation
+## Decisions settled during implementation
 
-- The exact meaning and display treatment of failed and processing sessions in the three-state matrix.
-- Whether researcher coding uses the framework version stored with the session, the current framework, or a selectable version.
-- How simultaneous edits and unsaved changes are handled when two researchers work on the same lesson.
-- Whether a researcher may edit or delete submitted notes and codes, and what audit history must be retained.
-- Whether researchers need a side-by-side comparison view in addition to selecting one researcher's coding.
+These questions were open before the portal was built. The portal answers them as follows (DL-071).
+
+- **Failed and processing sessions in the status matrix:** every session record that is not completed shows as started (`Påbörjad`), including failed, processing and awaiting sessions. Hovering over the cell shows the stored status.
+- **Framework version for researcher coding:** the current framework. Codes are checked against the framework files when they are saved, and each saved entry records that framework version. AI coding keeps the version it was made with.
+- **Simultaneous edits and unsaved changes:** each researcher writes only their own records, so the two never overwrite each other. A researcher has one record per prompt and one per sequence, and the latest save wins, for example between two open tabs. Edits are kept only until they are saved: choosing another prompt or sequence, switching researcher or leaving the page discards unsaved edits without a warning.
+- **Editing, deleting and history:** a researcher can change or delete only their own notes, codes and reflection comments. Saving an empty prompt entry or comment deletes it, and a sequence has its own delete button. Only the latest version is kept, with the time it was saved; there is no audit history. Earlier versions survive only in database backups (DL-067).
+- **Comparison view:** there is no separate side-by-side view. The independent AI, Armin and Frida controls above the transcript show the sources' prompt codes and sequence tracks together (ADMIN-FR-004), and the side panel shows one researcher's coding at a time, the other researcher's as read-only (ADMIN-FR-007).

@@ -109,11 +109,12 @@ pnpm.cmd dev
 ## Scripts
 | Command | What it does |
 |---|---|
-| `pnpm dev` | App plus Firestore emulator and emulator UI |
+| `pnpm dev` | App plus the Firestore and Authentication emulators and the emulator UI |
 | `pnpm check` | Everything below except the build and end-to-end tests; run before opening a PR |
 | `pnpm lint` / `pnpm typecheck` | ESLint / TypeScript |
 | `pnpm format` / `pnpm format:check` | Prettier (code only; Markdown docs keep their authors' formatting) |
 | `pnpm test` | Unit tests (Vitest, next to the code as `*.test.ts(x)`) |
+| `pnpm test:firebase-admin-runtime` | Loads Firebase Admin's authentication module the way Vercel's server runtime does (DL-062) |
 | `pnpm test:emulator` | Firestore security-rule and Admin SDK tests (`tests/emulator/`) |
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`), in Chromium and Firefox, one test at a time (DL-050) |
 | `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
@@ -242,7 +243,7 @@ Copy `.env.example` to `.env.local` and fill in values there. **Never commit rea
 - `ENABLE_EXPERIMENTAL_COREPACK=1` is set in the Vercel project. Vercel only detects pnpm up to version 10 on its own; with this set, it uses the pnpm version from `package.json`.
 - Functions run in Stockholm (`arn1`, under Settings → Functions), next to Firestore in `europe-north2`. Keep both in the EU (DL-026).
 - The variables from `.env.example` are set in Vercel, per environment: Production uses the Firebase project `clarifai-19445`, Preview uses `clarifai-preview`, so preview deployments cannot reach the research data (DL-028).
-- `OPENAI_API_KEY` must be set in Vercel for Preview and Production before the analysis can run there. The session page allows 300 seconds per request (the Hobby maximum), which is what the analysis gets to finish in.
+- `OPENAI_API_KEY` must be set in Vercel for Preview and Production before the analysis can run there. The session page allows 300 seconds per request (the Hobby maximum), which is what the analysis gets to finish in. The admin session page allows the same for the lesson 1 and 4 analysis.
 - Firebase projects: `clarifai-19445` (production) and `clarifai-preview` (previews). After changing `firestore.rules`, deploy to both: `pnpm exec firebase login`, then `pnpm exec firebase deploy --only firestore:rules --project clarifai-19445` and the same with `--project clarifai-preview`.
   On Windows PowerShell, use `pnpm.cmd` for these commands if the shorter command is unavailable.
 
