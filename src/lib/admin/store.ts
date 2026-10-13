@@ -3,10 +3,12 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 
 import type { ResearcherId } from "@/lib/admin/auth";
+import { adminLessonAnalysisRequestFromDocument } from "@/lib/admin/analysis";
 import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
 import type {
   AdminParticipantOverview,
   AdminReflectionAssessment,
+  AdminSession,
   ReflectionCommentsByResearcher,
   ResearcherCoding,
   ResearcherPromptCoding,
@@ -104,12 +106,15 @@ function reflectionAssessment(session: Session): AdminReflectionAssessment {
 export async function getAdminSession(
   participantCode: string,
   lesson: Lesson,
-): Promise<Session | null> {
+): Promise<AdminSession | null> {
   const id = `${participantCode}_${lesson}`;
   const snapshot = await getDb().collection(SESSIONS).doc(id).get();
-  return snapshot.exists
-    ? sessionFromDocument(snapshot.id, snapshot.data() ?? {})
-    : null;
+  if (!snapshot.exists) return null;
+  const data = snapshot.data() ?? {};
+  return {
+    ...sessionFromDocument(snapshot.id, data),
+    adminAnalysisRequest: adminLessonAnalysisRequestFromDocument(data),
+  };
 }
 
 export async function listResearcherCoding(
