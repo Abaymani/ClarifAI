@@ -1,9 +1,25 @@
 import type { ResearcherId } from "@/lib/admin/auth";
 import type { AnalysisAgreement } from "@/lib/session/types";
 import type { Lesson } from "@/lib/session/credentials";
-import type { SessionStatus, TranscriptSubmission } from "@/lib/session/types";
+import type {
+  Session,
+  SessionStatus,
+  TranscriptSubmission,
+} from "@/lib/session/types";
 
 export const MAX_REFLECTION_COMMENT_LENGTH = 5_000;
+
+export type AdminLessonAnalysisRequest = {
+  status: "processing" | "completed" | "failed";
+  requestedBy: ResearcherId;
+  requestedAt: string;
+  finishedAt: string | null;
+  errorCode: string | null;
+};
+
+export type AdminSession = Session & {
+  adminAnalysisRequest: AdminLessonAnalysisRequest | null;
+};
 
 export type AdminSessionState = "started" | "completed" | "missing";
 

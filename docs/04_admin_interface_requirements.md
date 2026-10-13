@@ -21,7 +21,7 @@ The definitions of started and missing make the requested three-state overview t
 
 | ID | Requirement | Acceptance criteria |
 | --- | --- | --- |
-| ADMIN-FR-010 | The admin interface shall not generate, regenerate, transform, or request any AI output. | No action in the admin interface calls an AI API or consumes model tokens. The interface only reads already stored transcripts and AI analysis, and reads or writes researcher-authored notes and coding. Search, filtering, navigation, and presentation are deterministic application functions. |
+| ADMIN-FR-010 | Except for the one-time lesson 1 and 4 action in ADMIN-FR-015, the admin interface shall not generate, regenerate, transform, or request AI output. | Search, filtering, navigation, presentation, researcher coding, and comments do not call an AI API or change stored AI results. No admin action can regenerate or replace an existing analysis. |
 
 ## Session overview and transcript navigation
 
@@ -44,6 +44,7 @@ The definitions of started and missing make the requested three-state overview t
 | ADMIN-FR-009 | The system shall allow a researcher to expand an AI-assigned prompt or sequence code to inspect why it was assigned. | Each AI code is compact by default. Expanding it shows the stored justification and supporting transcript excerpt; collapsing it hides those details again. Viewing the explanation does not recompute or modify the AI coding. |
 | ADMIN-FR-013 | The transcript detail page shall provide a reflection overview for the selected participant and lesson. | A separate reflection tab shows every stored reflection moment together, including its compact transcript excerpt with a full-message toggle, fitted analysis, reflection questions, submitted answer and Ja/Delvis/Nej response. Related AI, Armin and Frida coding uses the same source-labelled badges as the transcript. The view never changes stored student or AI data and never calls an AI API. |
 | ADMIN-FR-014 | Each researcher shall be able to comment independently on a reflection moment while seeing both researchers' comments. | Armin's and Frida's comments are visible together for each reflection moment. The signed-in researcher can save or clear only their own comment. Comments are stored in researcher-owned records outside the session document, and saving one never changes the transcript, AI analysis, reflection questions, student response or the other researcher's comment. |
+| ADMIN-FR-015 | An authorized researcher shall be able to request AI analysis once for a completed lesson 1 or 4 transcript. | A confirmation explains that the request is irreversible. A transaction permits at most one request per participant and lesson across both researchers, including simultaneous requests. The existing analysis pipeline stores coding and reflection questions in the same fields used for lessons 2 and 3. Request metadata records which researcher claimed the single attempt. The action never changes or deletes the transcript, transcript submission kind, session status, completion timestamp, student responses, or researcher coding. Existing AI output also blocks a request so it cannot be overwritten. A failed request remains consumed and exposes its diagnostic code without a retry action. |
 
 ## Coding tool
 

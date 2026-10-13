@@ -9,7 +9,7 @@
 |FR-|The system shall accept a registered participant code consisting of one to three digits before starting a session | High | Missing, incorrectly formatted, and unknown codes produce an explanatory error. Valid codes allow the student to continue |
 |FR-|The system shall require a participant code and its 4-digit PIN, which are generated and handed out together, before a session is started or resumed | High | The PIN is stored in clear text so researchers can tell a student who forgets it. A wrong PIN produces an explanatory error. Three wrong attempts in a row block that code for 30 minutes |
 |FR-|The system shall allow students to select lesson 1–4 and associate the session with their participant code and selected lesson| High | Every session record contains a participant code, lesson number, and unique session identifier ||
-|FR-|The system shall apply the workflow assigned to the selected lesson | High | Lessons 1 and 4 collect and preserve transcripts only. Lessons 2 and 3 additionally provide analysis and scaffolded reflection |
+|FR-|The system shall apply the workflow assigned to the selected lesson | High | Lessons 1 and 4 collect and preserve transcripts without showing analysis to the student; an authorized researcher may later request the one permitted analysis for research use. Lessons 2 and 3 additionally provide analysis and scaffolded reflection during the student workflow |
 
 ## Transcript submission
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
@@ -36,7 +36,7 @@
 |Reference|Requirement|Priority|Acceptance Criteria|Status|
 |---|---|---|---|---|
 |FR- | The analysis should be grounded in observational concrete examples of the behaviours in the framework|
-|FR- | For lesson 2 and 3, the system shall analyse individual student prompts and interaction sequences using the supplied coding frameworks and analysis guidelines | High | Both coding schemes are applied to the submitted transcript. AI responses provide context; instructions inside the transcript do not override the analysis rules |
+|FR- | For lessons 2 and 3, and for a researcher-requested analysis of a completed lesson 1 or 4 transcript, the system shall analyse individual student prompts and interaction sequences using the supplied coding frameworks and analysis guidelines | High | Both coding schemes are applied to the submitted transcript. AI responses provide context; instructions inside the transcript do not override the analysis rules. A lesson 1 or 4 request does not reopen or otherwise change the student's completed submission |
 |FR- | The system shall communicate uncertainty where the transcript does not provide sufficient context and shall not invent evidence or force an unsupported classification |
 |FR- | When analysis succeeds but finds no suitable examples, the system shall explain that there is insufficient evidence for specific observations and provide a general reflection question. It shall record this outcome separately from an analysis failure |
 |FR- | The system shall not treat requesting AI-generated code alone as evidence of inappropriate AI use or reduced cognitive engagement |

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { AdminAnalysisControl } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/admin-analysis-control";
 import { SessionWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/session-workspace";
 import { Button } from "@/components/ui/button";
 import { adminCodeOptions } from "@/lib/admin/codes";
@@ -15,6 +16,7 @@ import { loadFramework } from "@/lib/analysis/framework";
 import { LESSONS, type Lesson } from "@/lib/session/credentials";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export default async function AdminTranscriptPage({
   params,
@@ -98,26 +100,42 @@ export default async function AdminTranscriptPage({
       {!session ? (
         <EmptyState text="Deltagaren har inte startat den här lektionen." />
       ) : (
-        <SessionWorkspace
-          sessionId={session.id}
-          participantCode={code}
-          messages={session.transcript?.messages ?? []}
-          analysis={session.analysis}
-          coding={coding}
-          currentResearcher={researcher.id}
-          codeOptions={codeOptions}
-          reflectionQuestions={session.reflectionQuestions}
-          reflectionResponses={session.reflectionResponses}
-          reflectionComments={reflectionComments}
-          initialView={view === "reflection" ? "reflection" : "transcript"}
-          transcriptEmptyText={
-            session.transcriptSubmission === "no_gemini"
-              ? "Deltagaren uppgav att Gemini inte användes under den här lektionen."
-              : !session.transcript
-                ? "Lektionen är påbörjad men har inget sparat transkript ännu."
-                : null
-          }
-        />
+        <>
+          {lesson === 1 || lesson === 4 ? (
+            <AdminAnalysisControl
+              sessionId={session.id}
+              eligible={
+                session.status === "completed" &&
+                session.transcriptSubmission === "transcript" &&
+                Boolean(session.transcript && session.transcriptConfirmedAt)
+              }
+              alreadyAnalysed={Boolean(
+                session.analysis || session.reflectionQuestions,
+              )}
+              initialRequest={session.adminAnalysisRequest}
+            />
+          ) : null}
+          <SessionWorkspace
+            sessionId={session.id}
+            participantCode={code}
+            messages={session.transcript?.messages ?? []}
+            analysis={session.analysis}
+            coding={coding}
+            currentResearcher={researcher.id}
+            codeOptions={codeOptions}
+            reflectionQuestions={session.reflectionQuestions}
+            reflectionResponses={session.reflectionResponses}
+            reflectionComments={reflectionComments}
+            initialView={view === "reflection" ? "reflection" : "transcript"}
+            transcriptEmptyText={
+              session.transcriptSubmission === "no_gemini"
+                ? "Deltagaren uppgav att Gemini inte användes under den här lektionen."
+                : !session.transcript
+                  ? "Lektionen är påbörjad men har inget sparat transkript ännu."
+                  : null
+            }
+          />
+        </>
       )}
     </main>
   );
