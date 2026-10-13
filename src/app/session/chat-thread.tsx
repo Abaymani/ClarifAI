@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { MessagesSquare } from "lucide-react";
 import { cn } from "cn";
 
@@ -32,23 +32,26 @@ export function ChatThread({
   );
 }
 
+type ChatBubbleProps = Omit<ComponentPropsWithoutRef<"article">, "children"> & {
+  message: TranscriptMessage;
+  children: ReactNode;
+  headerActions?: ReactNode;
+  headerLabel?: string;
+};
+
 export function ChatBubble({
   message,
   children,
   className,
   headerActions,
   headerLabel,
-}: {
-  message: TranscriptMessage;
-  children: ReactNode;
-  className?: string;
-  headerActions?: ReactNode;
-  headerLabel?: string;
-}) {
+  ...articleProps
+}: ChatBubbleProps) {
   const student = message.role === "student";
 
   return (
     <article
+      {...articleProps}
       data-chat-role={message.role}
       className={cn(
         "min-w-0 rounded-xl px-3 py-2.5 text-sm break-words sm:px-4 sm:py-3",

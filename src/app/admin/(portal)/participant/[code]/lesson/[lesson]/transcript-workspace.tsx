@@ -1,7 +1,15 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Search, Sparkles, Trash2, UserRound, X } from "lucide-react";
+import {
+  Check,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  UserRound,
+  X,
+} from "lucide-react";
 
 import {
   CodingSourceBadge,
@@ -368,8 +376,14 @@ function TranscriptSequenceGrid({
                   selectable ? `Deltagare ${participantCode}` : "Gemini"
                 }`}
                 headerActions={
-                  badges.length > 0 ? (
+                  selected || badges.length > 0 ? (
                     <div className="flex flex-wrap justify-end gap-1 normal-case">
+                      {selected ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-700 px-2 py-0.5 text-[0.6875rem] font-semibold tracking-normal text-white normal-case dark:bg-blue-300 dark:text-blue-950">
+                          <Check aria-hidden="true" className="size-3" />
+                          Vald för kodning
+                        </span>
+                      ) : null}
                       {badges.map((badge) => (
                         <CodingSourceBadge
                           key={`${badge.source}-${badge.code}`}
@@ -379,11 +393,23 @@ function TranscriptSequenceGrid({
                     </div>
                   ) : null
                 }
-                className={`${
-                  selected
-                    ? "ring-2 ring-foreground/30 ring-offset-2 ring-offset-background"
-                    : ""
-                } ${
+                role={selectable ? "button" : undefined}
+                tabIndex={selectable ? 0 : undefined}
+                aria-pressed={selectable ? selected : undefined}
+                data-selected={selected ? "true" : undefined}
+                onClick={
+                  selectable ? () => onMessageSelect(message.index) : undefined
+                }
+                onKeyDown={
+                  selectable
+                    ? (event) => {
+                        if (event.key !== "Enter" && event.key !== " ") return;
+                        event.preventDefault();
+                        onMessageSelect(message.index);
+                      }
+                    : undefined
+                }
+                className={`${selectable ? "cursor-pointer border border-transparent transition-[background-color,border-color,box-shadow] hover:border-blue-400 hover:bg-blue-100/80 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[selected=true]:border-blue-700 data-[selected=true]:bg-blue-100 data-[selected=true]:shadow-sm data-[selected=true]:ring-2 data-[selected=true]:ring-blue-700 data-[selected=true]:ring-offset-2 data-[selected=true]:ring-offset-background dark:hover:border-blue-500 dark:hover:bg-blue-900/60 dark:data-[selected=true]:border-blue-300 dark:data-[selected=true]:bg-blue-900/70 dark:data-[selected=true]:ring-blue-300" : ""} ${
                   highlighted
                     ? sequenceMessageHighlight(highlightedSequence.source)
                     : ""
@@ -394,16 +420,6 @@ function TranscriptSequenceGrid({
                 ) : (
                   <MessageContent text={message.text} />
                 )}
-                {selectable ? (
-                  <button
-                    type="button"
-                    onClick={() => onMessageSelect(message.index)}
-                    className="mt-3 text-xs font-medium underline-offset-2 hover:underline"
-                    aria-pressed={selected}
-                  >
-                    {selected ? "Vald prompt" : "Välj prompt"}
-                  </button>
-                ) : null}
               </ChatBubble>
             </div>
           );

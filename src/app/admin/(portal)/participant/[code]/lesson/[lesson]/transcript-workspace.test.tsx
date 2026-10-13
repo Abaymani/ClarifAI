@@ -15,6 +15,11 @@ const props = {
   messages: [
     { index: 1, role: "student" as const, text: "Jag testade pin 8." },
     { index: 2, role: "gemini" as const, text: "Bra, vad hände?" },
+    {
+      index: 3,
+      role: "student" as const,
+      text: "Jag jämförde med kopplingsschemat.",
+    },
   ],
   analysis: {
     frameworkVersion: "test",
@@ -183,6 +188,36 @@ describe("TranscriptWorkspace", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Armin (du)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Frida" })).toBeTruthy();
+  });
+
+  test("selects a prompt from the entire participant bubble", () => {
+    render(<TranscriptWorkspace {...props} />);
+
+    const first = screen.getByRole("button", {
+      name: /1\. Deltagare 12.*Jag testade pin 8/,
+    });
+    const second = screen.getByRole("button", {
+      name: /3\. Deltagare 12.*Jag jämförde med kopplingsschemat/,
+    });
+    const gemini = screen.getByText("2. Gemini").closest("article");
+
+    expect(first.getAttribute("aria-pressed")).toBe("true");
+    expect(second.getAttribute("aria-pressed")).toBe("false");
+    expect(within(first).getByText("Vald för kodning")).toBeTruthy();
+    expect(screen.queryByText("Välj prompt")).toBeNull();
+    expect(screen.queryByText("Vald prompt")).toBeNull();
+    expect(gemini?.getAttribute("role")).toBeNull();
+
+    fireEvent.click(
+      within(second).getByText("Jag jämförde med kopplingsschemat."),
+    );
+    expect(first.getAttribute("aria-pressed")).toBe("false");
+    expect(second.getAttribute("aria-pressed")).toBe("true");
+    expect(within(second).getByText("Vald för kodning")).toBeTruthy();
+
+    fireEvent.keyDown(first, { key: " " });
+    expect(first.getAttribute("aria-pressed")).toBe("true");
+    expect(second.getAttribute("aria-pressed")).toBe("false");
   });
 
   test("places overlapping sequences in separate lanes and opens their stored details", async () => {
