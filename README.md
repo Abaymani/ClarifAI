@@ -119,6 +119,7 @@ pnpm.cmd dev
 | `pnpm test:e2e` | Playwright end-to-end tests (`tests/e2e/`), in Chromium and Firefox, one test at a time (DL-050) |
 | `pnpm scrape <link>` | Scrape a Gemini share link into `private-data/transcripts/` (local stand-in for S1) |
 | `pnpm codes:generate [count]` | Create participant codes with PINs and write the hand-out list to `private-data/` (named after the target database) |
+| `pnpm codes:lesson-one <csv> --project <id> [--env <file>] [--write]` | Save which lesson 1 codes belong to which participants, for the researcher portal (DL-072) |
 | `pnpm db:backup --env <file> --project <id>` | Read every Firestore document into `private-data/backups/` (DL-067) |
 | `pnpm db:restore <folder>` | Load a backup into the emulator and check it against the backup's checksum |
 | `pnpm build` | Production build |
@@ -152,6 +153,21 @@ The list lands in `private-data/participant-codes-<project>.csv`, which is git-i
 Three wrong PINs block that code for 30 minutes, and a correct PIN is refused until the block expires. To let a student in sooner, open their document under `participants` in the Firebase console and set `lockedUntil` to null and `failedAttempts` to 0. Clearing only `lockedUntil` blocks them again on the next wrong attempt.
 
 The same document holds the student's `pin`, which is what to read out when someone forgets theirs.
+
+### Codes changed after lesson 1
+Some participants were given new codes before lesson 2, so their lesson 1 is stored under a different code than lessons 2–4. The researchers keep the mapping in one Firestore document, `codeMappings/lessonOne`, and the researcher portal shows each lesson 1 under the participant's code from lessons 2–4 (DL-072). The sessions themselves are never changed. A moved lesson 1 says which code it was handed in under, and a mapping that would put two lesson 1 sessions under one participant is not used at all; the overview then says why.
+
+To save the mapping from the researchers' sheet, a CSV with a header row and one `lesson 1 code,code in lessons 2–4` row per participant, put the production key in a file of its own as for the backup, then:
+
+```bash
+pnpm codes:lesson-one <csv file> --env .env.production.local --project clarifai-19445
+```
+
+This only shows what it would save. Add `--write` to save it, then delete the key file. Running it again replaces the mapping. Keep the CSV out of the repository: the repository is public, and the mapping shows which codes belong to the same student.
+
+To try a mapping first, restore a backup into the emulator (see "Backing up the database"), run the command with `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` in front and `--project demo-clarifai`, and open `/admin`.
+
+Anything that reads the database or a backup directly, such as the statistical analysis, has to apply the same mapping.
 
 ## Backing up the database
 Firestore's own export needs a billing account, so `pnpm db:backup` reads every document instead and writes them to `private-data/backups/<project>-<time>/` (DL-067). It only reads. It also finds the researchers' coding under `sessions/<id>/researcherCoding/R1` and `/R2`: those two parent documents never exist, so reading only a collection's documents would miss everything below them. Timestamps and Firestore's other value types are stored so they come back exactly.
@@ -228,6 +244,8 @@ For local development, `pnpm dev` starts both Firebase emulators and `/admin` op
 `firebase-admin` currently needs the repository patch for `jwks-rsa` recorded in DL-062 so its authentication module can load in Vercel's CommonJS server runtime while continuing to use supported `jose` 6. `pnpm test:firebase-admin-runtime` guards the exact failure. Remove the patch when the upstream lazy-import fix ships in a released `jwks-rsa` version.
 
 The overview defaults to session status and has separate matrices for researcher coding and `Studentbedömning`. The student-assessment view shows one muted Ja/Delvis/Nej circle per stored analysed reflection moment, with explicit empty states when no such moment exists or no reflection was submitted, and links submitted groups directly to the session's reflection tab. A view-only filter can hide participants with no session in any of the four lessons; it never changes stored data. A session detail view exposes the already stored transcript and AI coding, including expandable stored justifications and excerpts, and keeps each researcher's manual notes and coding separate. Source toggles reveal prompt codes and compact sequence tracks beside the transcript; overlapping sequences occupy parallel lanes, and selecting a track opens its stored details in the side panel. Code badges show the framework name on hover or keyboard focus, and transcript turns are labelled with their message number and participant code. The `Reflektion` tab shows all stored reflection moments, answers and agreement choices together with the same AI, Armin and Frida code badges. Both researchers' comments are visible for each moment, while only the signed-in researcher's own comment is editable. The only admin AI write is the one-time lesson 1/4 analysis request described above; all other portal actions remain deterministic or researcher-authored and cannot regenerate AI output (DL-063, DL-065, DL-066, DL-068).
+
+Participants who got new codes after lesson 1 have their lesson 1 shown under their later code; see "Codes changed after lesson 1" (DL-072).
 
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.

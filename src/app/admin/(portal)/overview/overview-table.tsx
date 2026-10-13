@@ -150,7 +150,11 @@ export function OverviewTable({
                         <Link
                           href={`/admin/participant/${participant.participantCode}/lesson/${lesson}`}
                           className="block min-w-44 rounded-lg px-2 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
-                          title={session?.status}
+                          title={
+                            session?.submittedCode
+                              ? `${session.status} · inlämnad med kod ${session.submittedCode}`
+                              : session?.status
+                          }
                         >
                           {view === "status" ? (
                             <StatusBadge state={state} />

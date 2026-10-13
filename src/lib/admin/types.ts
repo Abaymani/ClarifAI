@@ -33,6 +33,8 @@ export type AdminReflectionAssessment =
 
 export type AdminSessionSummary = {
   participantCode: string;
+  // Set when a lesson 1 was handed in under the participant's earlier code (DL-072).
+  submittedCode?: string;
   lesson: Lesson;
   state: Exclude<AdminSessionState, "missing">;
   status: SessionStatus;
