@@ -5,6 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 import type { ResearcherId } from "@/lib/admin/auth";
 import { adminLessonAnalysisRequestFromDocument } from "@/lib/admin/analysis";
+import { icapCounts, promptCodeLevels } from "@/lib/admin/icap-counts";
 import {
   LESSON_ONE_CODES_COLLECTION,
   LESSON_ONE_CODES_DOC,
@@ -81,6 +82,7 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
     ]);
   const codes =
     lessonOneCodes.status === "applied" ? lessonOneCodes.codes : null;
+  const levels = promptCodeLevels(loadFramework());
 
   const codingBySession = new Map<string, Set<ResearcherId>>();
   for (const doc of codingEntries.docs) {
@@ -125,6 +127,9 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
         codingBySession.get(session.id)?.has(researcherId),
       ),
       reflectionAssessment: reflectionAssessment(session),
+      ...(session.analysis
+        ? { aiCodeCounts: icapCounts(session.analysis, levels) }
+        : {}),
     };
     byParticipant.set(participantCode, participant);
   }
