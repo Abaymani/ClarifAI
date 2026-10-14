@@ -32,6 +32,7 @@ export function SessionWorkspace({
   reflectionComments,
   transcriptEmptyText,
   initialView = "transcript",
+  showReflection = true,
 }: {
   sessionId: string;
   participantCode: string;
@@ -45,9 +46,26 @@ export function SessionWorkspace({
   reflectionComments: ReflectionCommentsByResearcher;
   transcriptEmptyText: string | null;
   initialView?: View;
+  showReflection?: boolean;
 }) {
   const [view, setView] = useState<View>(initialView);
   const reflectionCount = reflectionQuestions?.items.length ?? 0;
+  const transcript = transcriptEmptyText ? (
+    <EmptyState text={transcriptEmptyText} />
+  ) : (
+    <TranscriptWorkspace
+      sessionId={sessionId}
+      participantCode={participantCode}
+      messages={messages}
+      analysis={analysis}
+      coding={coding}
+      currentResearcher={currentResearcher}
+      codeOptions={codeOptions}
+    />
+  );
+
+  // Without a reflection to review, a single tab would only add noise.
+  if (!showReflection) return <section>{transcript}</section>;
 
   return (
     <section>
@@ -87,19 +105,7 @@ export function SessionWorkspace({
       </div>
 
       <div id="transcript-panel" role="tabpanel" hidden={view !== "transcript"}>
-        {transcriptEmptyText ? (
-          <EmptyState text={transcriptEmptyText} />
-        ) : (
-          <TranscriptWorkspace
-            sessionId={sessionId}
-            participantCode={participantCode}
-            messages={messages}
-            analysis={analysis}
-            coding={coding}
-            currentResearcher={currentResearcher}
-            codeOptions={codeOptions}
-          />
-        )}
+        {transcript}
       </div>
 
       <div id="reflection-panel" role="tabpanel" hidden={view !== "reflection"}>

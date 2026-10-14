@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, Circle, FileX2, Search } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  Circle,
+  FileText,
+  FileX2,
+  MessageSquareOff,
+  Search,
+} from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import type { ResearcherId } from "@/lib/admin/auth";
@@ -157,7 +165,10 @@ export function OverviewTable({
                           }
                         >
                           {view === "status" ? (
-                            <StatusBadge state={state} />
+                            <StatusBadge
+                              state={state}
+                              submission={session?.transcriptSubmission}
+                            />
                           ) : (
                             <CodingCoverage session={session} />
                           )}
@@ -318,8 +329,10 @@ function OverviewTab({
 
 function StatusBadge({
   state,
+  submission,
 }: {
   state: "started" | "completed" | "missing";
+  submission?: AdminSessionSummary["transcriptSubmission"];
 }) {
   const label = {
     started: "Påbörjad",
@@ -340,6 +353,26 @@ function StatusBadge({
     >
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {label}
+      <SubmissionIcon submission={submission} />
+    </span>
+  );
+}
+
+// What the student handed in, so a lesson without a transcript is not mistaken
+// for one the student never got to. Named on hover and for screen readers.
+function SubmissionIcon({
+  submission,
+}: {
+  submission: AdminSessionSummary["transcriptSubmission"] | undefined;
+}) {
+  if (!submission) return null;
+  const transcript = submission === "transcript";
+  const Icon = transcript ? FileText : MessageSquareOff;
+  const name = transcript ? "Transkript" : "Använde inte Gemini";
+  return (
+    <span title={name} className="inline-flex">
+      <Icon aria-hidden="true" className="size-3.5" />
+      <span className="sr-only">{name}</span>
     </span>
   );
 }
