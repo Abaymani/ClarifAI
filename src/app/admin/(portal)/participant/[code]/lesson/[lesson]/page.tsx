@@ -151,6 +151,8 @@ export default async function AdminTranscriptPage({
             reflectionResponses={session.reflectionResponses}
             reflectionComments={reflectionComments}
             initialView={view === "reflection" ? "reflection" : "transcript"}
+            // Students only reflect in lessons 2 and 3 (DL-073).
+            showReflection={lesson === 2 || lesson === 3}
             transcriptEmptyText={
               session.transcriptSubmission === "no_gemini"
                 ? "Deltagaren uppgav att Gemini inte användes under den här lektionen."

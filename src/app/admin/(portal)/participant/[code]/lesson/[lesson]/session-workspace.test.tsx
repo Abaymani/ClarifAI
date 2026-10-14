@@ -81,6 +81,21 @@ describe("SessionWorkspace", () => {
     expect(screen.getByText("Reflektionsinnehåll")).toBeTruthy();
   });
 
+  test("shows only the transcript in lessons without a reflection", () => {
+    render(
+      <SessionWorkspace
+        {...props}
+        initialView="reflection"
+        showReflection={false}
+      />,
+    );
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByText("Transkriptinnehåll")).toBeTruthy();
+    expect(screen.queryByText("Reflektionsinnehåll")).toBeNull();
+  });
+
   test("can open directly on the reflection tab", () => {
     render(<SessionWorkspace {...props} initialView="reflection" />);
 

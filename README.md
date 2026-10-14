@@ -247,6 +247,8 @@ The overview defaults to session status and has separate matrices for researcher
 
 Participants who got new codes after lesson 1 have their lesson 1 shown under their later code; see "Codes changed after lesson 1" (DL-072).
 
+In the status view, the badge of a lesson with a submission also holds a symbol: a document for a transcript, a crossed-out speech bubble when the student said Gemini was not used. Hovering names it. Lessons 1 and 4 have no reflection, so their session page shows the transcript without the `Reflektion` tab (DL-073).
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 

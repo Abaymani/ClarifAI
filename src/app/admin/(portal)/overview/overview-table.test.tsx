@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 
 import { OverviewTable } from "@/app/admin/(portal)/overview/overview-table";
@@ -63,6 +63,71 @@ describe("OverviewTable", () => {
         .getByRole("tab", { name: "Forskarkodning" })
         .getAttribute("aria-selected"),
     ).toBe("true");
+  });
+
+  test("marks in the status badge whether a lesson has a transcript or the student did not use Gemini", () => {
+    render(
+      <OverviewTable
+        participants={[
+          {
+            participantCode: "12",
+            sessions: {
+              1: {
+                participantCode: "12",
+                lesson: 1,
+                state: "completed",
+                status: "completed",
+                transcriptSubmission: "transcript",
+                codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
+              },
+              2: {
+                participantCode: "12",
+                lesson: 2,
+                state: "completed",
+                status: "completed",
+                transcriptSubmission: "no_gemini",
+                codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
+              },
+              3: {
+                participantCode: "12",
+                lesson: 3,
+                state: "started",
+                status: "awaiting_transcript",
+                transcriptSubmission: null,
+                codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
+              },
+            },
+          },
+        ]}
+      />,
+    );
+
+    const cell = (lesson: number) => {
+      const link = screen
+        .getAllByRole("link")
+        .find((candidate) =>
+          candidate.getAttribute("href")?.endsWith(`/${lesson}`),
+        );
+      if (!link) throw new Error(`no cell for lesson ${lesson}`);
+      return link;
+    };
+    // The symbol sits inside the same badge as the status, without a visible label.
+    const transcript = within(cell(1)).getByTitle("Transkript");
+    expect(transcript.parentElement?.textContent).toBe("SlutfördTranskript");
+    expect(transcript.querySelector("svg")).toBeTruthy();
+    const noGemini = within(cell(2)).getByTitle("Använde inte Gemini");
+    expect(noGemini.parentElement?.textContent).toBe(
+      "SlutfördAnvände inte Gemini",
+    );
+    expect(cell(3).textContent).toBe("Påbörjad");
+    expect(cell(4).textContent).toBe("Saknas");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Forskarkodning" }));
+    expect(screen.queryByTitle("Transkript")).toBeNull();
+    expect(screen.queryByTitle("Använde inte Gemini")).toBeNull();
   });
 
   test("filters by participant code", () => {
