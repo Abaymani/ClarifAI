@@ -1,4 +1,5 @@
 import type { ResearcherId } from "@/lib/admin/auth";
+import type { IcapCounts } from "@/lib/admin/icap-counts";
 import type { AnalysisAgreement } from "@/lib/session/types";
 import type { Lesson } from "@/lib/session/credentials";
 import type {
@@ -41,6 +42,8 @@ export type AdminSessionSummary = {
   transcriptSubmission: TranscriptSubmission;
   codedBy: ResearcherId[];
   reflectionAssessment: AdminReflectionAssessment;
+  // The AI's codes per ICAP level; absent when the session has no AI coding (DL-074).
+  aiCodeCounts?: IcapCounts;
 };
 
 export type AdminParticipantOverview = {

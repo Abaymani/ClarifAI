@@ -14,6 +14,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import type { ResearcherId } from "@/lib/admin/auth";
+import type { IcapCounts, IcapLevel } from "@/lib/admin/icap-counts";
 import { researcherName } from "@/lib/admin/researchers";
 import type {
   AdminParticipantOverview,
@@ -23,7 +24,13 @@ import type {
 import type { AnalysisAgreement } from "@/lib/session/types";
 import { LESSONS } from "@/lib/session/credentials";
 
-type OverviewView = "status" | "coding" | "assessment";
+type OverviewView = "status" | "coding" | "ai" | "assessment";
+
+const ICAP_LEVELS: [IcapLevel, string][] = [
+  ["P", "Passiv"],
+  ["A", "Aktiv"],
+  ["C", "Konstruktiv"],
+];
 
 export function OverviewTable({
   participants,
@@ -66,6 +73,9 @@ export function OverviewTable({
           onSelect={setView}
         >
           Forskarkodning
+        </OverviewTab>
+        <OverviewTab view="ai" selected={view === "ai"} onSelect={setView}>
+          AI-kodning
         </OverviewTab>
         <OverviewTab
           view="assessment"
@@ -113,6 +123,14 @@ export function OverviewTable({
         <p className="text-sm text-muted-foreground">
           Kodad betyder att forskaren har sparat minst en anteckning eller kod
           för lektionen.
+        </p>
+      ) : null}
+
+      {view === "ai" ? (
+        <p className="text-sm text-muted-foreground">
+          Antal promptkoder i AI-kodningen per ICAP-nivå. Varje kod räknas, så
+          en prompt med två koder räknas två gånger, och NA-koder räknas inte.
+          Ramverket har inga promptkoder på nivå I.
         </p>
       ) : null}
 
@@ -169,6 +187,8 @@ export function OverviewTable({
                               state={state}
                               submission={session?.transcriptSubmission}
                             />
+                          ) : view === "ai" ? (
+                            <AiCodeCounts counts={session?.aiCodeCounts} />
                           ) : (
                             <CodingCoverage session={session} />
                           )}
@@ -197,8 +217,36 @@ function panelLabel(view: OverviewView) {
   return {
     status: "Sessionsstatus",
     coding: "Forskarkodning",
+    ai: "AI-kodning",
     assessment: "Studentbedömning",
   }[view];
+}
+
+function AiCodeCounts({ counts }: { counts: IcapCounts | undefined }) {
+  if (!counts) {
+    return (
+      <span className="text-xs text-muted-foreground">Ingen AI-kodning</span>
+    );
+  }
+
+  return (
+    <span className="flex flex-wrap gap-1">
+      {ICAP_LEVELS.map(([level, name]) => (
+        <span
+          key={level}
+          title={name}
+          className={`rounded-md bg-muted/60 px-1.5 py-0.5 text-xs whitespace-nowrap tabular-nums ${counts[level] === 0 ? "text-muted-foreground" : "font-semibold"}`}
+        >
+          <span aria-hidden="true">
+            {counts[level]} {level}
+          </span>
+          <span className="sr-only">
+            {name}: {counts[level]}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function AssessmentLegend() {

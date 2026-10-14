@@ -241,4 +241,60 @@ describe("OverviewTable", () => {
     );
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
+
+  test("counts the AI's codes per ICAP level for every lesson", () => {
+    render(
+      <OverviewTable
+        participants={[
+          {
+            participantCode: "12",
+            sessions: {
+              1: {
+                participantCode: "12",
+                lesson: 1,
+                state: "completed",
+                status: "completed",
+                transcriptSubmission: "transcript",
+                codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
+              },
+              2: {
+                participantCode: "12",
+                lesson: 2,
+                state: "completed",
+                status: "completed",
+                transcriptSubmission: "transcript",
+                codedBy: [],
+                reflectionAssessment: { state: "unavailable" },
+                aiCodeCounts: { P: 5, A: 0, C: 2 },
+              },
+            },
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "AI-kodning" }));
+
+    const lesson2 = screen
+      .getAllByRole("link")
+      .find((link) => link.getAttribute("href")?.endsWith("/2"));
+    // One short label per level, from P on the left to C on the right.
+    const labels = [...lesson2!.querySelectorAll("[title]")].map((label) => [
+      label.getAttribute("title"),
+      label.querySelector('[aria-hidden="true"]')?.textContent,
+    ]);
+    expect(labels).toEqual([
+      ["Passiv", "5 P"],
+      ["Aktiv", "0 A"],
+      ["Konstruktiv", "2 C"],
+    ]);
+    expect(within(lesson2!).getByText("Passiv: 5")).toBeTruthy();
+    expect(screen.getAllByText("Ingen AI-kodning")).toHaveLength(3);
+    expect(
+      screen
+        .getByRole("tabpanel", { name: "AI-kodning" })
+        .querySelectorAll("a"),
+    ).toHaveLength(4);
+  });
 });
