@@ -23,7 +23,6 @@ import {
 import { ChatBubble } from "@/app/session/chat-thread";
 import { ExpandableText } from "@/app/session/expandable-text";
 import { MessageContent } from "@/app/session/message-content";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -921,7 +920,7 @@ function ResearcherCodingPanel({
       {target === "prompt" ? (
         editable ? (
           <PromptEditor
-            key={`${selectedResearcher}-${selectedMessage}-${prompt?.updatedAt ?? "empty"}`}
+            key={`${selectedResearcher}-${selectedMessage}`}
             sessionId={sessionId}
             message={selectedMessage}
             initial={prompt}
@@ -956,6 +955,17 @@ function ResearcherCodingPanel({
   );
 }
 
+type SaveStatus = "saving" | "saved" | { error: string } | null;
+
+function statusText(status: SaveStatus): string | null {
+  if (status === "saving") return "Sparar…";
+  if (status === "saved") return "Sparat.";
+  return status?.error ?? null;
+}
+
+// Codes are saved the moment they are chosen or removed; only the note waits for
+// its own button (DL-075). The editor is not remounted after a save, so an unsaved
+// note survives a code being saved.
 function PromptEditor({
   sessionId,
   message,
@@ -970,44 +980,122 @@ function PromptEditor({
   onSaved: (entry: ResearcherPromptCoding) => void;
 }) {
   const [note, setNote] = useState(initial?.note ?? "");
+  const [savedNote, setSavedNote] = useState(initial?.note ?? "");
   const [codes, setCodes] = useState(initial?.codes ?? []);
-  const [status, setStatus] = useState<string | null>(null);
+  const [noteStatus, setNoteStatus] = useState<SaveStatus>(null);
+  const [codeStatus, setCodeStatus] = useState<SaveStatus>(null);
   const [pending, startTransition] = useTransition();
 
-  function save() {
+  function saveCodes(next: string[]) {
+    const previous = codes;
+    setCodes(next);
+    setCodeStatus("saving");
     startTransition(async () => {
       const result = await savePromptCodingAction({
         sessionId,
         message,
-        note,
-        codes,
+        codes: next,
       });
-      if (!result.ok) return setStatus(result.error);
+      if (!result.ok) {
+        setCodes(previous);
+        setCodeStatus({ error: result.error });
+        return;
+      }
       onSaved(result.entry);
-      setStatus("Sparat.");
+      setCodes(result.entry.codes);
+      setCodeStatus("saved");
+    });
+  }
+
+  function saveNote() {
+    const sent = note;
+    setNoteStatus("saving");
+    startTransition(async () => {
+      const result = await savePromptCodingAction({
+        sessionId,
+        message,
+        note: sent,
+      });
+      if (!result.ok) {
+        setNoteStatus({ error: result.error });
+        return;
+      }
+      onSaved(result.entry);
+      setSavedNote(result.entry.note);
+      setNote((current) => (current === sent ? result.entry.note : current));
+      setNoteStatus("saved");
     });
   }
 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm font-semibold">Prompt {message}</p>
+      <NoteField
+        id={`prompt-note-${message}`}
+        value={note}
+        saved={note === savedNote}
+        status={noteStatus}
+        placeholder="Skriv en anteckning om prompten…"
+        onChange={setNote}
+        onSave={saveNote}
+        disabled={pending}
+      />
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`prompt-note-${message}`}>Anteckning</Label>
-        <Textarea
-          id={`prompt-note-${message}`}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          maxLength={5_000}
-          placeholder="Skriv en anteckning om prompten…"
+        <CodePicker
+          options={codeOptions}
+          selected={codes}
+          onChange={saveCodes}
+          disabled={pending}
         />
+        <p aria-live="polite" className="text-xs text-muted-foreground">
+          {statusText(codeStatus)}
+        </p>
       </div>
-      <CodePicker options={codeOptions} selected={codes} onChange={setCodes} />
+    </div>
+  );
+}
+
+function NoteField({
+  id,
+  value,
+  saved,
+  status,
+  placeholder,
+  onChange,
+  onSave,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  saved: boolean;
+  status: SaveStatus;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  disabled: boolean;
+}) {
+  const message =
+    status === "saving" || (status !== null && status !== "saved")
+      ? statusText(status)
+      : saved
+        ? statusText(status)
+        : "Anteckningen är inte sparad.";
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>Anteckning</Label>
+      <Textarea
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        maxLength={5_000}
+        placeholder={placeholder}
+      />
       <div className="flex items-center justify-between gap-3">
         <p aria-live="polite" className="text-xs text-muted-foreground">
-          {status}
+          {message}
         </p>
-        <Button type="button" onClick={save} disabled={pending}>
-          {pending ? "Sparar…" : "Spara"}
+        <Button type="button" onClick={onSave} disabled={disabled || saved}>
+          Spara anteckning
         </Button>
       </div>
     </div>
@@ -1042,20 +1130,23 @@ function SequencePanel({
   if (editable && (selected || draftId)) {
     return (
       <SequenceEditor
-        key={selected?.updatedAt ?? draftId}
+        key={selected?.id ?? draftId}
         sessionId={sessionId}
         messages={messages}
         initial={selected}
         id={selected?.id ?? draftId!}
         codeOptions={codeOptions}
-        onCancel={() => {
+        onClose={() => {
           setSelectedId(null);
           setDraftId(null);
         }}
         onSaved={(entry) => {
           onSaved(entry);
-          setSelectedId(entry.id);
-          setDraftId(null);
+          // A sequence left without codes and note is removed from storage but
+          // stays open, so a new code can bring it back.
+          const stored = Boolean(entry.note || entry.codes.length > 0);
+          setSelectedId(stored ? entry.id : null);
+          setDraftId(stored ? null : entry.id);
         }}
         onDeleted={(id) => {
           onDeleted(id);
@@ -1109,13 +1200,15 @@ function SequencePanel({
   );
 }
 
+// The range and the codes are saved as soon as they change, and the note with its
+// own button (DL-075). A new sequence is stored once it gets a code or a note.
 function SequenceEditor({
   sessionId,
   messages,
   initial,
   id,
   codeOptions,
-  onCancel,
+  onClose,
   onSaved,
   onDeleted,
 }: {
@@ -1124,12 +1217,13 @@ function SequenceEditor({
   initial?: ResearcherSequenceCoding;
   id: string;
   codeOptions: AdminCodeOption[];
-  onCancel: () => void;
+  onClose: () => void;
   onSaved: (entry: ResearcherSequenceCoding) => void;
   onDeleted: (id: string) => void;
 }) {
   const firstIndex = messages[0]?.index ?? 1;
   const lastIndex = messages.at(-1)?.index ?? firstIndex;
+  const stored = initial !== undefined;
   const [firstMessage, setFirstMessage] = useState(
     initial?.firstMessage ?? firstIndex,
   );
@@ -1137,30 +1231,80 @@ function SequenceEditor({
     initial?.lastMessage ?? lastIndex,
   );
   const [note, setNote] = useState(initial?.note ?? "");
+  const [savedNote, setSavedNote] = useState(initial?.note ?? "");
   const [codes, setCodes] = useState(initial?.codes ?? []);
-  const [status, setStatus] = useState<string | null>(null);
+  const [noteStatus, setNoteStatus] = useState<SaveStatus>(null);
+  const [codeStatus, setCodeStatus] = useState<SaveStatus>(null);
   const [pending, startTransition] = useTransition();
+  const rangeValid = firstMessage <= lastMessage;
 
-  function save() {
+  function send(
+    change: {
+      firstMessage: number;
+      lastMessage: number;
+      note?: string;
+      codes?: string[];
+    },
+    setStatus: (status: SaveStatus) => void,
+    undo: () => void,
+    done?: (entry: ResearcherSequenceCoding) => void,
+  ) {
+    setStatus("saving");
     startTransition(async () => {
       const result = await saveSequenceCodingAction({
         sessionId,
         id,
-        firstMessage,
-        lastMessage,
-        note,
-        codes,
+        ...change,
       });
-      if (!result.ok) return setStatus(result.error);
+      if (!result.ok) {
+        undo();
+        setStatus({ error: result.error });
+        return;
+      }
       onSaved(result.entry);
-      setStatus("Sparat.");
+      setCodes(result.entry.codes);
+      done?.(result.entry);
+      setStatus("saved");
     });
+  }
+
+  function changeRange(range: { firstMessage: number; lastMessage: number }) {
+    const previous = { firstMessage, lastMessage };
+    setFirstMessage(range.firstMessage);
+    setLastMessage(range.lastMessage);
+    // A draft keeps its range until its first code or note is saved.
+    if (!stored || range.firstMessage > range.lastMessage) return;
+    send(range, setCodeStatus, () => {
+      setFirstMessage(previous.firstMessage);
+      setLastMessage(previous.lastMessage);
+    });
+  }
+
+  function saveCodes(next: string[]) {
+    const previous = codes;
+    setCodes(next);
+    send({ firstMessage, lastMessage, codes: next }, setCodeStatus, () =>
+      setCodes(previous),
+    );
+  }
+
+  function saveNote() {
+    const sent = note;
+    send(
+      { firstMessage, lastMessage, note: sent },
+      setNoteStatus,
+      () => {},
+      (entry) => {
+        setSavedNote(entry.note);
+        setNote((current) => (current === sent ? entry.note : current));
+      },
+    );
   }
 
   function remove() {
     startTransition(async () => {
       const result = await deleteSequenceCodingAction({ sessionId, id });
-      if (!result.ok) return setStatus(result.error);
+      if (!result.ok) return setCodeStatus({ error: result.error });
       onDeleted(id);
     });
   }
@@ -1169,44 +1313,62 @@ function SequenceEditor({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">
-          {initial ? "Redigera sekvens" : "Ny sekvens"}
+          {stored ? "Redigera sekvens" : "Ny sekvens"}
         </h3>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Avbryt
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          Stäng
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <SelectMessage
-          label="Från meddelande"
-          value={firstMessage}
-          messages={messages}
-          onChange={setFirstMessage}
-        />
-        <SelectMessage
-          label="Till meddelande"
-          value={lastMessage}
-          messages={messages}
-          onChange={setLastMessage}
-        />
-      </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`sequence-note-${id}`}>Anteckning</Label>
-        <Textarea
-          id={`sequence-note-${id}`}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          maxLength={5_000}
-          placeholder="Skriv en anteckning om sekvensen…"
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <SelectMessage
+            label="Från meddelande"
+            value={firstMessage}
+            messages={messages}
+            onChange={(value) =>
+              changeRange({ firstMessage: value, lastMessage })
+            }
+            disabled={pending}
+          />
+          <SelectMessage
+            label="Till meddelande"
+            value={lastMessage}
+            messages={messages}
+            onChange={(value) =>
+              changeRange({ firstMessage, lastMessage: value })
+            }
+            disabled={pending}
+          />
+        </div>
+        {!rangeValid ? (
+          <p className="text-xs text-destructive">
+            Sekvensen kan inte sluta före meddelandet den börjar på.
+          </p>
+        ) : null}
       </div>
-      <CodePicker options={codeOptions} selected={codes} onChange={setCodes} />
-      {status ? (
-        <Alert variant={status === "Sparat." ? "default" : "destructive"}>
-          <AlertDescription>{status}</AlertDescription>
-        </Alert>
-      ) : null}
-      <div className="flex justify-between gap-2">
-        {initial ? (
+      <NoteField
+        id={`sequence-note-${id}`}
+        value={note}
+        saved={note === savedNote}
+        status={noteStatus}
+        placeholder="Skriv en anteckning om sekvensen…"
+        onChange={setNote}
+        onSave={saveNote}
+        disabled={pending || !rangeValid}
+      />
+      <div className="flex flex-col gap-2">
+        <CodePicker
+          options={codeOptions}
+          selected={codes}
+          onChange={saveCodes}
+          disabled={pending || !rangeValid}
+        />
+        <p aria-live="polite" className="text-xs text-muted-foreground">
+          {statusText(codeStatus)}
+        </p>
+      </div>
+      {stored ? (
+        <div>
           <Button
             type="button"
             variant="destructive"
@@ -1216,13 +1378,8 @@ function SequenceEditor({
             <Trash2 aria-hidden="true" />
             Ta bort
           </Button>
-        ) : (
-          <span />
-        )}
-        <Button type="button" onClick={save} disabled={pending}>
-          {pending ? "Sparar…" : "Spara sekvens"}
-        </Button>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1232,11 +1389,13 @@ function SelectMessage({
   value,
   messages,
   onChange,
+  disabled,
 }: {
   label: string;
   value: number;
   messages: TranscriptMessage[];
   onChange: (value: number) => void;
+  disabled: boolean;
 }) {
   return (
     <label className="flex flex-col gap-2 text-sm">
@@ -1244,7 +1403,8 @@ function SelectMessage({
       <select
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-9 rounded-lg border bg-background px-2"
+        disabled={disabled}
+        className="h-9 rounded-lg border bg-background px-2 disabled:opacity-60"
       >
         {messages.map((message) => (
           <option key={message.index} value={message.index}>
@@ -1256,14 +1416,18 @@ function SelectMessage({
   );
 }
 
+// Saving happens one change at a time, so choosing and removing are paused while
+// a save is under way; typing a search is not.
 function CodePicker({
   options,
   selected,
   onChange,
+  disabled,
 }: {
   options: AdminCodeOption[];
   selected: string[];
   onChange: (codes: string[]) => void;
+  disabled: boolean;
 }) {
   const [query, setQuery] = useState("");
   const results = useMemo(() => {
@@ -1307,7 +1471,8 @@ function CodePicker({
                   onChange([...selected, option.code]);
                   setQuery("");
                 }}
-                className="block w-full rounded-md px-3 py-2 text-left hover:bg-muted"
+                disabled={disabled}
+                className="block w-full rounded-md px-3 py-2 text-left hover:bg-muted disabled:opacity-60"
               >
                 <span className="text-sm font-medium">
                   {option.code} · {option.name}
@@ -1341,7 +1506,9 @@ function CodePicker({
                   onClick={() =>
                     onChange(selected.filter((candidate) => candidate !== code))
                   }
+                  disabled={disabled}
                   aria-label={`Ta bort ${code}`}
+                  className="disabled:opacity-60"
                 >
                   <X aria-hidden="true" className="size-3" />
                 </button>

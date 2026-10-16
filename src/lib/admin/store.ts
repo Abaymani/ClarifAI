@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type DocumentReference } from "firebase-admin/firestore";
 
 import type { ResearcherId } from "@/lib/admin/auth";
 import { adminLessonAnalysisRequestFromDocument } from "@/lib/admin/analysis";
@@ -282,8 +282,8 @@ export async function savePromptCoding(input: {
   sessionId: string;
   researcherId: ResearcherId;
   message: number;
-  note: string;
-  codes: string[];
+  note?: string;
+  codes?: string[];
   now?: Date;
 }): Promise<ResearcherPromptCoding> {
   const session = await requiredSession(input.sessionId);
@@ -293,33 +293,26 @@ export async function savePromptCoding(input: {
   if (!message || message.role !== "student") {
     throw new AdminCodingError("INVALID_PROMPT");
   }
-  const note = validNote(input.note);
-  const { codes, frameworkVersion } = validCodes(input.codes, "prompt");
   const now = input.now ?? new Date();
   const id = `prompt-${message.index}`;
-  const ref = codingEntries(session.id, input.researcherId).doc(id);
-
-  if (!note && codes.length === 0) {
-    await ref.delete();
-  } else {
-    await ref.set({
+  const fields = await saveEntryFields(
+    codingEntries(session.id, input.researcherId).doc(id),
+    { note: input.note, codes: input.codes },
+    "prompt",
+    (stored) => ({
       kind: "prompt",
       researcherId: input.researcherId,
       message: message.index,
-      note,
-      codes,
-      frameworkVersion,
+      ...stored,
       updatedAt: Timestamp.fromDate(now),
-    });
-  }
+    }),
+  );
   return {
     id,
     kind: "prompt",
     researcherId: input.researcherId,
     message: message.index,
-    note,
-    codes,
-    frameworkVersion,
+    ...fields,
     updatedAt: now.toISOString(),
   };
 }
@@ -330,8 +323,8 @@ export async function saveSequenceCoding(input: {
   id: string;
   firstMessage: number;
   lastMessage: number;
-  note: string;
-  codes: string[];
+  note?: string;
+  codes?: string[];
   now?: Date;
 }): Promise<ResearcherSequenceCoding> {
   if (!/^sequence-[a-zA-Z0-9-]{8,80}$/.test(input.id)) {
@@ -348,35 +341,66 @@ export async function saveSequenceCoding(input: {
   ) {
     throw new AdminCodingError("INVALID_SEQUENCE");
   }
-  const note = validNote(input.note);
-  const { codes, frameworkVersion } = validCodes(input.codes, "sequence");
-  if (!note && codes.length === 0) {
-    throw new AdminCodingError("EMPTY_ENTRY");
-  }
   const now = input.now ?? new Date();
-  await codingEntries(session.id, input.researcherId)
-    .doc(input.id)
-    .set({
+  const fields = await saveEntryFields(
+    codingEntries(session.id, input.researcherId).doc(input.id),
+    { note: input.note, codes: input.codes },
+    "sequence",
+    (stored) => ({
       kind: "sequence",
       researcherId: input.researcherId,
       firstMessage: input.firstMessage,
       lastMessage: input.lastMessage,
-      note,
-      codes,
-      frameworkVersion,
+      ...stored,
       updatedAt: Timestamp.fromDate(now),
-    });
+    }),
+  );
   return {
     id: input.id,
     kind: "sequence",
     researcherId: input.researcherId,
     firstMessage: input.firstMessage,
     lastMessage: input.lastMessage,
-    note,
-    codes,
-    frameworkVersion,
+    ...fields,
     updatedAt: now.toISOString(),
   };
+}
+
+type EntryFields = { note: string; codes: string[]; frameworkVersion: string };
+
+// A field left out keeps its stored value, so a code can be saved the moment it is
+// chosen while the note waits for its own save. An entry left with neither a note
+// nor a code is removed (DL-075).
+async function saveEntryFields(
+  ref: DocumentReference,
+  change: { note?: string; codes?: string[] },
+  kind: "prompt" | "sequence",
+  document: (fields: EntryFields) => Record<string, unknown>,
+): Promise<EntryFields> {
+  const note = change.note === undefined ? undefined : validNote(change.note);
+  const chosen =
+    change.codes === undefined ? undefined : validCodes(change.codes, kind);
+  return getDb().runTransaction(async (tx) => {
+    const stored = (await tx.get(ref)).data();
+    const fields: EntryFields = {
+      note: note ?? (typeof stored?.note === "string" ? stored.note : ""),
+      codes:
+        chosen?.codes ??
+        (Array.isArray(stored?.codes)
+          ? stored.codes.filter(
+              (code): code is string => typeof code === "string",
+            )
+          : []),
+      frameworkVersion:
+        chosen?.frameworkVersion ??
+        (typeof stored?.frameworkVersion === "string"
+          ? stored.frameworkVersion
+          : loadFramework().version),
+    };
+    if (!fields.note && fields.codes.length === 0) tx.delete(ref);
+    else tx.set(ref, document(fields));
+    return fields;
+  });
 }
 
 export async function deleteSequenceCoding(input: {
@@ -401,7 +425,6 @@ export class AdminCodingError extends Error {
       | "INVALID_SEQUENCE"
       | "INVALID_NOTE"
       | "INVALID_CODE"
-      | "EMPTY_ENTRY"
       | "INVALID_REFLECTION_ITEM"
       | "INVALID_COMMENT",
   ) {
