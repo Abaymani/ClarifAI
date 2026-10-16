@@ -251,6 +251,8 @@ In the status view, the badge of a lesson with a submission also holds a symbol:
 
 The `AI-kodning` tab counts the AI's prompt codes on the levels P, A and C for each participant and lesson, shown as short labels such as `2 P`. Every prompt code counts, so a prompt with two codes counts twice, and NA codes are not counted. The framework has no Interactive prompt codes, so I is not shown (DL-074).
 
+When coding a transcript, a code is saved as soon as it is chosen or removed, and so is a stored sequence's range. Only the note has a save button, and the editor says when the note is not saved yet (DL-075).
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 

@@ -16,18 +16,23 @@ import type {
 type ActionError = { ok: false; error: string };
 type ActionSuccess<T> = { ok: true; entry: T };
 
+// A field left out keeps its stored value, so codes can be saved the moment they
+// are chosen without saving a half-written note (DL-075).
 export async function savePromptCodingAction(input: {
   sessionId: string;
   message: number;
-  note: string;
-  codes: string[];
+  note?: string;
+  codes?: string[];
 }): Promise<ActionSuccess<ResearcherPromptCoding> | ActionError> {
   const researcher = await getCurrentResearcher();
   if (!researcher) return { ok: false, error: "Du är inte längre inloggad." };
 
   try {
     const entry = await savePromptCoding({
-      ...input,
+      sessionId: input.sessionId,
+      message: input.message,
+      note: input.note,
+      codes: input.codes,
       researcherId: researcher.id,
     });
     revalidatePath("/admin");
@@ -46,15 +51,20 @@ export async function saveSequenceCodingAction(input: {
   id: string;
   firstMessage: number;
   lastMessage: number;
-  note: string;
-  codes: string[];
+  note?: string;
+  codes?: string[];
 }): Promise<ActionSuccess<ResearcherSequenceCoding> | ActionError> {
   const researcher = await getCurrentResearcher();
   if (!researcher) return { ok: false, error: "Du är inte längre inloggad." };
 
   try {
     const entry = await saveSequenceCoding({
-      ...input,
+      sessionId: input.sessionId,
+      id: input.id,
+      firstMessage: input.firstMessage,
+      lastMessage: input.lastMessage,
+      note: input.note,
+      codes: input.codes,
       researcherId: researcher.id,
     });
     revalidatePath("/admin");

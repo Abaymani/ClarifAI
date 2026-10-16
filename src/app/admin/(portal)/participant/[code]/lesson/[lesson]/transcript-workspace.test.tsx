@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@/app/admin/(portal)/coding-actions", () => ({
@@ -7,7 +13,12 @@ vi.mock("@/app/admin/(portal)/coding-actions", () => ({
   deleteSequenceCodingAction: vi.fn(),
 }));
 
+import {
+  savePromptCodingAction,
+  saveSequenceCodingAction,
+} from "@/app/admin/(portal)/coding-actions";
 import { TranscriptWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/transcript-workspace";
+import type { ResearcherPromptCoding } from "@/lib/admin/types";
 
 const props = {
   sessionId: "12_2",
@@ -283,5 +294,138 @@ describe("TranscriptWorkspace", () => {
 
     fireEvent.mouseLeave(sequence);
     expect(tooltip.className).toContain("absolute");
+  });
+
+  describe("saving researcher coding", () => {
+    const armin = props.coding.R1[0] as ResearcherPromptCoding;
+
+    function searchCode(text: string) {
+      fireEvent.change(
+        screen.getByPlaceholderText("Sök kod, beskrivning eller exempel"),
+        { target: { value: text } },
+      );
+    }
+
+    test("saves a prompt code as soon as it is chosen, without the unsaved note", async () => {
+      vi.mocked(savePromptCodingAction).mockResolvedValue({
+        ok: true,
+        entry: { ...armin, codes: ["C2", "A6"] },
+      });
+      render(<TranscriptWorkspace {...props} />);
+
+      fireEvent.change(screen.getByLabelText("Anteckning"), {
+        target: { value: "En tanke som inte är klar" },
+      });
+      searchCode("noggrann");
+      fireEvent.click(
+        screen.getByRole("button", { name: /A6 · Precis rapportering/ }),
+      );
+
+      expect(savePromptCodingAction).toHaveBeenCalledWith({
+        sessionId: "12_2",
+        message: 1,
+        codes: ["C2", "A6"],
+      });
+      expect(await screen.findByText("Sparat.")).toBeTruthy();
+      expect(
+        (screen.getByLabelText("Anteckning") as HTMLTextAreaElement).value,
+      ).toBe("En tanke som inte är klar");
+      expect(screen.getByText("Anteckningen är inte sparad.")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Ta bort A6" })).toBeTruthy();
+    });
+
+    test("saves the note only with its button", async () => {
+      vi.mocked(savePromptCodingAction).mockResolvedValue({
+        ok: true,
+        entry: { ...armin, note: "Ny anteckning" },
+      });
+      render(<TranscriptWorkspace {...props} />);
+      const save = screen.getByRole("button", { name: "Spara anteckning" });
+      expect((save as HTMLButtonElement).disabled).toBe(true);
+
+      fireEvent.change(screen.getByLabelText("Anteckning"), {
+        target: { value: "Ny anteckning" },
+      });
+      fireEvent.click(save);
+
+      expect(savePromptCodingAction).toHaveBeenCalledWith({
+        sessionId: "12_2",
+        message: 1,
+        note: "Ny anteckning",
+      });
+      await waitFor(() =>
+        expect((save as HTMLButtonElement).disabled).toBe(true),
+      );
+      expect(screen.getByText("Sparat.")).toBeTruthy();
+    });
+
+    test("puts a removed code back when it could not be saved", async () => {
+      vi.mocked(savePromptCodingAction).mockResolvedValue({
+        ok: false,
+        error: "Kodningen kunde inte sparas.",
+      });
+      render(<TranscriptWorkspace {...props} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Ta bort C2" }));
+
+      expect(savePromptCodingAction).toHaveBeenCalledWith({
+        sessionId: "12_2",
+        message: 1,
+        codes: [],
+      });
+      expect(
+        await screen.findByText("Kodningen kunde inte sparas."),
+      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Ta bort C2" })).toBeTruthy();
+    });
+
+    test("stores a new sequence with its first code and saves range changes at once", async () => {
+      vi.mocked(saveSequenceCodingAction).mockImplementation(async (input) => ({
+        ok: true,
+        entry: {
+          id: input.id,
+          kind: "sequence",
+          researcherId: "R1",
+          firstMessage: input.firstMessage,
+          lastMessage: input.lastMessage,
+          note: "",
+          codes: input.codes ?? ["S7"],
+          frameworkVersion: "test",
+          updatedAt: "2026-10-16T00:00:00.000Z",
+        },
+      }));
+      render(<TranscriptWorkspace {...props} />);
+      fireEvent.click(screen.getByRole("button", { name: "Sekvenser" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ny sekvens" }));
+
+      // A draft's range is not saved on its own.
+      fireEvent.change(screen.getByLabelText("Från meddelande"), {
+        target: { value: "2" },
+      });
+      expect(saveSequenceCodingAction).not.toHaveBeenCalled();
+
+      searchCode("samkonstruktion");
+      fireEvent.click(
+        screen.getByRole("button", { name: /S7 · Produktiv samkonstruktion/ }),
+      );
+      expect(saveSequenceCodingAction).toHaveBeenCalledWith({
+        sessionId: "12_2",
+        id: expect.stringMatching(/^sequence-/),
+        firstMessage: 2,
+        lastMessage: 3,
+        codes: ["S7"],
+      });
+      expect(await screen.findByText("Redigera sekvens")).toBeTruthy();
+
+      fireEvent.change(screen.getByLabelText("Till meddelande"), {
+        target: { value: "2" },
+      });
+      expect(saveSequenceCodingAction).toHaveBeenLastCalledWith({
+        sessionId: "12_2",
+        id: expect.stringMatching(/^sequence-/),
+        firstMessage: 2,
+        lastMessage: 2,
+      });
+    });
   });
 });
