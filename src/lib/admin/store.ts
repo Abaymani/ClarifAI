@@ -2,9 +2,17 @@ import "server-only";
 
 import { cache } from "react";
 import { Timestamp, type DocumentReference } from "firebase-admin/firestore";
+import { z } from "zod";
 
 import type { ResearcherId } from "@/lib/admin/auth";
 import { adminLessonAnalysisRequestFromDocument } from "@/lib/admin/analysis";
+import {
+  calculateCoderAgreement,
+  type AgreementSessionInput,
+  type CoderAgreement,
+  type PromptCodes,
+  type StoredCoderAgreement,
+} from "@/lib/admin/coder-agreement";
 import { icapCounts, promptCodeLevels } from "@/lib/admin/icap-counts";
 import {
   LESSON_ONE_CODES_COLLECTION,
@@ -37,6 +45,8 @@ const SESSIONS = "sessions";
 const RESEARCHER_CODING = "researcherCoding";
 const RESEARCHER_REFLECTION_COMMENTS = "researcherReflectionComments";
 const ENTRIES = "entries";
+const CODER_AGREEMENT_COLLECTION = "coderAgreement";
+const CODER_AGREEMENT_DOC = "latest";
 export const MAX_RESEARCHER_NOTE_LENGTH = 5_000;
 
 // Read once per request. A mapping that cannot be applied safely is ignored as a
@@ -86,13 +96,9 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
 
   const codingBySession = new Map<string, Set<ResearcherId>>();
   for (const doc of codingEntries.docs) {
-    const match =
-      /^sessions\/([^/]+)\/researcherCoding\/(R1|R2)\/entries\/[^/]+$/.exec(
-        doc.ref.path,
-      );
-    if (!match) continue;
-    const sessionId = match[1];
-    const researcherId = match[2] as ResearcherId;
+    const owner = researcherCodingEntryOwner(doc.ref.path);
+    if (!owner) continue;
+    const { sessionId, researcherId } = owner;
     const researchers = codingBySession.get(sessionId) ?? new Set();
     researchers.add(researcherId);
     codingBySession.set(sessionId, researchers);
@@ -160,6 +166,162 @@ function reflectionAssessment(session: Session): AdminReflectionAssessment {
     ),
   };
 }
+
+// Compares every transcript's prompt coding and replaces the stored result, which
+// both researchers then see until the next run (DL-076).
+export async function runCoderAgreement(
+  researcherId: ResearcherId,
+  now: Date = new Date(),
+): Promise<StoredCoderAgreement> {
+  const db = getDb();
+  const [sessions, entries] = await Promise.all([
+    db.collection(SESSIONS).get(),
+    db.collectionGroup(ENTRIES).get(),
+  ]);
+
+  const codingBySession = new Map<
+    string,
+    Record<ResearcherId, PromptCodes[]>
+  >();
+  for (const doc of entries.docs) {
+    const owner = researcherCodingEntryOwner(doc.ref.path);
+    if (!owner) continue;
+    for (const entry of parseEntry(doc.id, doc.data(), owner.researcherId)) {
+      if (entry.kind !== "prompt") continue;
+      const coding = codingBySession.get(owner.sessionId) ?? { R1: [], R2: [] };
+      coding[owner.researcherId].push({
+        message: entry.message,
+        codes: entry.codes,
+      });
+      codingBySession.set(owner.sessionId, coding);
+    }
+  }
+
+  const inputs = sessions.docs.flatMap((doc): AgreementSessionInput[] => {
+    const session = sessionFromDocument(doc.id, doc.data());
+    const prompts =
+      session.transcript?.messages
+        .filter((message) => message.role === "student")
+        .map((message) => message.index) ?? [];
+    if (prompts.length === 0) return [];
+    return [
+      {
+        sessionId: session.id,
+        participantCode: session.participantCode,
+        lesson: session.lesson,
+        prompts,
+        coding: {
+          ...(codingBySession.get(session.id) ?? { R1: [], R2: [] }),
+          AI:
+            session.analysis?.prompts.map((prompt) => ({
+              message: prompt.message,
+              codes: prompt.codes.map((coded) => coded.code),
+            })) ?? [],
+        },
+      },
+    ];
+  });
+
+  const agreement = calculateCoderAgreement(inputs, loadFramework());
+  // As JSON text, Firestore does not index the result value by value; nobody
+  // queries it.
+  await db
+    .collection(CODER_AGREEMENT_COLLECTION)
+    .doc(CODER_AGREEMENT_DOC)
+    .set({
+      calculatedAt: Timestamp.fromDate(now),
+      calculatedBy: researcherId,
+      result: JSON.stringify(agreement),
+    });
+  return {
+    ...agreement,
+    calculatedAt: now.toISOString(),
+    calculatedBy: researcherId,
+  };
+}
+
+// Null before the first run, or for a result stored in a shape this version
+// cannot read; running again replaces it.
+export async function loadCoderAgreement(): Promise<StoredCoderAgreement | null> {
+  const snapshot = await getDb()
+    .collection(CODER_AGREEMENT_COLLECTION)
+    .doc(CODER_AGREEMENT_DOC)
+    .get();
+  const data = snapshot.data();
+  if (
+    !data ||
+    !(data.calculatedAt instanceof Timestamp) ||
+    (data.calculatedBy !== "R1" && data.calculatedBy !== "R2") ||
+    typeof data.result !== "string"
+  ) {
+    return null;
+  }
+
+  let result: unknown;
+  try {
+    result = JSON.parse(data.result);
+  } catch {
+    return null;
+  }
+  const parsed = coderAgreementSchema.safeParse(result);
+  if (!parsed.success) return null;
+  return {
+    ...parsed.data,
+    calculatedAt: data.calculatedAt.toDate().toISOString(),
+    calculatedBy: data.calculatedBy,
+  };
+}
+
+const lessonSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+]);
+const pairSchema = z.enum(["R1-R2", "AI-R1", "AI-R2"]);
+const categorySchema = z.object({
+  category: z.string(),
+  alpha: z.number().nullable(),
+  both: z.number(),
+  onlyFirst: z.number(),
+  onlySecond: z.number(),
+});
+const setSchema = z.object({
+  alpha: z.number().nullable(),
+  identical: z.number(),
+  firstTotal: z.number(),
+  secondTotal: z.number(),
+});
+const coderAgreementSchema: z.ZodType<CoderAgreement> = z.object({
+  transcripts: z.array(
+    z.object({
+      sessionId: z.string(),
+      participantCode: z.string(),
+      lesson: lessonSchema,
+      prompts: z.number(),
+      coders: z.array(z.enum(["R1", "R2", "AI"])),
+      differing: z.array(z.object({ pair: pairSchema, prompts: z.number() })),
+    }),
+  ),
+  variants: z.array(
+    z.object({
+      lesson: lessonSchema.nullable(),
+      base: z.enum(["pair", "allThree"]),
+      pairs: z.array(
+        z.object({
+          pair: pairSchema,
+          transcripts: z.number(),
+          prompts: z.number(),
+          promptsWithoutCodes: z.number(),
+          codes: setSchema,
+          levels: setSchema,
+          perCode: z.array(categorySchema),
+          perLevel: z.array(categorySchema),
+        }),
+      ),
+    }),
+  ),
+});
 
 export type AdminParticipantLesson = {
   session: AdminSession | null;
@@ -431,6 +593,18 @@ export class AdminCodingError extends Error {
     super(code);
     this.name = "AdminCodingError";
   }
+}
+
+// Every `entries` subcollection shares one collection group, so the researchers'
+// coding is told apart from reflection comments by its path.
+function researcherCodingEntryOwner(
+  path: string,
+): { sessionId: string; researcherId: ResearcherId } | null {
+  const match =
+    /^sessions\/([^/]+)\/researcherCoding\/(R1|R2)\/entries\/[^/]+$/.exec(path);
+  return match
+    ? { sessionId: match[1], researcherId: match[2] as ResearcherId }
+    : null;
 }
 
 function codingEntries(sessionId: string, researcherId: ResearcherId) {
