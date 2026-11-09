@@ -6,6 +6,18 @@ import { useRouter } from "next/navigation";
 import { Calculator, LoaderCircle, RefreshCw } from "lucide-react";
 
 import { runCoderAgreementAction } from "@/app/admin/(portal)/agreement-actions";
+import {
+  PAIR_CODERS,
+  UNCERTAIN_BELOW,
+  Uncertain,
+  coderName,
+  type AgreementCode,
+  formatAlpha,
+  formatDifference,
+  formatInterval,
+  pairName,
+} from "@/app/admin/(portal)/agreement/agreement-format";
+import { FrameworkChangesPanel } from "@/app/admin/(portal)/agreement/framework-changes-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type {
@@ -13,9 +25,6 @@ import type {
   AgreementTranscript,
   CategoryAgreement,
   Coder,
-  CoderPair,
-  Difference,
-  Interval,
   PairAgreement,
   SetAgreement,
   StoredCoderAgreement,
@@ -24,35 +33,15 @@ import type { IcapLevel } from "@/lib/admin/icap-counts";
 import { researcherName } from "@/lib/admin/researchers";
 import { LESSONS, type Lesson } from "@/lib/session/credentials";
 
-export type AgreementCode = { code: string; name: string; level: IcapLevel };
-
-const PAIR_CODERS: Record<CoderPair, [Coder, Coder]> = {
-  "R1-R2": ["R1", "R2"],
-  "AI-R1": ["AI", "R1"],
-  "AI-R2": ["AI", "R2"],
-};
 const LEVEL_NAMES: [IcapLevel, string][] = [
   ["P", "Passiv"],
   ["A", "Aktiv"],
   ["C", "Konstruktiv"],
 ];
-const ALPHA = new Intl.NumberFormat("sv-SE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 const MEAN = new Intl.NumberFormat("sv-SE", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
-const DIFFERENCE = new Intl.NumberFormat("sv-SE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
-});
-// Intervals from fewer transcripts are shown but marked as unreliable (DL-077).
-const UNCERTAIN_BELOW = 10;
-const UNCERTAIN_STYLE =
-  "rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200";
 
 export function CoderAgreementView({
   agreement,
@@ -173,6 +162,8 @@ export function CoderAgreementView({
               categories={(pair) => pair.perLevel}
             />
           </section>
+
+          <FrameworkChangesPanel codes={codes} lesson={lesson} base={base} />
 
           <section
             className="flex flex-col gap-3"
@@ -577,50 +568,5 @@ function TranscriptTable({
         </p>
       ) : null}
     </div>
-  );
-}
-
-function coderName(coder: Coder): string {
-  return coder === "AI" ? "AI" : researcherName(coder);
-}
-
-function pairName(pair: CoderPair): string {
-  const [first, second] = PAIR_CODERS[pair];
-  return `${coderName(first)} – ${coderName(second)}`;
-}
-
-function formatAlpha(value: number | null): string {
-  return value === null ? "–" : ALPHA.format(value);
-}
-
-// "till" rather than a dash when a bound is negative, so the minus sign can't be
-// mistaken for the dash.
-function formatInterval(interval: Interval | null, label: string): string {
-  if (!interval) return `${label} kan inte beräknas`;
-  const [low, high] = interval.map((bound) => ALPHA.format(bound));
-  return `${label} ${low}${interval[0] < 0 ? " till " : "–"}${high}`;
-}
-
-function formatDifference(difference: Difference | null): string {
-  const lead = `Jämfört med ${pairName("R1-R2")}:`;
-  if (!difference) return `${lead} kan inte beräknas`;
-  return `${lead} ${DIFFERENCE.format(difference.estimate)} (${formatInterval(difference.interval, "95 % KI")})`;
-}
-
-function Uncertain({
-  transcripts,
-  long = false,
-}: {
-  transcripts: number;
-  long?: boolean;
-}) {
-  if (transcripts >= UNCERTAIN_BELOW) return null;
-  return (
-    <span
-      className={UNCERTAIN_STYLE}
-      title={`Färre än ${UNCERTAIN_BELOW} transkript`}
-    >
-      {long ? `Osäkert: färre än ${UNCERTAIN_BELOW} transkript` : "Osäkert"}
-    </span>
   );
 }

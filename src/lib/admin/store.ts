@@ -8,11 +8,18 @@ import type { ResearcherId } from "@/lib/admin/auth";
 import { adminLessonAnalysisRequestFromDocument } from "@/lib/admin/analysis";
 import {
   calculateCoderAgreement,
+  compareFrameworkChanges,
   type AgreementSessionInput,
+  type ChangeVariant,
   type CoderAgreement,
   type PromptCodes,
   type StoredCoderAgreement,
 } from "@/lib/admin/coder-agreement";
+import {
+  applyFrameworkChanges,
+  frameworkChangesProblem,
+  type FrameworkChange,
+} from "@/lib/admin/framework-changes";
 import { icapCounts, promptCodeLevels } from "@/lib/admin/icap-counts";
 import {
   LESSON_ONE_CODES_COLLECTION,
@@ -173,6 +180,52 @@ export async function runCoderAgreement(
   researcherId: ResearcherId,
   now: Date = new Date(),
 ): Promise<StoredCoderAgreement> {
+  const agreement = calculateCoderAgreement(
+    await loadAgreementInputs(),
+    loadFramework(),
+  );
+  // As JSON text, Firestore does not index the result value by value; nobody
+  // queries it.
+  await getDb()
+    .collection(CODER_AGREEMENT_COLLECTION)
+    .doc(CODER_AGREEMENT_DOC)
+    .set({
+      calculatedAt: Timestamp.fromDate(now),
+      calculatedBy: researcherId,
+      result: JSON.stringify(agreement),
+    });
+  return {
+    ...agreement,
+    calculatedAt: now.toISOString(),
+    calculatedBy: researcherId,
+  };
+}
+
+// Only reads: the changes are made to a copy in memory, and nothing, not even the
+// result, is written (DL-078).
+export async function tryFrameworkChanges(
+  changes: readonly FrameworkChange[],
+): Promise<
+  { ok: true; variants: ChangeVariant[] } | { ok: false; problem: string }
+> {
+  const framework = loadFramework();
+  const problem = frameworkChangesProblem(changes, framework);
+  if (problem) return { ok: false, problem };
+
+  const sessions = await loadAgreementInputs();
+  return {
+    ok: true,
+    variants: compareFrameworkChanges(
+      sessions,
+      framework,
+      applyFrameworkChanges(sessions, framework, changes),
+    ),
+  };
+}
+
+// Every transcript's student prompts with Armin's, Frida's and the AI's prompt
+// codes, read without writing anything.
+async function loadAgreementInputs(): Promise<AgreementSessionInput[]> {
   const db = getDb();
   const [sessions, entries] = await Promise.all([
     db.collection(SESSIONS).get(),
@@ -197,7 +250,7 @@ export async function runCoderAgreement(
     }
   }
 
-  const inputs = sessions.docs.flatMap((doc): AgreementSessionInput[] => {
+  return sessions.docs.flatMap((doc): AgreementSessionInput[] => {
     const session = sessionFromDocument(doc.id, doc.data());
     const prompts =
       session.transcript?.messages
@@ -221,23 +274,6 @@ export async function runCoderAgreement(
       },
     ];
   });
-
-  const agreement = calculateCoderAgreement(inputs, loadFramework());
-  // As JSON text, Firestore does not index the result value by value; nobody
-  // queries it.
-  await db
-    .collection(CODER_AGREEMENT_COLLECTION)
-    .doc(CODER_AGREEMENT_DOC)
-    .set({
-      calculatedAt: Timestamp.fromDate(now),
-      calculatedBy: researcherId,
-      result: JSON.stringify(agreement),
-    });
-  return {
-    ...agreement,
-    calculatedAt: now.toISOString(),
-    calculatedBy: researcherId,
-  };
 }
 
 // Null before the first run, or for a result stored in a shape this version

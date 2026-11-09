@@ -3,12 +3,14 @@ import { describe, expect, test } from "vitest";
 
 import {
   calculateCoderAgreement,
+  compareFrameworkChanges,
   masiDistance,
   type AgreementSessionInput,
   type CoderAgreement,
   type CoderPair,
   type PromptCodes,
 } from "@/lib/admin/coder-agreement";
+import { applyFrameworkChanges } from "@/lib/admin/framework-changes";
 import type { Lesson } from "@/lib/session/credentials";
 
 const framework = {
@@ -386,5 +388,49 @@ describe("calculateCoderAgreement", () => {
 
     expect(versus?.codes).toEqual({ estimate: 0, interval: [0, 0] });
     expect(versus?.levels).toEqual({ estimate: 0, interval: [0, 0] });
+  });
+});
+
+describe("compareFrameworkChanges", () => {
+  test("finds no change when nothing changes", () => {
+    const sessions = randomSessions(12);
+    const [all] = compareFrameworkChanges(sessions, framework, {
+      sessions,
+      framework,
+    });
+    const pair = all.pairs[0];
+
+    expect(pair.codes.after).toBe(pair.codes.before);
+    expect(pair.codes.difference).toEqual({ estimate: 0, interval: [0, 0] });
+    expect(pair.affected).toBe(0);
+  });
+
+  test("shows the gain from merging codes the coders mix up, with an interval", () => {
+    // On every other transcript Armin gives P1 where Frida gives A2.
+    const sessions = Array.from({ length: 12 }, (_, s) =>
+      session(`${740 + s}_2`, {
+        R1: { 1: ["P1"], 3: ["C3"], 5: s % 2 ? ["P2"] : ["C10"] },
+        R2: {
+          1: s % 2 ? ["A2"] : ["P1"],
+          3: ["C3"],
+          5: s % 2 ? ["P2"] : ["C10"],
+        },
+      }),
+    );
+    const changed = applyFrameworkChanges(sessions, framework, [
+      { kind: "merge", codes: ["P1", "A2"], level: "P" },
+    ]);
+    const [all] = compareFrameworkChanges(sessions, framework, changed);
+    const pair = all.pairs[0];
+
+    expect(pair.codes.after!).toBeGreaterThan(pair.codes.before!);
+    expect(pair.codes.difference!.estimate).toBeCloseTo(
+      pair.codes.after! - pair.codes.before!,
+      12,
+    );
+    expect(pair.codes.difference!.interval![0]).toBeGreaterThan(0);
+    // On level P, the merged prompts now agree on their level as well.
+    expect(pair.levels.after!).toBeGreaterThan(pair.levels.before!);
+    expect(pair).toMatchObject({ transcripts: 12, prompts: 48, affected: 12 });
   });
 });
