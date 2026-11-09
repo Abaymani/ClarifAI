@@ -100,6 +100,29 @@ export type StoredCoderAgreement = CoderAgreement & {
   calculatedBy: ResearcherId;
 };
 
+// Alpha before and after trying framework changes, and the change between them.
+export type Change = {
+  before: number | null;
+  after: number | null;
+  difference: Difference | null;
+};
+
+export type PairChange = {
+  pair: CoderPair;
+  transcripts: number;
+  prompts: number;
+  // Prompts where either coder gave a code that the changes merge or delete.
+  affected: number;
+  codes: Change;
+  levels: Change;
+};
+
+export type ChangeVariant = {
+  lesson: Lesson | null;
+  base: AgreementBase;
+  pairs: PairChange[];
+};
+
 export const CODERS: readonly Coder[] = ["R1", "R2", "AI"];
 // Armin–Frida first: the AI's pairs are compared with it.
 export const PAIRS: readonly {
@@ -136,22 +159,12 @@ export function calculateCoderAgreement(
   sessions: readonly AgreementSessionInput[],
   framework: Pick<Framework, "promptCodes">,
 ): CoderAgreement {
-  const levels = promptCodeLevels(framework);
-  const comparedCodes = framework.promptCodes
-    .map((entry) => entry.code)
-    .filter((code) => isLevel(levels.get(code)));
-  const compared = new Set(comparedCodes);
-  const coded = sessions.map((session) =>
-    codedTranscript(session, compared, levels),
-  );
+  const { coded, comparedCodes } = codedTranscripts(sessions, framework);
 
   const variants = [null, ...LESSONS].flatMap((lesson, l) =>
     BASES.map((base, b): AgreementVariant => {
-      const pool = coded.filter(
-        (transcript) =>
-          (lesson === null || transcript.session.lesson === lesson) &&
-          (base === "pair" ||
-            CODERS.every((coder) => transcript.codeSets[coder])),
+      const pool = coded.filter((transcript) =>
+        inVariant(transcript, lesson, base),
       );
       return {
         lesson,
@@ -193,6 +206,94 @@ export function calculateCoderAgreement(
   });
 
   return { bootstrap: BOOTSTRAP, transcripts, variants };
+}
+
+// Alpha before and after framework changes, on the same transcripts and the same
+// draws, so the change itself gets an interval (DL-078). The changed coding must
+// leave every coder's set of coded transcripts as it was, which merges and
+// deletions do.
+export function compareFrameworkChanges(
+  sessions: readonly AgreementSessionInput[],
+  framework: Pick<Framework, "promptCodes">,
+  changed: {
+    sessions: readonly AgreementSessionInput[];
+    framework: Pick<Framework, "promptCodes">;
+  },
+): ChangeVariant[] {
+  const before = codedTranscripts(sessions, framework);
+  const after = codedTranscripts(changed.sessions, changed.framework);
+  const kept = new Set(after.comparedCodes);
+  const touched = new Set(
+    before.comparedCodes.filter((code) => !kept.has(code)),
+  );
+
+  return [null, ...LESSONS].flatMap((lesson, l) =>
+    BASES.map((base, b): ChangeVariant => {
+      const seed = BOOTSTRAP.seed + 10 * (2 * l + b);
+      const pool = before.coded
+        .map((transcript, t) => ({ transcript, t }))
+        .filter(({ transcript }) => inVariant(transcript, lesson, base));
+
+      return {
+        lesson,
+        base,
+        pairs: PAIRS.map(({ pair, first, second }, p): PairChange => {
+          const shared = pool
+            .filter(
+              ({ transcript }) =>
+                transcript.codeSets[first] && transcript.codeSets[second],
+            )
+            .map(({ t }) => t);
+          const inputs = [before.coded, after.coded].map((coded) =>
+            pairInputs(
+              shared.map((t) => coded[t]),
+              first,
+              second,
+            ),
+          );
+          const alphas = (weights?: number[]) =>
+            inputs.map((input) =>
+              [input.codes, input.levels].map((groups) =>
+                groupedAlpha(groups, weights),
+              ),
+            );
+          const [[codesBefore, levelsBefore], [codesAfter, levelsAfter]] =
+            alphas();
+          const [codesInterval, levelsInterval] = bootstrapIntervals(
+            shared.length,
+            (weights) => {
+              const [[codesB, levelsB], [codesA, levelsA]] = alphas(weights);
+              return [minus(codesA, codesB), minus(levelsA, levelsB)];
+            },
+            { resamples: BOOTSTRAP.resamples, seed: seed + 1 + p },
+          );
+          const a = shared.flatMap((t) => before.coded[t].codeSets[first]!);
+          const b = shared.flatMap((t) => before.coded[t].codeSets[second]!);
+
+          return {
+            pair,
+            transcripts: shared.length,
+            prompts: a.length,
+            affected: a.filter(
+              (set, i) =>
+                set.some((code) => touched.has(code)) ||
+                b[i].some((code) => touched.has(code)),
+            ).length,
+            codes: {
+              before: codesBefore,
+              after: codesAfter,
+              difference: difference(codesAfter, codesBefore, codesInterval),
+            },
+            levels: {
+              before: levelsBefore,
+              after: levelsAfter,
+              difference: difference(levelsAfter, levelsBefore, levelsInterval),
+            },
+          };
+        }),
+      };
+    }),
+  );
 }
 
 // On the transcripts all three coded, one bootstrap draws the same transcripts for
@@ -339,13 +440,15 @@ function pairStatistics(
 // Armin–Frida's: codes for both AI pairs first, then levels.
 function withDifferences(perPair: (number | null)[][]): (number | null)[] {
   const [researchers, ...ai] = perPair;
-  const minus = (a: number | null, b: number | null) =>
-    a === null || b === null ? null : a - b;
   return [
     ...perPair.flat(),
     ...ai.map((statistics) => minus(statistics[0], researchers[0])),
     ...ai.map((statistics) => minus(statistics[1], researchers[1])),
   ];
+}
+
+function minus(a: number | null, b: number | null): number | null {
+  return a === null || b === null ? null : a - b;
 }
 
 function difference(
@@ -356,6 +459,34 @@ function difference(
   return estimate === null || reference === null
     ? null
     : { estimate: estimate - reference, interval };
+}
+
+function codedTranscripts(
+  sessions: readonly AgreementSessionInput[],
+  framework: Pick<Framework, "promptCodes">,
+): { coded: CodedTranscript[]; comparedCodes: string[] } {
+  const levels = promptCodeLevels(framework);
+  const comparedCodes = framework.promptCodes
+    .map((entry) => entry.code)
+    .filter((code) => isLevel(levels.get(code)));
+  const compared = new Set(comparedCodes);
+  return {
+    coded: sessions.map((session) =>
+      codedTranscript(session, compared, levels),
+    ),
+    comparedCodes,
+  };
+}
+
+function inVariant(
+  transcript: CodedTranscript,
+  lesson: Lesson | null,
+  base: AgreementBase,
+): boolean {
+  return (
+    (lesson === null || transcript.session.lesson === lesson) &&
+    (base === "pair" || CODERS.every((coder) => transcript.codeSets[coder]))
+  );
 }
 
 function codedTranscript(

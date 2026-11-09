@@ -17,6 +17,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/app/admin/(portal)/agreement-actions", () => ({
   runCoderAgreementAction: runAgreement,
+  tryFrameworkChangesAction: vi.fn(),
 }));
 
 import { CoderAgreementView } from "@/app/admin/(portal)/agreement/coder-agreement-view";

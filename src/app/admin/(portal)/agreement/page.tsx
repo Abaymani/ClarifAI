@@ -1,7 +1,5 @@
-import {
-  CoderAgreementView,
-  type AgreementCode,
-} from "@/app/admin/(portal)/agreement/coder-agreement-view";
+import type { AgreementCode } from "@/app/admin/(portal)/agreement/agreement-format";
+import { CoderAgreementView } from "@/app/admin/(portal)/agreement/coder-agreement-view";
 import { promptCodeLevels } from "@/lib/admin/icap-counts";
 import { studyParticipantCode } from "@/lib/admin/lesson-one-codes";
 import { loadCoderAgreement, loadLessonOneCodes } from "@/lib/admin/store";
