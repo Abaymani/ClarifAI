@@ -14,6 +14,8 @@ import type {
   CategoryAgreement,
   Coder,
   CoderPair,
+  Difference,
+  Interval,
   PairAgreement,
   SetAgreement,
   StoredCoderAgreement,
@@ -42,6 +44,15 @@ const MEAN = new Intl.NumberFormat("sv-SE", {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
+const DIFFERENCE = new Intl.NumberFormat("sv-SE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  signDisplay: "exceptZero",
+});
+// Intervals from fewer transcripts are shown but marked as unreliable (DL-077).
+const UNCERTAIN_BELOW = 10;
+const UNCERTAIN_STYLE =
+  "rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200";
 
 export function CoderAgreementView({
   agreement,
@@ -222,6 +233,9 @@ function RunPanel({
             {agreement
               ? `Kodade transkript: ${(["R1", "R2", "AI"] as const).map((coder) => `${coderName(coder)} ${coded(coder)}`).join(" · ")}. Ny kodning syns först när någon beräknar igen.`
               : "Beräkningen jämför Armins, Fridas och AI:ns promptkoder i alla kodade transkript. Resultatet sparas och visas för er båda."}
+            {agreement && !agreement.bootstrap
+              ? " Det här resultatet saknar intervall; beräkna igen för att få dem."
+              : null}
           </p>
         </div>
         <Button type="button" onClick={run} disabled={pending}>
@@ -265,6 +279,18 @@ function Method() {
         I tabellerna gäller α en kod eller nivå i taget: om prompten har den
         eller inte.
       </li>
+      <li>
+        KI är 95 % bootstrap-intervall: transkripten dras om 2 000 gånger med
+        återläggning, så att prompter i samma transkript hålls ihop. Med färre
+        än {UNCERTAIN_BELOW} transkript är intervallen osäkra och markeras så.
+      </li>
+      <li>
+        Med ”Bara de som alla tre kodat” visar AI:ns kort skillnaden mot Armin –
+        Frida. Ligger hela intervallet under 0 är AI:n tydligt mindre överens
+        med er än ni är med varandra. Innehåller det 0 går skillnaden inte att
+        avgöra med de här transkripten, vilket inte betyder att AI:n är lika
+        bra.
+      </li>
     </ul>
   );
 }
@@ -295,6 +321,17 @@ function PairCards({
               <span className="sr-only">Krippendorffs α: </span>
               {formatAlpha(result.alpha)}
             </p>
+            {pair.prompts > 0 && result.interval !== undefined ? (
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm tabular-nums">
+                {formatInterval(result.interval, "95 % KI")}
+                <Uncertain transcripts={pair.transcripts} long />
+              </p>
+            ) : null}
+            {pair.versusResearchers ? (
+              <p className="mt-2 text-sm tabular-nums">
+                {formatDifference(pair.versusResearchers[kind])}
+              </p>
+            ) : null}
             {pair.prompts === 0 ? (
               <p className="mt-2 text-sm text-muted-foreground">
                 {base === "pair"
@@ -400,7 +437,7 @@ function CategoryTable({
                 {pairs.map((pair) => (
                   <CategoryCell
                     key={pair.pair}
-                    pair={pair.pair}
+                    pair={pair}
                     result={categories(pair).find(
                       (candidate) => candidate.category === row.category,
                     )}
@@ -419,10 +456,10 @@ function CategoryCell({
   pair,
   result,
 }: {
-  pair: CoderPair;
+  pair: PairAgreement;
   result: CategoryAgreement | undefined;
 }) {
-  const [first, second] = PAIR_CODERS[pair];
+  const [first, second] = PAIR_CODERS[pair.pair];
   const used =
     result !== undefined &&
     result.both + result.onlyFirst + result.onlySecond > 0;
@@ -431,6 +468,12 @@ function CategoryCell({
       <span className="font-semibold tabular-nums">
         {formatAlpha(result?.alpha ?? null)}
       </span>
+      {result?.interval !== undefined && pair.prompts > 0 ? (
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs tabular-nums">
+          {formatInterval(result.interval, "KI")}
+          <Uncertain transcripts={pair.transcripts} />
+        </span>
+      ) : null}
       <span className="block text-xs text-muted-foreground tabular-nums">
         {used
           ? `båda ${result.both} · bara ${coderName(first)} ${result.onlyFirst} · bara ${coderName(second)} ${result.onlySecond}`
@@ -548,4 +591,36 @@ function pairName(pair: CoderPair): string {
 
 function formatAlpha(value: number | null): string {
   return value === null ? "–" : ALPHA.format(value);
+}
+
+// "till" rather than a dash when a bound is negative, so the minus sign can't be
+// mistaken for the dash.
+function formatInterval(interval: Interval | null, label: string): string {
+  if (!interval) return `${label} kan inte beräknas`;
+  const [low, high] = interval.map((bound) => ALPHA.format(bound));
+  return `${label} ${low}${interval[0] < 0 ? " till " : "–"}${high}`;
+}
+
+function formatDifference(difference: Difference | null): string {
+  const lead = `Jämfört med ${pairName("R1-R2")}:`;
+  if (!difference) return `${lead} kan inte beräknas`;
+  return `${lead} ${DIFFERENCE.format(difference.estimate)} (${formatInterval(difference.interval, "95 % KI")})`;
+}
+
+function Uncertain({
+  transcripts,
+  long = false,
+}: {
+  transcripts: number;
+  long?: boolean;
+}) {
+  if (transcripts >= UNCERTAIN_BELOW) return null;
+  return (
+    <span
+      className={UNCERTAIN_STYLE}
+      title={`Färre än ${UNCERTAIN_BELOW} transkript`}
+    >
+      {long ? `Osäkert: färre än ${UNCERTAIN_BELOW} transkript` : "Osäkert"}
+    </span>
+  );
 }

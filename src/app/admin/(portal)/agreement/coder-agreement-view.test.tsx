@@ -73,6 +73,22 @@ const agreement: StoredCoderAgreement = {
   calculatedBy: "R2",
 };
 
+// Twelve transcripts all three coded: enough for intervals without the mark.
+const larger: StoredCoderAgreement = {
+  ...calculateCoderAgreement(
+    Array.from({ length: 12 }, (_, s) =>
+      session(`${710 + s}_2`, {
+        R1: { 1: ["P1"], 3: s % 3 === 0 ? ["A2"] : ["C3"] },
+        R2: { 1: ["P1"], 3: s % 4 === 0 ? ["A2"] : ["C3"] },
+        AI: { 1: s % 5 === 0 ? ["C3"] : ["P1"], 3: ["C3"] },
+      }),
+    ),
+    { promptCodes: codes },
+  ),
+  calculatedAt: "2026-11-09T12:32:00.000Z",
+  calculatedBy: "R1",
+};
+
 function renderView(stored: StoredCoderAgreement | null = agreement) {
   return render(
     <CoderAgreementView
@@ -214,5 +230,74 @@ describe("CoderAgreementView", () => {
       card("Promptkoder", "AI – Armin").getByText("1 transkript · 4 prompter"),
     ).toBeTruthy();
     expect(transcriptLinks()).toEqual(["/admin/participant/701/lesson/2"]);
+  });
+
+  test("shows each card's interval, marked when it rests on fewer than 10 transcripts", () => {
+    renderView();
+
+    const aiArmin = card("Promptkoder", "AI – Armin");
+    expect(aiArmin.getByText(/^95 % KI \d,\d\d/)).toBeTruthy();
+    expect(aiArmin.getByText("Osäkert: färre än 10 transkript")).toBeTruthy();
+    // One transcript cannot be redrawn into anything else.
+    expect(
+      card("Promptkoder", "Armin – Frida").getByText(
+        "95 % KI kan inte beräknas",
+      ),
+    ).toBeTruthy();
+  });
+
+  test("leaves the mark out from 10 transcripts and compares the AI with Armin–Frida on all three", () => {
+    renderView(larger);
+
+    expect(screen.queryByText(/Osäkert/)).toBeNull();
+    expect(
+      within(
+        screen.getByRole("table", { name: "Överensstämmelse per ICAP-nivå" }),
+      ).getAllByText(/^KI /).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(
+        screen.getByRole("table", { name: "Överensstämmelse per kod" }),
+      ).queryAllByText(/^KI /),
+    ).toHaveLength(0);
+    expect(
+      card("Promptkoder", "AI – Armin").queryByText(/^Jämfört med/),
+    ).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Transkript som jämförs"), {
+      target: { value: "allThree" },
+    });
+    expect(
+      card("Promptkoder", "AI – Armin").getByText(
+        /^Jämfört med Armin – Frida: [−+]?\d,\d\d \(95 % KI /,
+      ),
+    ).toBeTruthy();
+    expect(
+      card("ICAP-nivåer", "AI – Frida").getByText(/^Jämfört med Armin – Frida/),
+    ).toBeTruthy();
+    expect(
+      card("Promptkoder", "Armin – Frida").queryByText(/^Jämfört med/),
+    ).toBeNull();
+  });
+
+  test("asks for a new run when the stored result has no intervals", () => {
+    // As stored before intervals were calculated (DL-077).
+    const old = JSON.parse(
+      JSON.stringify(agreement, (key, value) =>
+        ["bootstrap", "interval", "versusResearchers"].includes(key)
+          ? undefined
+          : value,
+      ),
+    ) as StoredCoderAgreement;
+    renderView(old);
+
+    expect(
+      screen.getByText(/saknar intervall; beräkna igen för att få dem\./),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "Promptkoder" })).queryByText(
+        /KI/,
+      ),
+    ).toBeNull();
   });
 });

@@ -279,20 +279,29 @@ const lessonSchema = z.union([
   z.literal(4),
 ]);
 const pairSchema = z.enum(["R1-R2", "AI-R1", "AI-R2"]);
+const boundsSchema = z.tuple([z.number(), z.number()]);
+// Optional: results stored before DL-077 have no intervals.
+const intervalSchema = boundsSchema.nullable().optional();
+const differenceSchema = z
+  .object({ estimate: z.number(), interval: boundsSchema.nullable() })
+  .nullable();
 const categorySchema = z.object({
   category: z.string(),
   alpha: z.number().nullable(),
+  interval: intervalSchema,
   both: z.number(),
   onlyFirst: z.number(),
   onlySecond: z.number(),
 });
 const setSchema = z.object({
   alpha: z.number().nullable(),
+  interval: intervalSchema,
   identical: z.number(),
   firstTotal: z.number(),
   secondTotal: z.number(),
 });
 const coderAgreementSchema: z.ZodType<CoderAgreement> = z.object({
+  bootstrap: z.object({ resamples: z.number(), seed: z.number() }).optional(),
   transcripts: z.array(
     z.object({
       sessionId: z.string(),
@@ -317,6 +326,9 @@ const coderAgreementSchema: z.ZodType<CoderAgreement> = z.object({
           levels: setSchema,
           perCode: z.array(categorySchema),
           perLevel: z.array(categorySchema),
+          versusResearchers: z
+            .object({ codes: differenceSchema, levels: differenceSchema })
+            .optional(),
         }),
       ),
     }),

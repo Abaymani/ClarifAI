@@ -1,9 +1,49 @@
 import { alpha as packageAlpha } from "krippendorff";
 import { describe, expect, test } from "vitest";
 
-import { krippendorffAlpha } from "@/lib/admin/krippendorff-alpha";
+import {
+  alphaGroups,
+  groupedAlpha,
+  krippendorffAlpha,
+} from "@/lib/admin/krippendorff-alpha";
 
 const _ = undefined;
+
+describe("groupedAlpha", () => {
+  test("counts each group as often as its weight, as if its units were repeated", () => {
+    let seed = 9;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31;
+      return seed / 2 ** 31;
+    };
+
+    for (let round = 0; round < 100; round++) {
+      const groups = Array.from(
+        { length: 2 + Math.floor(random() * 4) },
+        () => {
+          const units = 1 + Math.floor(random() * 6);
+          return [0, 1].map(() =>
+            Array.from({ length: units }, () => Math.floor(random() * 3)),
+          );
+        },
+      );
+      const weights = groups.map(() => Math.floor(random() * 3));
+      const repeated = [0, 1].map((coder) =>
+        groups.flatMap((group, g) =>
+          Array.from({ length: weights[g] }, () => group[coder]).flat(),
+        ),
+      );
+
+      const expected = packageAlpha(repeated);
+      const actual = groupedAlpha(alphaGroups(groups), weights);
+      if (Number.isFinite(expected)) {
+        expect(actual).toBeCloseTo(expected, 10);
+      } else {
+        expect(actual).toBeNull();
+      }
+    }
+  });
+});
 
 describe("krippendorffAlpha", () => {
   test("reproduces Krippendorff's published example with missing values", () => {
