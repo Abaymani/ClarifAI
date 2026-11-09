@@ -253,6 +253,8 @@ The `AI-kodning` tab counts the AI's prompt codes on the levels P, A and C for e
 
 When coding a transcript, a code is saved as soon as it is chosen or removed, and so is a stored sequence's range. Only the note has a save button, and the editor says when the note is not saved yet (DL-075).
 
+The `Överensstämmelse` page, linked from the header, shows how well Armin, Frida and the AI agree on prompt codes, as Krippendorff's α for each pair: for each prompt's whole set of codes and set of ICAP levels (MASI distance), and for each code and level on its own. A coder has coded a transcript once they have given any prompt in it a code, NA included, and their other prompts there then have no applicable code; NA codes are not compared and the order of codes is ignored. The figures are calculated with `Beräkna` and stored for both researchers until the next run, so new coding shows only after another run. Filters narrow the result to one lesson, or to the transcripts all three coded (DL-076).
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 

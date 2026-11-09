@@ -54,6 +54,12 @@ The definitions of started and missing make the requested three-state overview t
 | --- | --- | --- |
 | ADMIN-FR-008 | When coding a prompt-level behaviour or a sequence, the system shall provide a compact search popup for finding an appropriate code. | The researcher can search by code identifier, description, or example and select a result without leaving the transcript. The chosen code is added to the intended prompt or sequence only. |
 
+## Coder agreement
+
+| ID | Requirement | Acceptance criteria |
+| --- | --- | --- |
+| ADMIN-FR-018 | The portal shall show how well Armin, Frida and the AI agree on prompt codes, for each pair of coders, both per code and per ICAP level. | A separate page, linked from the portal header, shows Krippendorff's α for Armin–Frida, AI–Armin and AI–Frida: for each prompt's whole set of codes and set of ICAP levels, compared with the MASI distance, and for each code and each level on its own, with how often both, only one or only the other coder gave it. A coder has coded a transcript once they have given any prompt in it a prompt code, NA included; their other prompts in that transcript count as having no applicable code. NA codes are not compared, the order of codes is ignored, a prompt counts on every ICAP level it has a code on, and prompts that neither coder gave a code other than NA count as agreeing, with their number shown. Each pair is compared on the transcripts both of its coders coded, or, when chosen, only on those all three coded, for all lessons or one lesson. The figures are calculated when a researcher selects the calculate button and are stored with the time and the researcher, so both researchers see the same result and new coding appears only after another run; a failed run keeps the previous result. The page also lists every coded transcript with its coders and how many prompts each pair coded differently. The calculation reads only stored coding and never calls an AI API. |
+
 ## Approved architecture
 
 Two deployment shapes were considered:
