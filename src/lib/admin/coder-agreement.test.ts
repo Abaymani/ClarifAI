@@ -46,6 +46,37 @@ function session(
   };
 }
 
+// Transcripts all three coded, with Frida and the AI agreeing with Armin part of the
+// time, or the AI coding exactly as Armin does.
+function randomSessions(
+  count: number,
+  aiCodesLikeArmin = false,
+): AgreementSessionInput[] {
+  let seed = 3;
+  const random = () => {
+    seed = (seed * 1103515245 + 12345) % 2 ** 31;
+    return seed / 2 ** 31;
+  };
+  const codes = ["P1", "P2", "A2", "C3", "C10"];
+  const randomSet = () => codes.filter(() => random() < 0.3);
+  // Prompt 7 always has a code, so every coder has coded every transcript.
+  const like = (armin: Record<number, string[]>, share: number) =>
+    Object.fromEntries(
+      [1, 3, 5, 7].map((message) => {
+        const set = random() < share ? armin[message] : randomSet();
+        return [message, message === 7 && set.length === 0 ? ["C3"] : set];
+      }),
+    );
+  return Array.from({ length: count }, (_, s) => {
+    const armin = like({ 1: [], 3: [], 5: [], 7: [] }, 0);
+    return session(`${720 + s}_2`, {
+      R1: armin,
+      R2: like(armin, 0.7),
+      AI: aiCodesLikeArmin ? armin : like(armin, 0.5),
+    });
+  });
+}
+
 function pairOf(
   agreement: CoderAgreement,
   pair: CoderPair,
@@ -121,6 +152,8 @@ describe("calculateCoderAgreement", () => {
       prompts: 0,
       codes: { alpha: null },
     });
+    // One transcript cannot be redrawn into anything else.
+    expect(pair.codes.interval).toBeNull();
   });
 
   test("counts a coder once they have given any code, NA included", () => {
@@ -186,9 +219,30 @@ describe("calculateCoderAgreement", () => {
     const pair = pairOf(agreement, "R1-R2");
 
     expect(pair.perLevel).toEqual([
-      { category: "P", alpha: 0, both: 0, onlyFirst: 1, onlySecond: 0 },
-      { category: "A", alpha: null, both: 0, onlyFirst: 0, onlySecond: 0 },
-      { category: "C", alpha: 1, both: 1, onlyFirst: 0, onlySecond: 0 },
+      {
+        category: "P",
+        alpha: 0,
+        interval: null,
+        both: 0,
+        onlyFirst: 1,
+        onlySecond: 0,
+      },
+      {
+        category: "A",
+        alpha: null,
+        interval: null,
+        both: 0,
+        onlyFirst: 0,
+        onlySecond: 0,
+      },
+      {
+        category: "C",
+        alpha: 1,
+        interval: null,
+        both: 1,
+        onlyFirst: 0,
+        onlySecond: 0,
+      },
     ]);
     expect(pair.levels).toMatchObject({ firstTotal: 2, secondTotal: 1 });
   });
@@ -277,5 +331,60 @@ describe("calculateCoderAgreement", () => {
     );
 
     expect(pairOf(agreement, "R1-R2").codes.alpha).toBeCloseTo(expected, 10);
+  });
+
+  test("gives intervals from redrawn transcripts, the same ones on every run", () => {
+    const sessions = randomSessions(12);
+    const agreement = calculateCoderAgreement(sessions, framework);
+    const pair = pairOf(agreement, "R1-R2");
+    const [low, high] = pair.codes.interval!;
+
+    expect(low).toBeLessThan(high);
+    expect(low).toBeLessThanOrEqual(pair.codes.alpha!);
+    expect(high).toBeGreaterThanOrEqual(pair.codes.alpha!);
+    expect(pair.levels.interval).not.toBeNull();
+    expect(pair.perLevel.map((level) => level.interval === undefined)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(pair.perCode.some((code) => code.interval !== undefined)).toBe(
+      false,
+    );
+    expect(agreement.bootstrap).toEqual({ resamples: 2000, seed: 76 });
+    expect(calculateCoderAgreement(sessions, framework)).toEqual(agreement);
+  });
+
+  test("compares the AI with Armin–Frida only on the transcripts all three coded", () => {
+    const agreement = calculateCoderAgreement(randomSessions(12), framework);
+    const researchers = pairOf(agreement, "R1-R2", null, "allThree");
+    const ai = pairOf(agreement, "AI-R1", null, "allThree");
+
+    expect(ai.versusResearchers?.codes?.estimate).toBeCloseTo(
+      ai.codes.alpha! - researchers.codes.alpha!,
+      12,
+    );
+    expect(ai.versusResearchers?.codes?.interval).not.toBeNull();
+    expect(ai.versusResearchers?.levels?.interval).not.toBeNull();
+    expect(researchers.versusResearchers).toBeUndefined();
+    expect(pairOf(agreement, "AI-R1").versusResearchers).toBeUndefined();
+  });
+
+  test("draws the same transcripts for every pair it compares", () => {
+    // An AI that codes exactly as Armin does agrees with Frida exactly as Armin does
+    // in every draw, so it differs from Armin–Frida by 0 throughout.
+    const agreement = calculateCoderAgreement(
+      randomSessions(12, true),
+      framework,
+    );
+    const versus = pairOf(
+      agreement,
+      "AI-R2",
+      null,
+      "allThree",
+    ).versusResearchers;
+
+    expect(versus?.codes).toEqual({ estimate: 0, interval: [0, 0] });
+    expect(versus?.levels).toEqual({ estimate: 0, interval: [0, 0] });
   });
 });
