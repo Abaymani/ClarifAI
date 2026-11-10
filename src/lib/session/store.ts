@@ -142,40 +142,71 @@ export async function startSession(
       return { ok: true, session: { ...existing, updatedAt: now } };
     }
 
-    tx.set(sessionRef, {
-      participantCode: input.code,
-      lesson: input.lesson,
-      status: "awaiting_transcript" satisfies SessionStatus,
-      sessionTokenHash,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-      completedAt: null,
-      errorCode: null,
-      transcriptSubmission: null,
-      transcript: null,
-      transcriptConfirmedAt: null,
-    });
+    tx.set(
+      sessionRef,
+      newSessionDocument(input.code, input.lesson, sessionTokenHash, now),
+    );
     return {
       ok: true,
-      session: {
-        id,
-        participantCode: input.code,
-        lesson: input.lesson,
-        status: "awaiting_transcript",
-        createdAt: now,
-        updatedAt: now,
-        completedAt: null,
-        errorCode: null,
-        transcriptSubmission: null,
-        transcript: null,
-        transcriptConfirmedAt: null,
-        analysisStartedAt: null,
-        analysis: null,
-        reflectionQuestions: null,
-        reflectionResponses: null,
-      },
+      session: newSession(input.code, input.lesson, now),
     };
   });
+}
+
+// The expo demo (DL-079) has no login: every visitor gets a throwaway
+// participant of their own instead of a code and PIN.
+export async function createDemoSession(
+  lesson: Lesson,
+  sessionTokenHash: string,
+  now: Date = new Date(),
+): Promise<Session> {
+  const code = `demo-${randomUUID().slice(0, 8)}`;
+  await getDb()
+    .collection(SESSIONS)
+    .doc(sessionId(code, lesson))
+    .create(newSessionDocument(code, lesson, sessionTokenHash, now));
+  return newSession(code, lesson, now);
+}
+
+function newSessionDocument(
+  code: string,
+  lesson: Lesson,
+  sessionTokenHash: string,
+  now: Date,
+): DocumentData {
+  return {
+    participantCode: code,
+    lesson,
+    status: "awaiting_transcript" satisfies SessionStatus,
+    sessionTokenHash,
+    createdAt: Timestamp.fromDate(now),
+    updatedAt: Timestamp.fromDate(now),
+    completedAt: null,
+    errorCode: null,
+    transcriptSubmission: null,
+    transcript: null,
+    transcriptConfirmedAt: null,
+  };
+}
+
+function newSession(code: string, lesson: Lesson, now: Date): Session {
+  return {
+    id: sessionId(code, lesson),
+    participantCode: code,
+    lesson,
+    status: "awaiting_transcript",
+    createdAt: now,
+    updatedAt: now,
+    completedAt: null,
+    errorCode: null,
+    transcriptSubmission: null,
+    transcript: null,
+    transcriptConfirmedAt: null,
+    analysisStartedAt: null,
+    analysis: null,
+    reflectionQuestions: null,
+    reflectionResponses: null,
+  };
 }
 
 export async function getSessionByToken(

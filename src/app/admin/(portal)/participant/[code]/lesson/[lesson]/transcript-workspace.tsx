@@ -20,6 +20,10 @@ import {
   savePromptCodingAction,
   saveSequenceCodingAction,
 } from "@/app/admin/(portal)/coding-actions";
+import {
+  AiCodeDetails,
+  AiSequenceDetails,
+} from "@/app/session/ai-coding-details";
 import { ChatBubble } from "@/app/session/chat-thread";
 import { ExpandableText } from "@/app/session/expandable-text";
 import { MessageContent } from "@/app/session/message-content";
@@ -738,37 +742,11 @@ function AiCodingPanel({
         <div className="mt-2 flex flex-col gap-2">
           {prompt?.codes.length ? (
             prompt.codes.map((coding) => (
-              <details
+              <AiCodeDetails
                 key={coding.code}
-                className="group rounded-lg border p-3"
-              >
-                <summary className="cursor-pointer list-none font-medium marker:hidden">
-                  <span className="mr-2 inline-flex rounded-md bg-emerald-100 px-2 py-1 text-xs text-emerald-900">
-                    {coding.code}
-                  </span>
-                  {names.get(coding.code) ?? coding.code}
-                  <span className="float-right text-xs text-muted-foreground group-open:hidden">
-                    Visa motivering
-                  </span>
-                  <span className="float-right hidden text-xs text-muted-foreground group-open:inline">
-                    Dölj motivering
-                  </span>
-                </summary>
-                <div className="mt-3 space-y-3 border-t pt-3 text-sm">
-                  <div>
-                    <h4 className="font-medium">Motivering</h4>
-                    <p className="mt-1 text-muted-foreground">
-                      {coding.justification}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Utdrag ur chatten</h4>
-                    <blockquote className="mt-1 rounded-lg bg-muted p-3 text-muted-foreground">
-                      {coding.excerpt}
-                    </blockquote>
-                  </div>
-                </div>
-              </details>
+                coding={coding}
+                name={names.get(coding.code) ?? coding.code}
+              />
             ))
           ) : (
             <PanelEmpty>
@@ -783,50 +761,12 @@ function AiCodingPanel({
         <div className="mt-2 flex flex-col gap-2">
           {analysis.sequences.length ? (
             analysis.sequences.map((sequence, index) => (
-              <details
+              <AiSequenceDetails
                 key={`${sequence.pattern}-${sequence.firstMessage}-${index}`}
-                open={
-                  selectedSequence === aiSequenceKey(sequence, index) ||
-                  undefined
-                }
-                className={`group rounded-lg border p-3 ${
-                  selectedSequence === aiSequenceKey(sequence, index)
-                    ? "ring-2 ring-emerald-400/60"
-                    : ""
-                }`}
-              >
-                <summary className="cursor-pointer list-none font-medium marker:hidden">
-                  <span className="mr-2 inline-flex rounded-md bg-violet-100 px-2 py-1 text-xs text-violet-900">
-                    {sequence.pattern}
-                  </span>
-                  {names.get(sequence.pattern) ?? sequence.pattern}
-                  <span className="block pt-1 text-xs font-normal text-muted-foreground">
-                    Meddelande {sequence.firstMessage}–{sequence.lastMessage}
-                    <span className="group-open:hidden">
-                      {" "}
-                      · Visa motivering
-                    </span>
-                    <span className="hidden group-open:inline">
-                      {" "}
-                      · Dölj motivering
-                    </span>
-                  </span>
-                </summary>
-                <div className="mt-3 space-y-3 border-t pt-3 text-sm">
-                  <div>
-                    <h4 className="font-medium">Motivering</h4>
-                    <p className="mt-1 text-muted-foreground">
-                      {sequence.justification}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Utdrag ur chatten</h4>
-                    <blockquote className="mt-1 rounded-lg bg-muted p-3 text-muted-foreground">
-                      {sequence.excerpt}
-                    </blockquote>
-                  </div>
-                </div>
-              </details>
+                sequence={sequence}
+                name={names.get(sequence.pattern) ?? sequence.pattern}
+                selected={selectedSequence === aiSequenceKey(sequence, index)}
+              />
             ))
           ) : (
             <PanelEmpty>Inga sekvenskoder finns lagrade.</PanelEmpty>

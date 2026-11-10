@@ -11,6 +11,7 @@ import {
   hashSessionToken,
 } from "@/lib/session/session-token";
 import {
+  createDemoSession,
   ensureParticipants,
   beginTranscriptSubmission,
   completeNoGeminiUse,
@@ -175,6 +176,32 @@ describe("startSession", () => {
       ok: false,
       reason: "ALREADY_COMPLETED",
     });
+  });
+});
+
+describe("createDemoSession", () => {
+  test("starts a throwaway participant on every call, without code or PIN", async () => {
+    const tokens = [createSessionToken(), createSessionToken()];
+    const sessions = await Promise.all(
+      tokens.map((token) => createDemoSession(2, hashSessionToken(token))),
+    );
+
+    expect(sessions[0].id).not.toBe(sessions[1].id);
+    for (const [index, token] of tokens.entries()) {
+      const stored = await getSessionByToken(token);
+      expect(stored).toMatchObject({
+        id: sessions[index].id,
+        lesson: 2,
+        status: "awaiting_transcript",
+        transcript: null,
+      });
+      expect(stored?.participantCode).toMatch(/^demo-[0-9a-f]{8}$/);
+      const participant = await getDb()
+        .collection("participants")
+        .doc(sessions[index].participantCode)
+        .get();
+      expect(participant.exists).toBe(false);
+    }
   });
 });
 

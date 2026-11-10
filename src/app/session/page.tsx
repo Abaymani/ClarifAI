@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
 import { AnalysisPending } from "@/app/session/analysis-pending";
 import { AnalysisRetry } from "@/app/session/analysis-retry";
+import { DemoCoding } from "@/app/session/demo-coding";
 import { NoGeminiConfirmation } from "@/app/session/no-gemini-confirmation";
 import { ReflectionQuestions } from "@/app/session/reflection-questions";
 import { TranscriptForm } from "@/app/session/transcript-form";
@@ -16,7 +17,9 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { INTERRUPTED_ANALYSIS, UNREADABLE_RESULT } from "@/lib/analysis/errors";
+import { loadFramework } from "@/lib/analysis/framework";
 import type { StoredReflectionQuestions } from "@/lib/analysis/types";
+import { demoMode } from "@/lib/demo";
 import { reflectionDraftKey } from "@/lib/session/reflection-drafts";
 import { SESSION_COOKIE } from "@/lib/session/session-token";
 import { getSessionByToken } from "@/lib/session/store";
@@ -100,6 +103,8 @@ export default async function SessionPage() {
   if (session.status === "completed") redirect("/");
 
   const view = viewFor(session, new Date());
+  // The demo has no code or PIN to come back with (DL-079).
+  const demo = demoMode();
   const header = {
     transcript: {
       status:
@@ -107,17 +112,17 @@ export default async function SessionPage() {
           ? sv.session.statusProcessing
           : sv.session.statusAwaitingTranscript,
       heading: sv.session.heading,
-      intro: sv.session.intro,
+      intro: demo ? sv.demo.sessionIntro : sv.session.intro,
     },
     preview: {
       status: sv.session.statusAwaitingConfirmation,
       heading: sv.session.heading,
-      intro: sv.session.introConfirmation,
+      intro: demo ? sv.demo.introConfirmation : sv.session.introConfirmation,
     },
     analysing: {
       status: sv.session.statusAnalysing,
       heading: sv.session.analysingHeading,
-      intro: sv.session.analysingIntro,
+      intro: demo ? sv.demo.analysingIntro : sv.session.analysingIntro,
     },
     analysisFailed: {
       status: sv.session.statusAnalysisFailed,
@@ -152,11 +157,13 @@ export default async function SessionPage() {
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-4 p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          {sv.session.participant(session.participantCode, session.lesson)}
+          {demo
+            ? sv.demo.label
+            : sv.session.participant(session.participantCode, session.lesson)}
         </span>
         <form action={logoutAction}>
           <Button type="submit" variant="ghost" size="sm">
-            {sv.session.logout}
+            {demo ? sv.demo.restart : sv.session.logout}
           </Button>
         </form>
       </div>
@@ -205,6 +212,14 @@ export default async function SessionPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {demo && view.kind === "reflection" && session.analysis ? (
+        <DemoCoding
+          messages={session.transcript?.messages ?? []}
+          analysis={session.analysis}
+          framework={loadFramework()}
+        />
+      ) : null}
     </main>
   );
 }

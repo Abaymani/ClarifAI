@@ -17,7 +17,8 @@ import {
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_SECONDS,
 } from "@/lib/session/session-token";
-import { startSession } from "@/lib/session/store";
+import { DEMO_LESSON, demoMode } from "@/lib/demo";
+import { createDemoSession, startSession } from "@/lib/session/store";
 import { sv } from "@/lib/sv";
 
 export type LoginField = "code" | "pin" | "lesson";
@@ -66,6 +67,34 @@ export async function startSessionAction(
     }
   }
 
+  await setSessionCookie(token);
+  redirect("/session");
+}
+
+export type DemoState = { error: string | null };
+
+export async function startDemoAction(): Promise<DemoState> {
+  if (!demoMode()) redirect("/");
+
+  const token = createSessionToken();
+  try {
+    await createDemoSession(DEMO_LESSON, hashSessionToken(token));
+  } catch (error) {
+    console.error("S0-DB", error instanceof Error ? error.name : "unknown");
+    return { error: sv.errors.unexpected("S0-DB") };
+  }
+
+  await setSessionCookie(token);
+  redirect("/session");
+}
+
+export async function logoutAction(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_COOKIE);
+  redirect("/");
+}
+
+async function setSessionCookie(token: string): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -74,13 +103,6 @@ export async function startSessionAction(
     path: "/",
     maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
   });
-  redirect("/session");
-}
-
-export async function logoutAction(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
-  redirect("/");
 }
 
 function problemState(problem: CredentialProblem): LoginState {

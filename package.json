@@ -6,6 +6,7 @@
     "dev": "firebase emulators:exec --only firestore,auth --project demo-clarifai --ui \"next dev\"",
     "build": "next build",
     "start": "next start",
+    "demo": "next build && CLARIFAI_DEMO=1 firebase emulators:exec --only firestore --project demo-clarifai \"next start\"",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",

@@ -1,3 +1,4 @@
+import { DemoStart } from "@/app/demo-start";
 import { LoginForm } from "@/app/login-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -6,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
+import { demoMode } from "@/lib/demo";
 import { sv } from "@/lib/sv";
 
 export default async function Home({
@@ -20,6 +22,24 @@ export default async function Home({
       : submitted === "no-gemini"
         ? sv.session.noGeminiSuccess
         : null;
+
+  if (demoMode()) {
+    return (
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-4 p-6">
+        <Card>
+          <CardHeader>
+            <h1 className="font-heading text-2xl leading-snug font-medium">
+              {sv.demo.title}
+            </h1>
+            <CardDescription>{sv.demo.intro}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DemoStart />
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center gap-4 p-6">

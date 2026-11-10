@@ -182,4 +182,25 @@ export const sv = {
     reflectionTest: "TEST: ramverket är inte studiens slutliga version.",
     reflectionFake: "Testanalys utan AI: kodningen är påhittad.",
   },
+  // The expo demo (DL-079): no login, and the AI's coding is shown to the visitor.
+  demo: {
+    title: "Prova ClarifAI",
+    intro:
+      "Lämna in en delningslänk till en Gemini-chatt. ClarifAI analyserar chatten, ställer reflektionsfrågor och visar hur AI:n kodade varje prompt.",
+    start: "Starta demo",
+    starting: "Startar …",
+    label: "Demo",
+    restart: "Ny demo",
+    sessionIntro: "Lämna in länken till Gemini-chatten du vill analysera.",
+    introConfirmation:
+      "Nästa steg är att bekräfta att det är rätt Gemini-chatt.",
+    analysingIntro: "Det kan ta en stund.",
+    codingHeading: "Så kodade AI:n chatten",
+    codingIntro:
+      "AI:n kodar varje prompt med koder ur ClarifAI:s ramverk. Bokstaven anger ICAP-nivån: P = passiv, A = aktiv, C = konstruktiv. NA är koder utan ICAP-nivå. Reflektionsfrågorna ovan bygger på den här kodningen.",
+    icapSummary: "Koder per ICAP-nivå",
+    noCodes: "Inga koder för den här prompten.",
+    sequencesHeading: "Mönster över flera prompter",
+    noSequences: "AI:n hittade inga mönster över flera prompter.",
+  },
 } as const;

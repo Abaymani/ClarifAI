@@ -123,6 +123,7 @@ pnpm.cmd dev
 | `pnpm db:backup --env <file> --project <id>` | Read every Firestore document into `private-data/backups/` (DL-067) |
 | `pnpm db:restore <folder>` | Load a backup into the emulator and check it against the backup's checksum |
 | `pnpm build` | Production build |
+| `pnpm demo` | The expo demo: a production build against an empty Firestore emulator, without login (DL-079) |
 
 ## Participant codes
 Codes and their PINs are generated together and handed out by the teacher (DL-029). Re-running the generator keeps the PINs of codes that already exist, so slips already handed out stay valid.
@@ -232,6 +233,11 @@ For every concrete analysed example, the student chooses **Ja**, **Delvis**, or 
 Students can state on the transcript screen that they did not use Gemini. Lessons 1 and 4 then record `no_gemini` and show a reversible confirmation before completion. Lessons 2 and 3 skip scraping and analysis, show R01, and complete after its answer is saved. Before completion, both paths let the student return to transcript submission; doing so clears the no-Gemini choice and any generated R01 questions. Reflection answers are redacted before storage and saved atomically with their agreement choices, then followed by a dedicated completion page.
 
 Until the reflection is handed in, what the student has written is kept in that browser tab (`sessionStorage`), so a reload brings it back, and the browser asks before a page with unsent text is left (DL-049). The copy never leaves the computer; it is removed at hand-in and disappears when the tab closes.
+
+## Expo demo
+`pnpm demo` builds the app and starts it on http://localhost:3000 against an empty Firestore emulator, with `CLARIFAI_DEMO=1` (DL-079). There is no login: `Starta demo` gives every visitor a lesson 2 session of their own, and after the analysis the reflection page also shows how the AI coded each prompt, with its reasons. `Ny demo` at the top starts over.
+
+The demo needs internet, since the Gemini link is fetched and the analysis runs on OpenAI, and it needs `OPENAI_API_KEY` in `.env.local`; without a key the analysis fails with `S2-CONFIG`. Demo mode refuses to start except against the emulator's `demo-clarifai` project, and everything entered is discarded when the command stops.
 
 ## Researcher portal
 
