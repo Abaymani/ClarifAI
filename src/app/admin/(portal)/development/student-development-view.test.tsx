@@ -115,12 +115,63 @@ describe("StudentDevelopmentView", () => {
         t.textContent?.replace(/\s/g, " "),
       ),
     ).toContain("Lektion 4 · C konstruktiv: 50 % (2 av 4 koder)");
-    expect(chart().querySelectorAll("circle")).toHaveLength(0);
+    expect(chart().querySelectorAll("[data-level]")).toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Linjer" }));
-    // Three levels across four coded lessons.
-    expect(chart().querySelectorAll("circle")).toHaveLength(12);
+    // Three levels across four coded lessons, each level with its own shape.
+    const marker = (level: string) =>
+      [...chart().querySelectorAll(`[data-level="${level}"]`)].map(
+        (element) => element.tagName,
+      );
+    expect(marker("P")).toEqual(["circle", "circle", "circle", "circle"]);
+    expect(marker("A")).toEqual(["rect", "rect", "rect", "rect"]);
+    expect(marker("C")).toEqual(["path", "path", "path", "path"]);
     expect(chart().querySelectorAll("line[stroke]")).toHaveLength(9);
+  });
+
+  test("scales each card to its own data", () => {
+    render(<StudentDevelopmentView students={students} />);
+    const axisTop = (code: string) =>
+      within(card(code))
+        .getAllByText(/./, { selector: "text" })[0]
+        .textContent?.replace(/\s/g, " ");
+
+    expect(axisTop("3")).toBe("100 %");
+    fireEvent.click(screen.getByRole("button", { name: "Antal" }));
+    // Lesson 4 holds the most codes: 1 + 1 + 2 for 3, 3 + 1 + 0 for 7.
+    expect(axisTop("3")).toBe("4");
+    expect(axisTop("12")).toBe("3");
+    fireEvent.click(screen.getByRole("button", { name: "Linjer" }));
+    // The highest single level: P 3 in lesson 4 for 7.
+    expect(axisTop("7")).toBe("3");
+    fireEvent.click(screen.getByRole("button", { name: "Andel" }));
+    // Its highest share is P at 75 % in lesson 4, rounded up to 80 %.
+    expect(axisTop("7")).toBe("80 %");
+  });
+
+  test("can show only participants with all four lessons coded by the source", () => {
+    render(<StudentDevelopmentView students={students} />);
+    const filter = screen.getByRole("checkbox", {
+      name: "Visa bara deltagare med alla fyra lektioner kodade",
+    });
+
+    expect(screen.getByText(/Visar 3 av 3 deltagare/)).toBeTruthy();
+    fireEvent.click(filter);
+    expect(cardCodes()).toEqual(["Deltagare 3"]);
+    expect(
+      screen.getByText(
+        /Visar 1 av 3 deltagare, alla fyra lektioner kodade av AI/,
+      ),
+    ).toBeTruthy();
+
+    // Frida has not coded all four lessons for anyone.
+    fireEvent.click(screen.getByRole("button", { name: "Frida" }));
+    expect(
+      screen.queryAllByRole("heading", { name: /Deltagare/ }),
+    ).toHaveLength(0);
+
+    fireEvent.click(filter);
+    expect(cardCodes()).toHaveLength(3);
   });
 
   test("dashes a line across a lesson without coding", () => {
