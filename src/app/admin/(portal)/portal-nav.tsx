@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/admin/overview", label: "Översikt" },
   { href: "/admin/agreement", label: "Överensstämmelse" },
+  { href: "/admin/development", label: "Utveckling" },
 ];
 
 export function PortalNav() {

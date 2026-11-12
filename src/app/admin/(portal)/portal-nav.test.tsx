@@ -34,6 +34,20 @@ describe("PortalNav", () => {
       screen
         .getAllByRole("link")
         .map((link) => link.getAttribute("aria-current")),
-    ).toEqual([null, null]);
+    ).toEqual([null, null, null]);
+  });
+
+  test("links to the development page", () => {
+    pathname.current = "/admin/development";
+    render(<PortalNav />);
+
+    expect(
+      screen.getByRole("link", { name: "Utveckling" }).getAttribute("href"),
+    ).toBe("/admin/development");
+    expect(
+      screen
+        .getByRole("link", { name: "Utveckling" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
   });
 });

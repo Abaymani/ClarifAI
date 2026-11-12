@@ -30,6 +30,10 @@ import {
   studyParticipantCode,
   type LessonOneCodesState,
 } from "@/lib/admin/lesson-one-codes";
+import {
+  studentDevelopment,
+  type StudentDevelopment,
+} from "@/lib/admin/student-development";
 import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
 import type {
   AdminParticipantOverview,
@@ -221,6 +225,19 @@ export async function tryFrameworkChanges(
       applyFrameworkChanges(sessions, framework, changes),
     ),
   };
+}
+
+// Only reads: the development page never changes a session or any coding (DL-079).
+export async function loadStudentDevelopment(): Promise<StudentDevelopment[]> {
+  const [sessions, lessonOneCodes] = await Promise.all([
+    loadAgreementInputs(),
+    loadLessonOneCodes(),
+  ]);
+  return studentDevelopment(
+    sessions,
+    loadFramework(),
+    lessonOneCodes.status === "applied" ? lessonOneCodes.codes : null,
+  );
 }
 
 // Every transcript's student prompts with Armin's, Frida's and the AI's prompt

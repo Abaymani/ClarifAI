@@ -257,6 +257,8 @@ The `Överensstämmelse` page, linked from the header, shows how well Armin, Fri
 
 `Prova ändringar i ramverket` on the same page tries merging and deleting prompt codes: it reads today's coding, applies the changes to a copy in memory and shows each pair's α before and after, with an interval on the change. When merged codes span ICAP levels, the researcher chooses the merged code's level. Nothing is stored or deleted; the coding, the framework files and the stored result stay as they are (DL-078).
 
+The `Utveckling` page shows one card per participant with their P, A and C prompt codes in lessons 1–4. Switches choose the source (AI, Armin or Frida), shares or counts, and stacked bars or one line per level, for every card at once; all cards share one scale. Codes are counted as in the `AI-kodning` tab, and a lesson without a transcript or without coding from the chosen source is a faint grey band, never a bar or a point. Cards can be sorted by the largest change in P, A or C from the first to the last coded lesson. The page only reads the stored coding and never changes it (DL-079).
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 
