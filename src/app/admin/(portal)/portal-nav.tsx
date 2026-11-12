@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin/overview", label: "Översikt" },
   { href: "/admin/agreement", label: "Överensstämmelse" },
   { href: "/admin/development", label: "Utveckling" },
+  { href: "/admin/passive", label: "Andel passivt" },
 ];
 
 export function PortalNav() {

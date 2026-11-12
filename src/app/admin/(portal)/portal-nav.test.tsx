@@ -34,7 +34,7 @@ describe("PortalNav", () => {
       screen
         .getAllByRole("link")
         .map((link) => link.getAttribute("aria-current")),
-    ).toEqual([null, null, null]);
+    ).toEqual([null, null, null, null]);
   });
 
   test("links to the development page", () => {

@@ -10,6 +10,7 @@ import {
   type DevelopmentForm,
 } from "@/app/admin/(portal)/development/development-chart";
 import { coderName } from "@/app/admin/(portal)/agreement/agreement-format";
+import { SegmentedControl } from "@/app/admin/(portal)/segmented-control";
 import type { Coder } from "@/lib/admin/coder-agreement";
 import type { IcapLevel } from "@/lib/admin/icap-counts";
 import {
@@ -73,7 +74,7 @@ export function StudentDevelopmentView({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-        <Segmented
+        <SegmentedControl
           label="Källa"
           value={coder}
           onChange={setCoder}
@@ -82,7 +83,7 @@ export function StudentDevelopmentView({
             coderName(option),
           ])}
         />
-        <Segmented
+        <SegmentedControl
           label="Visa"
           value={scale}
           onChange={setScale}
@@ -91,7 +92,7 @@ export function StudentDevelopmentView({
             ["count", "Antal"],
           ]}
         />
-        <Segmented
+        <SegmentedControl
           label="Diagram"
           value={form}
           onChange={setForm}
@@ -164,43 +165,6 @@ export function StudentDevelopmentView({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function Segmented<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: [T, string][];
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span id={`development-${label}`} className="text-sm font-medium">
-        {label}
-      </span>
-      <div
-        role="group"
-        aria-labelledby={`development-${label}`}
-        className="flex w-fit rounded-lg bg-muted p-1"
-      >
-        {options.map(([option, text]) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === value}
-            onClick={() => onChange(option)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${option === value ? "bg-background shadow-xs" : "text-muted-foreground"}`}
-          >
-            {text}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
