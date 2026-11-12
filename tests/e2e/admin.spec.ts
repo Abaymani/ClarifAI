@@ -20,6 +20,7 @@ test("protected admin pages redirect unauthenticated visitors", async ({
     "/admin/overview",
     "/admin/agreement",
     "/admin/development",
+    "/admin/passive",
   ]) {
     await page.goto(path);
 
