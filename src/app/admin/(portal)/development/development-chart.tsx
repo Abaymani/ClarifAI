@@ -9,11 +9,12 @@ import {
 
 export type DevelopmentForm = "bars" | "lines";
 
-// One blue ramp, light to dark from P to C, since the levels are ordered.
+// Chosen by the researchers. Red and green are hard to tell apart with red–green
+// colour blindness, so bars keep a fixed order and line points have their own shape.
 export const LEVEL_COLOURS: Record<IcapLevel, string> = {
-  P: "#86b6ef",
-  A: "#3987e5",
-  C: "#184f95",
+  P: "#e34948",
+  A: "#eda100",
+  C: "#008300",
 };
 export const LEVEL_NAMES: Record<IcapLevel, string> = {
   P: "Passiv",
@@ -38,16 +39,14 @@ export function DevelopmentChart({
   lessons,
   form,
   scale,
-  max,
   coderLabel,
 }: {
   lessons: readonly DevelopmentLesson[];
   form: DevelopmentForm;
   scale: DevelopmentScale;
-  // Shared by every card, so heights compare across participants.
-  max: number;
   coderLabel: string;
 }) {
+  const max = chartMax(lessons, form, scale);
   const x = (lesson: number) => LEFT + (PLOT_WIDTH * (lesson + 0.5)) / 4;
   const y = (value: number) =>
     TOP + PLOT_HEIGHT * (1 - (max > 0 ? value / max : 0));
@@ -72,7 +71,7 @@ export function DevelopmentChart({
         textAnchor="end"
         className="fill-muted-foreground text-[10px]"
       >
-        {scale === "share" ? "100 %" : max}
+        {scale === "share" ? PERCENT.format(max) : max}
       </text>
       <text
         x={LEFT - 4}
@@ -238,19 +237,83 @@ function Line({
         );
       })}
       {points.map((point) => (
-        <circle
+        <LevelMarker
           key={point.index}
-          cx={x(point.index)}
-          cy={y(point.value)}
-          r={3.5}
-          fill={LEVEL_COLOURS[level]}
-          strokeWidth={1.5}
-          className="stroke-card"
-        >
-          <title>{markText(point.index + 1, level, point.counts)}</title>
-        </circle>
+          level={level}
+          x={x(point.index)}
+          y={y(point.value)}
+          title={markText(point.index + 1, level, point.counts)}
+        />
       ))}
     </g>
+  );
+}
+
+// Each card has its own scale, so its marks fill the card (DL-079). Stacked shares
+// always add up to 100 %; line shares go up to the card's highest, by tens.
+export function chartMax(
+  lessons: readonly DevelopmentLesson[],
+  form: DevelopmentForm,
+  scale: DevelopmentScale,
+): number {
+  if (scale === "share" && form === "bars") return 1;
+  let max = 0;
+  for (const lesson of lessons) {
+    if (lesson.state !== "coded") continue;
+    if (form === "bars") {
+      max = Math.max(max, totalCodes(lesson.counts));
+      continue;
+    }
+    for (const level of DEVELOPMENT_LEVELS) {
+      max = Math.max(max, levelValue(lesson.counts, level, scale) ?? 0);
+    }
+  }
+  if (scale === "count") return Math.max(max, 1);
+  // Rounded first, so that 0.3 from floating point is not lifted to 0.4.
+  const tenths = Math.ceil(Number((max * 10).toFixed(6)));
+  return Math.min(1, Math.max(1, tenths) / 10);
+}
+
+// A circle for P, a square for A and a triangle for C.
+export function LevelMarker({
+  level,
+  x,
+  y,
+  title,
+}: {
+  level: IcapLevel;
+  x: number;
+  y: number;
+  title?: string;
+}) {
+  const shared = {
+    "data-level": level,
+    fill: LEVEL_COLOURS[level],
+    strokeWidth: 1.5,
+    className: "stroke-card",
+  };
+  const label = title ? <title>{title}</title> : null;
+  if (level === "P") {
+    return (
+      <circle cx={x} cy={y} r={3.5} {...shared}>
+        {label}
+      </circle>
+    );
+  }
+  if (level === "A") {
+    return (
+      <rect x={x - 3.5} y={y - 3.5} width={7} height={7} {...shared}>
+        {label}
+      </rect>
+    );
+  }
+  return (
+    <path
+      d={`M${x} ${y - 4.5}L${x + 4.5} ${y + 3.5}L${x - 4.5} ${y + 3.5}Z`}
+      {...shared}
+    >
+      {label}
+    </path>
   );
 }
 

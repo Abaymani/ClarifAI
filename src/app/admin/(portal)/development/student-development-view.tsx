@@ -6,6 +6,7 @@ import {
   DevelopmentChart,
   LEVEL_COLOURS,
   LEVEL_NAMES,
+  LevelMarker,
   type DevelopmentForm,
 } from "@/app/admin/(portal)/development/development-chart";
 import { coderName } from "@/app/admin/(portal)/agreement/agreement-format";
@@ -15,7 +16,6 @@ import {
   DEVELOPMENT_CODERS,
   DEVELOPMENT_LEVELS,
   levelChange,
-  totalCodes,
   type DevelopmentScale,
   type StudentDevelopment,
 } from "@/lib/admin/student-development";
@@ -42,14 +42,23 @@ export function StudentDevelopmentView({
   const [scale, setScale] = useState<DevelopmentScale>("share");
   const [form, setForm] = useState<DevelopmentForm>("bars");
   const [sort, setSort] = useState<Sort>("code");
+  const [allFourOnly, setAllFourOnly] = useState(false);
 
-  const max = useMemo(
-    () => sharedMax(students, coder, scale, form),
-    [students, coder, scale, form],
-  );
   const sorted = useMemo(
-    () => sortStudents(students, coder, scale, sort),
-    [students, coder, scale, sort],
+    () =>
+      sortStudents(
+        allFourOnly
+          ? students.filter((student) =>
+              student.lessons[coder].every(
+                (lesson) => lesson.state === "coded",
+              ),
+            )
+          : students,
+        coder,
+        scale,
+        sort,
+      ),
+    [students, coder, scale, sort, allFourOnly],
   );
 
   if (students.length === 0) {
@@ -108,9 +117,26 @@ export function StudentDevelopmentView({
             ))}
           </select>
         </div>
+        <label className="flex h-10 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={allFourOnly}
+            onChange={(event) => setAllFourOnly(event.target.checked)}
+            className="size-4"
+          />
+          Visa bara deltagare med alla fyra lektioner kodade
+        </label>
       </div>
 
-      <Legend coder={coder} scale={scale} />
+      <Legend coder={coder} scale={scale} form={form} />
+
+      <p className="text-sm text-muted-foreground" aria-live="polite">
+        Visar {sorted.length} av {students.length} deltagare
+        {allFourOnly
+          ? `, alla fyra lektioner kodade av ${coderName(coder)}`
+          : ""}
+        .
+      </p>
 
       <ul
         aria-label="Deltagare"
@@ -133,7 +159,6 @@ export function StudentDevelopmentView({
               lessons={student.lessons[coder]}
               form={form}
               scale={scale}
-              max={max}
               coderLabel={coderName(coder)}
             />
           </li>
@@ -183,20 +208,28 @@ function Segmented<T extends string>({
 function Legend({
   coder,
   scale,
+  form,
 }: {
   coder: Coder;
   scale: DevelopmentScale;
+  form: DevelopmentForm;
 }): ReactNode {
   return (
     <div className="flex flex-col gap-1 text-sm text-muted-foreground">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         {DEVELOPMENT_LEVELS.map((level) => (
           <span key={level} className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className="size-2.5 rounded-xs"
-              style={{ background: LEVEL_COLOURS[level] }}
-            />
+            {form === "lines" ? (
+              <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3">
+                <LevelMarker level={level} x={6} y={6.5} />
+              </svg>
+            ) : (
+              <span
+                aria-hidden="true"
+                className="size-2.5 rounded-xs"
+                style={{ background: LEVEL_COLOURS[level] }}
+              />
+            )}
             {level} {LEVEL_NAMES[level].toLowerCase()}
           </span>
         ))}
@@ -212,32 +245,12 @@ function Legend({
         {scale === "share"
           ? "Andel av promptkoderna på P, A och C."
           : "Antal promptkoder på P, A och C."}{" "}
-        Varje kod räknas, NA räknas inte, och alla kort har samma skala.
-        Förändringen räknas från den första till den sista kodade lektionen.
+        Varje kod räknas och NA räknas inte. Varje kort har sin egen skala, så
+        jämför kort med siffrorna på axeln. Förändringen räknas från den första
+        till den sista kodade lektionen.
       </p>
     </div>
   );
-}
-
-function sharedMax(
-  students: readonly StudentDevelopment[],
-  coder: Coder,
-  scale: DevelopmentScale,
-  form: DevelopmentForm,
-): number {
-  if (scale === "share") return 1;
-  let max = 0;
-  for (const student of students) {
-    for (const lesson of student.lessons[coder]) {
-      if (lesson.state !== "coded") continue;
-      const value =
-        form === "bars"
-          ? totalCodes(lesson.counts)
-          : Math.max(...DEVELOPMENT_LEVELS.map((l) => lesson.counts[l]));
-      max = Math.max(max, value);
-    }
-  }
-  return Math.max(max, 1);
 }
 
 function sortStudents(
