@@ -16,7 +16,11 @@ test("researcher portal is only exposed at its direct URL", async ({
 test("protected admin pages redirect unauthenticated visitors", async ({
   page,
 }) => {
-  for (const path of ["/admin/overview", "/admin/agreement"]) {
+  for (const path of [
+    "/admin/overview",
+    "/admin/agreement",
+    "/admin/development",
+  ]) {
     await page.goto(path);
 
     await expect(page).toHaveURL(/\/admin$/);
