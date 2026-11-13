@@ -7,9 +7,16 @@ import type {
   StudentDevelopment,
 } from "@/lib/admin/student-development";
 
-const coded = (P: number, A: number, C: number): DevelopmentLesson => ({
+// Unless given, every code is taken to sit on a prompt of its own.
+const coded = (
+  P: number,
+  A: number,
+  C: number,
+  codedPrompts = P + A + C,
+): DevelopmentLesson => ({
   state: "coded",
   counts: { P, A, C },
+  codedPrompts,
 });
 const none: DevelopmentLesson = { state: "noTranscript" };
 
@@ -72,6 +79,10 @@ describe("PassiveShareView", () => {
     ]);
     expect(cells("Elever")).toEqual(["2", "1", "2", "1", "2", "2"]);
     expect(cells("Koder")).toEqual(["12", "10", "12", "10", "22", "22"]);
+    expect(cells("Promptar")).toEqual(["12", "10", "12", "10", "22", "22"]);
+    expect(
+      screen.getByText(/Promptar räknar promptar med minst en/),
+    ).toBeTruthy();
   });
 
   test("can pool all codes instead", () => {

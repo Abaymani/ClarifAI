@@ -7,9 +7,16 @@ import type {
 
 import { passiveShare } from "./passive-share";
 
-const coded = (P: number, A: number, C: number): DevelopmentLesson => ({
+// Unless given, every code is taken to sit on a prompt of its own.
+const coded = (
+  P: number,
+  A: number,
+  C: number,
+  codedPrompts = P + A + C,
+): DevelopmentLesson => ({
   state: "coded",
   counts: { P, A, C },
+  codedPrompts,
 });
 const uncoded: DevelopmentLesson = { state: "uncoded" };
 const none: DevelopmentLesson = { state: "noTranscript" };
@@ -55,6 +62,7 @@ describe("passiveShare", () => {
     expect(result.lessons[0].share).toBeCloseTo(0.4);
     expect(result.lessons[0].studentShares).toEqual([0.8, 0]);
     expect(result.lessons[0].codes).toBe(12);
+    expect(result.lessons[0].prompts).toBe(12);
     // Lesson 2: only student 1, 6 of 10.
     expect(result.lessons[1].share).toBeCloseTo(0.6);
   });
@@ -91,6 +99,22 @@ describe("passiveShare", () => {
     expect(result.post.share).toBeCloseTo(0.3);
   });
 
+  it("counts prompts with a P, A or C code, which can carry several codes", () => {
+    const result = passiveShare(
+      [
+        student("1", [coded(2, 1, 1, 3), coded(1, 0, 0, 1), none, none]),
+        // A lesson with only NA codes has no such prompt.
+        student("2", [coded(0, 0, 0, 0), coded(0, 2, 0, 1), none, none]),
+      ],
+      "mean",
+      "all",
+    );
+
+    expect(result.lessons[0]).toMatchObject({ codes: 4, prompts: 3 });
+    expect(result.lessons[1]).toMatchObject({ codes: 3, prompts: 2 });
+    expect(result.pre).toMatchObject({ students: 2, codes: 7, prompts: 5 });
+  });
+
   it("has no share or change without P, A or C codes", () => {
     const result = passiveShare([students[2]], "mean", "all");
 
@@ -98,6 +122,7 @@ describe("passiveShare", () => {
       share: null,
       students: 0,
       codes: 0,
+      prompts: 0,
       studentShares: [],
     });
     expect(result.change).toBeNull();

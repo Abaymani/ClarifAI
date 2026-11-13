@@ -131,6 +131,7 @@ export function PassiveShareView({
                 ["Andel passivt", (f) => formatShare(f.share, PRECISE)],
                 ["Elever", (f) => String(f.students)],
                 ["Koder", (f) => String(f.codes)],
+                ["Promptar", (f) => String(f.prompts)],
               ] as [string, (figure: PassiveFigure) => string][]
             ).map(([label, format]) => (
               <tr key={label} className="border-b last:border-0">
@@ -151,6 +152,10 @@ export function PassiveShareView({
             ))}
           </tbody>
         </table>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Promptar räknar promptar med minst en P-, A- eller C-kod. En prompt
+          kan ha flera koder, så det kan finnas fler koder än promptar.
+        </p>
       </div>
     </div>
   );

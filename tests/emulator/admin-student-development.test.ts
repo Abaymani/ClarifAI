@@ -131,17 +131,17 @@ describe("student development", () => {
     const first = students.find((student) => student.participantCode === "993");
     expect(first?.lessons.AI).toEqual([
       { state: "noTranscript" },
-      { state: "coded", counts: { P: 2, A: 0, C: 1 } },
-      { state: "coded", counts: { P: 0, A: 1, C: 1 } },
+      { state: "coded", counts: { P: 2, A: 0, C: 1 }, codedPrompts: 2 },
+      { state: "coded", counts: { P: 0, A: 1, C: 1 }, codedPrompts: 2 },
       { state: "noTranscript" },
     ]);
     expect(first?.lessons.R1.slice(1, 3)).toEqual([
-      { state: "coded", counts: { P: 0, A: 1, C: 0 } },
+      { state: "coded", counts: { P: 0, A: 1, C: 0 }, codedPrompts: 1 },
       { state: "uncoded" },
     ]);
     expect(first?.lessons.R2.slice(1, 3)).toEqual([
       { state: "uncoded" },
-      { state: "coded", counts: { P: 0, A: 0, C: 2 } },
+      { state: "coded", counts: { P: 0, A: 0, C: 2 }, codedPrompts: 1 },
     ]);
     const second = students.find(
       (student) => student.participantCode === "994",
@@ -149,6 +149,7 @@ describe("student development", () => {
     expect(second?.lessons.AI[1]).toEqual({
       state: "coded",
       counts: { P: 0, A: 0, C: 0 },
+      codedPrompts: 0,
     });
   });
 });

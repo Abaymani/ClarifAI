@@ -7,9 +7,16 @@ import type {
   StudentDevelopment,
 } from "@/lib/admin/student-development";
 
-const coded = (P: number, A: number, C: number): DevelopmentLesson => ({
+// Unless given, every code is taken to sit on a prompt of its own.
+const coded = (
+  P: number,
+  A: number,
+  C: number,
+  codedPrompts = P + A + C,
+): DevelopmentLesson => ({
   state: "coded",
   counts: { P, A, C },
+  codedPrompts,
 });
 const uncoded: DevelopmentLesson = { state: "uncoded" };
 const none: DevelopmentLesson = { state: "noTranscript" };

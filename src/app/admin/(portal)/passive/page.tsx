@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { LessonOneCodesNotice } from "@/app/admin/(portal)/lesson-one-codes-notice";
 import { PassiveShareView } from "@/app/admin/(portal)/passive/passive-share-view";
 import { getCurrentResearcher } from "@/lib/admin/auth";
-import { loadLessonOneCodes, loadStudentDevelopment } from "@/lib/admin/store";
+import { ResearchDataFreshness } from "@/app/admin/(portal)/research-data-freshness";
+import {
+  cachedStudentDevelopment,
+  formatFetchedAt,
+} from "@/lib/admin/cached-research-data";
+import { loadLessonOneCodes } from "@/lib/admin/store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +17,10 @@ export default async function AdminPassiveSharePage() {
   // every navigation.
   if (!(await getCurrentResearcher())) redirect("/admin");
 
-  // The same read-only loader as the development page (DL-079).
+  // The same read-only data as the development page (DL-079), from the portal's
+  // ten-minute cache (DL-081).
   const [students, lessonOneCodes] = await Promise.all([
-    loadStudentDevelopment(),
+    cachedStudentDevelopment(),
     loadLessonOneCodes(),
   ]);
 
@@ -32,8 +38,9 @@ export default async function AdminPassiveSharePage() {
           ingenting.
         </p>
       </div>
+      <ResearchDataFreshness fetchedAt={formatFetchedAt(students.fetchedAt)} />
       <LessonOneCodesNotice state={lessonOneCodes} />
-      <PassiveShareView students={students} />
+      <PassiveShareView students={students.data} />
     </main>
   );
 }
