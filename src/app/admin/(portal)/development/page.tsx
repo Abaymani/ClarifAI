@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { StudentDevelopmentView } from "@/app/admin/(portal)/development/student-development-view";
 import { LessonOneCodesNotice } from "@/app/admin/(portal)/lesson-one-codes-notice";
 import { getCurrentResearcher } from "@/lib/admin/auth";
-import { loadLessonOneCodes, loadStudentDevelopment } from "@/lib/admin/store";
+import { ResearchDataFreshness } from "@/app/admin/(portal)/research-data-freshness";
+import {
+  cachedStudentDevelopment,
+  formatFetchedAt,
+} from "@/lib/admin/cached-research-data";
+import { loadLessonOneCodes } from "@/lib/admin/store";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +18,7 @@ export default async function AdminDevelopmentPage() {
   if (!(await getCurrentResearcher())) redirect("/admin");
 
   const [students, lessonOneCodes] = await Promise.all([
-    loadStudentDevelopment(),
+    cachedStudentDevelopment(),
     loadLessonOneCodes(),
   ]);
 
@@ -27,8 +32,9 @@ export default async function AdminDevelopmentPage() {
           visar bara lagrad kodning och ändrar ingenting.
         </p>
       </div>
+      <ResearchDataFreshness fetchedAt={formatFetchedAt(students.fetchedAt)} />
       <LessonOneCodesNotice state={lessonOneCodes} />
-      <StudentDevelopmentView students={students} />
+      <StudentDevelopmentView students={students.data} />
     </main>
   );
 }

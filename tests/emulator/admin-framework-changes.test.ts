@@ -1,12 +1,17 @@
 import {
   CollectionReference,
+  Query,
   DocumentReference,
   Firestore,
   WriteBatch,
 } from "firebase-admin/firestore";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { savePromptCoding, tryFrameworkChanges } from "@/lib/admin/store";
+import {
+  loadAgreementInputs,
+  savePromptCoding,
+  tryFrameworkChanges,
+} from "@/lib/admin/store";
 import { getDb } from "@/lib/firebase/admin";
 
 const transcript = {
@@ -147,5 +152,22 @@ describe("trying framework changes", () => {
       ok: false,
       problem: "NA1 är ingen P-, A- eller C-kod i ramverket.",
     });
+  });
+
+  test("works on inputs it is given without reading the database (DL-081)", async () => {
+    const inputs = await loadAgreementInputs();
+    const reads = [
+      vi.spyOn(Query.prototype, "get"),
+      vi.spyOn(DocumentReference.prototype, "get"),
+      vi.spyOn(Firestore.prototype, "getAll"),
+    ];
+
+    const result = await tryFrameworkChanges(
+      [{ kind: "delete", code: "C9" }],
+      inputs,
+    );
+
+    expect(result.ok).toBe(true);
+    for (const read of reads) expect(read).not.toHaveBeenCalled();
   });
 });

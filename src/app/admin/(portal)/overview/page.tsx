@@ -1,12 +1,17 @@
 import { LessonOneCodesNotice } from "@/app/admin/(portal)/lesson-one-codes-notice";
 import { OverviewTable } from "@/app/admin/(portal)/overview/overview-table";
-import { listAdminOverview, loadLessonOneCodes } from "@/lib/admin/store";
+import { ResearchDataFreshness } from "@/app/admin/(portal)/research-data-freshness";
+import {
+  cachedAdminOverview,
+  formatFetchedAt,
+} from "@/lib/admin/cached-research-data";
+import { loadLessonOneCodes } from "@/lib/admin/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
-  const [participants, lessonOneCodes] = await Promise.all([
-    listAdminOverview(),
+  const [overview, lessonOneCodes] = await Promise.all([
+    cachedAdminOverview(),
     loadLessonOneCodes(),
   ]);
 
@@ -19,8 +24,9 @@ export default async function AdminOverviewPage() {
           studenternas bedömning per lektion.
         </p>
       </div>
+      <ResearchDataFreshness fetchedAt={formatFetchedAt(overview.fetchedAt)} />
       <LessonOneCodesNotice state={lessonOneCodes} />
-      <OverviewTable participants={participants} />
+      <OverviewTable participants={overview.data} />
     </main>
   );
 }

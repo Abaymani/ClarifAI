@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentResearcher } from "@/lib/admin/auth";
+import { cachedAgreementInputs } from "@/lib/admin/cached-research-data";
 import type { ChangeVariant } from "@/lib/admin/coder-agreement";
 import { MAX_FRAMEWORK_CHANGES } from "@/lib/admin/framework-changes";
 import { runCoderAgreement, tryFrameworkChanges } from "@/lib/admin/store";
@@ -43,7 +44,8 @@ export async function runCoderAgreementAction(): Promise<
   }
 }
 
-// Only reads and calculates, so there is nothing to revalidate (DL-078).
+// Only reads and calculates, so there is nothing to revalidate (DL-078). It works
+// on the portal's cached copy, so trying many changes costs no extra reads (DL-081).
 export async function tryFrameworkChangesAction(
   input: unknown,
 ): Promise<
@@ -57,7 +59,10 @@ export async function tryFrameworkChangesAction(
   }
 
   try {
-    const result = await tryFrameworkChanges(changes.data);
+    const result = await tryFrameworkChanges(
+      changes.data,
+      (await cachedAgreementInputs()).data,
+    );
     return result.ok
       ? { ok: true, variants: result.variants }
       : { ok: false, error: result.problem };

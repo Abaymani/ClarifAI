@@ -209,6 +209,8 @@ export async function runCoderAgreement(
 // result, is written (DL-078).
 export async function tryFrameworkChanges(
   changes: readonly FrameworkChange[],
+  // Already read inputs, such as the portal's cached copy (DL-081).
+  inputs?: readonly AgreementSessionInput[],
 ): Promise<
   { ok: true; variants: ChangeVariant[] } | { ok: false; problem: string }
 > {
@@ -216,7 +218,7 @@ export async function tryFrameworkChanges(
   const problem = frameworkChangesProblem(changes, framework);
   if (problem) return { ok: false, problem };
 
-  const sessions = await loadAgreementInputs();
+  const sessions = inputs ?? (await loadAgreementInputs());
   return {
     ok: true,
     variants: compareFrameworkChanges(
@@ -242,7 +244,7 @@ export async function loadStudentDevelopment(): Promise<StudentDevelopment[]> {
 
 // Every transcript's student prompts with Armin's, Frida's and the AI's prompt
 // codes, read without writing anything.
-async function loadAgreementInputs(): Promise<AgreementSessionInput[]> {
+export async function loadAgreementInputs(): Promise<AgreementSessionInput[]> {
   const db = getDb();
   const [sessions, entries] = await Promise.all([
     db.collection(SESSIONS).get(),

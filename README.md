@@ -261,6 +261,9 @@ The `Utveckling` page shows one card per participant with their P, A and C promp
 
 The `Andel passivt` page shows the share of passive codes in the AI coding for the whole group: P codes ÷ (P + A + C) codes, with NA left out. It gives the share per lesson, for pre-interaction (lessons 1 and 2) and post-interaction (lessons 3 and 4), and the change from pre to post. Switches choose between the average of each student's share and all codes pooled, and between all students with AI coding and only those with all four lessons. Each figure says how many students and codes it rests on. It only reads stored coding (DL-080).
 
+### Cached data in the portal
+`Översikt`, `Utveckling`, `Andel passivt` and the framework-change panel read every session and every coding entry, which on the free Firebase plan used up the day's reads. They now share a server-side copy for ten minutes. Each page says when its data was fetched, and `Uppdatera` fetches fresh data at once. Saved coding therefore shows on these pages within ten minutes, or at once after `Uppdatera`; the transcript page and `Beräkna` always read the database directly (DL-081).
+
 ## Environment variables
 Copy `.env.example` to `.env.local` and fill in values there. **Never commit real values.** Every `.env*` file except `.env.example` is git-ignored, and a gitleaks pre-commit hook blocks commits that contain secrets. The Firebase service-account values are only needed on Vercel; locally the emulator is used.
 
