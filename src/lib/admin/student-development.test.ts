@@ -35,9 +35,16 @@ function session(
   };
 }
 
-const coded = (P: number, A: number, C: number): DevelopmentLesson => ({
+// Unless given, every code is taken to sit on a prompt of its own.
+const coded = (
+  P: number,
+  A: number,
+  C: number,
+  codedPrompts = P + A + C,
+): DevelopmentLesson => ({
   state: "coded",
   counts: { P, A, C },
+  codedPrompts,
 });
 const uncoded: DevelopmentLesson = { state: "uncoded" };
 const noTranscript: DevelopmentLesson = { state: "noTranscript" };
@@ -62,7 +69,8 @@ describe("studentDevelopment", () => {
     expect(student.participantCode).toBe("7");
     expect(student.lessons.AI).toEqual([
       noTranscript,
-      coded(1, 1, 1),
+      // Message 1 has P2 and C10 and message 3 has A6; message 5 has only NA.
+      coded(1, 1, 1, 2),
       noTranscript,
       noTranscript,
     ]);
@@ -101,7 +109,7 @@ describe("studentDevelopment", () => {
       framework,
       null,
     );
-    expect(student.lessons.R1[1]).toEqual(coded(0, 1, 1));
+    expect(student.lessons.R1[1]).toEqual(coded(0, 1, 1, 1));
   });
 
   it("shows lesson 1 under the participant's later code", () => {

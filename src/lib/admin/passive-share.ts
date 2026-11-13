@@ -20,6 +20,8 @@ export type PassiveFigure = {
   share: number | null;
   students: number;
   codes: number;
+  // Prompts with at least one P, A or C code; one prompt can carry several codes.
+  prompts: number;
   // Each included student's own share, for the dots in the chart.
   studentShares: number[];
 };
@@ -71,18 +73,21 @@ function figure(
   // is taken; a student with coding in only one of the lessons still counts.
   const perStudent = students.flatMap((student) => {
     const counts: IcapCounts = { P: 0, A: 0, C: 0 };
+    let prompts = 0;
     for (const lesson of lessons) {
       const coded = student.lessons.AI[lesson - 1];
       if (coded?.state !== "coded") continue;
       counts.P += coded.counts.P;
       counts.A += coded.counts.A;
       counts.C += coded.counts.C;
+      prompts += coded.codedPrompts;
     }
     const total = totalCodes(counts);
-    return total === 0 ? [] : [{ passive: counts.P, total }];
+    return total === 0 ? [] : [{ passive: counts.P, total, prompts }];
   });
 
   const codes = perStudent.reduce((sum, student) => sum + student.total, 0);
+  const prompts = perStudent.reduce((sum, student) => sum + student.prompts, 0);
   const studentShares = perStudent.map(
     (student) => student.passive / student.total,
   );
@@ -94,5 +99,5 @@ function figure(
           studentShares.length
         : perStudent.reduce((sum, student) => sum + student.passive, 0) / codes;
   }
-  return { share, students: perStudent.length, codes, studentShares };
+  return { share, students: perStudent.length, codes, prompts, studentShares };
 }

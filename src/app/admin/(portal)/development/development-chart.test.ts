@@ -3,9 +3,16 @@ import { describe, expect, it } from "vitest";
 import { chartMax } from "@/app/admin/(portal)/development/development-chart";
 import type { DevelopmentLesson } from "@/lib/admin/student-development";
 
-const coded = (P: number, A: number, C: number): DevelopmentLesson => ({
+// Unless given, every code is taken to sit on a prompt of its own.
+const coded = (
+  P: number,
+  A: number,
+  C: number,
+  codedPrompts = P + A + C,
+): DevelopmentLesson => ({
   state: "coded",
   counts: { P, A, C },
+  codedPrompts,
 });
 const uncoded: DevelopmentLesson = { state: "uncoded" };
 
