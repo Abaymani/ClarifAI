@@ -22,7 +22,13 @@ export const DEVELOPMENT_LEVELS: readonly IcapLevel[] = ["P", "A", "C"];
 export type DevelopmentLesson =
   | { state: "noTranscript" }
   | { state: "uncoded" }
-  | { state: "coded"; counts: IcapCounts };
+  | {
+      state: "coded";
+      counts: IcapCounts;
+      // Student prompts with at least one P, A or C code, for the passive share
+      // page (DL-080).
+      codedPrompts: number;
+    };
 
 export type StudentDevelopment = {
   participantCode: string;
@@ -88,13 +94,19 @@ function lessonCounts(
   if (byPrompt.size === 0) return { state: "uncoded" };
 
   const counts: IcapCounts = { P: 0, A: 0, C: 0 };
+  let codedPrompts = 0;
   for (const codes of byPrompt.values()) {
+    let levelled = false;
     for (const code of codes) {
       const level = levels.get(code);
-      if (level === "P" || level === "A" || level === "C") counts[level] += 1;
+      if (level === "P" || level === "A" || level === "C") {
+        counts[level] += 1;
+        levelled = true;
+      }
     }
+    if (levelled) codedPrompts += 1;
   }
-  return { state: "coded", counts };
+  return { state: "coded", counts, codedPrompts };
 }
 
 export function totalCodes(counts: IcapCounts): number {
