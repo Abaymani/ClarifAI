@@ -242,6 +242,67 @@ describe("OverviewTable", () => {
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
+  test("totals the student assessments of the participants shown", () => {
+    const submitted = (
+      participantCode: string,
+      lesson: 1 | 2 | 3 | 4,
+      agreements: ("yes" | "partly" | "no" | null)[],
+    ) => ({
+      participantCode,
+      lesson,
+      state: "completed" as const,
+      status: "completed" as const,
+      transcriptSubmission: "transcript" as const,
+      codedBy: [],
+      reflectionAssessment: { state: "submitted" as const, agreements },
+    });
+    render(
+      <OverviewTable
+        participants={[
+          {
+            participantCode: "12",
+            sessions: {
+              1: submitted("12", 1, ["yes", "partly"]),
+              3: submitted("12", 3, ["yes", "no", null]),
+            },
+          },
+          {
+            participantCode: "34",
+            sessions: { 2: submitted("34", 2, ["no", "no", "yes"]) },
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Studentbedömning" }));
+
+    const totals = () =>
+      Object.fromEntries(
+        [...screen.getByLabelText("Totalt").querySelectorAll("div")].map(
+          (entry) => [
+            entry.querySelector("dt")?.textContent,
+            entry.querySelector("dd")?.textContent,
+          ],
+        ),
+      );
+    expect(totals()).toEqual({
+      Ja: "3",
+      Delvis: "1",
+      Nej: "3",
+      "Ej besvarad": "1",
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Sök deltagarkod"), {
+      target: { value: "34" },
+    });
+    expect(totals()).toEqual({
+      Ja: "1",
+      Delvis: "0",
+      Nej: "2",
+      "Ej besvarad": "0",
+    });
+  });
+
   test("counts the AI's codes per ICAP level for every lesson", () => {
     render(
       <OverviewTable
