@@ -134,7 +134,9 @@ export function OverviewTable({
         </p>
       ) : null}
 
-      {view === "assessment" ? <AssessmentLegend /> : null}
+      {view === "assessment" ? (
+        <AssessmentLegend totals={agreementTotals(visible)} />
+      ) : null}
 
       <div
         role="tabpanel"
@@ -249,28 +251,47 @@ function AiCodeCounts({ counts }: { counts: IcapCounts | undefined }) {
   );
 }
 
-function AssessmentLegend() {
+type AgreementTotals = Record<AnalysisAgreement | "unanswered", number>;
+
+function agreementTotals(
+  participants: AdminParticipantOverview[],
+): AgreementTotals {
+  const totals: AgreementTotals = { yes: 0, partly: 0, no: 0, unanswered: 0 };
+  for (const participant of participants) {
+    for (const lesson of LESSONS) {
+      const assessment = participant.sessions[lesson]?.reflectionAssessment;
+      if (assessment?.state !== "submitted") continue;
+      for (const agreement of assessment.agreements) {
+        totals[agreement ?? "unanswered"] += 1;
+      }
+    }
+  }
+  return totals;
+}
+
+function AssessmentLegend({ totals }: { totals: AgreementTotals }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border bg-background px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
       <p className="text-muted-foreground">
         Varje cirkel motsvarar ett reflektionsmoment. Klicka för att öppna
-        studentens reflektion.
+        studentens reflektion. Totalen gäller deltagarna som visas.
       </p>
-      <div className="flex flex-wrap gap-x-4 gap-y-2" aria-label="Förklaring">
+      <dl className="flex flex-wrap gap-x-4 gap-y-2" aria-label="Totalt">
         {(
           [
-            [null, "Ej besvarad"],
             ["yes", "Ja"],
             ["partly", "Delvis"],
             ["no", "Nej"],
+            ["unanswered", "Ej besvarad"],
           ] as const
-        ).map(([agreement, label]) => (
-          <span key={label} className="inline-flex items-center gap-1.5">
-            <AgreementCircle agreement={agreement} />
-            {label}
-          </span>
+        ).map(([key, label]) => (
+          <div key={key} className="inline-flex items-center gap-1.5">
+            <AgreementCircle agreement={key === "unanswered" ? null : key} />
+            <dt>{label}</dt>
+            <dd className="font-semibold tabular-nums">{totals[key]}</dd>
+          </div>
         ))}
-      </div>
+      </dl>
     </div>
   );
 }
