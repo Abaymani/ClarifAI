@@ -358,4 +358,90 @@ describe("OverviewTable", () => {
         .querySelectorAll("a"),
     ).toHaveLength(4);
   });
+
+  test("shows each reflection moment's coding and the session average for lessons 2 and 3", () => {
+    const base = {
+      state: "completed" as const,
+      status: "completed" as const,
+      transcriptSubmission: "transcript" as const,
+      codedBy: [],
+      reflectionAssessment: { state: "unavailable" as const },
+    };
+    render(
+      <OverviewTable
+        reflectionMaxScore={9}
+        participants={[
+          {
+            participantCode: "12",
+            sessions: {
+              1: { ...base, participantCode: "12", lesson: 1 },
+              2: {
+                ...base,
+                participantCode: "12",
+                lesson: 2,
+                reflectionCoding: {
+                  state: "submitted",
+                  moments: [
+                    { R1: 6, R2: 5 },
+                    { R1: 3, R2: null },
+                    { R1: null, R2: null },
+                  ],
+                },
+              },
+              3: {
+                ...base,
+                participantCode: "12",
+                lesson: 3,
+                reflectionCoding: { state: "not_submitted", moments: 2 },
+              },
+            },
+          },
+          {
+            participantCode: "13",
+            sessions: {
+              2: {
+                ...base,
+                participantCode: "13",
+                lesson: 2,
+                reflectionCoding: { state: "unavailable" },
+              },
+            },
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Reflektionskodning" }));
+
+    expect(
+      screen.getByRole("columnheader", { name: "Lektion 2" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "Lektion 3" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("columnheader", { name: "Lektion 1" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("columnheader", { name: "Lektion 4" }),
+    ).toBeNull();
+    expect(screen.getByText("Armin: 6 av 9")).toBeTruthy();
+    expect(screen.getAllByText("Frida: ej kodad")).toHaveLength(2);
+    expect(screen.getByText("= 5,5")).toBeTruthy();
+    expect(screen.getByText("Medel 4,3/9")).toBeTruthy();
+    expect(screen.getByText(/2 av 3 kodade/)).toBeTruthy();
+    expect(screen.getByText("Ej inskickad")).toBeTruthy();
+    expect(screen.getAllByText("Ingen reflektion")).toHaveLength(2);
+    expect(
+      screen
+        .getByRole("link", {
+          name: "Öppna reflektionen för deltagare 12, lektion 2",
+        })
+        .getAttribute("href"),
+    ).toBe("/admin/participant/12/lesson/2?view=reflection");
+
+    fireEvent.click(screen.getByLabelText(/Dölj deltagare utan reflektion/));
+    expect(screen.getByText("Deltagare 12")).toBeTruthy();
+    expect(screen.queryByText("Deltagare 13")).toBeNull();
+  });
 });

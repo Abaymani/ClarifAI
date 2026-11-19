@@ -1,0 +1,48 @@
+{
+  "version": "2026-11-19.1",
+  "notice": "The researchers' framework for coding students' reflections, copied from their coding sheet on 2026-11-19. Each criterion gives one point. The sheet's separate action plan column is not recorded; the action plan counts as State 3's criterion (DL-083).",
+  "states": [
+    {
+      "state": 1,
+      "criteria": [
+        { "id": "S1-WENT-WELL", "label": "1 for why things went well" },
+        { "id": "S1-NOT-WELL", "label": "1 for why things did not go well" },
+        {
+          "id": "S1-COMPETENCIES",
+          "label": "1 for competencies/knowledge they had to use"
+        }
+      ]
+    },
+    {
+      "state": 2,
+      "criteria": [
+        {
+          "id": "S2-OUTSIDE",
+          "label": "1 for applying learned competencies outside of prof life"
+        },
+        {
+          "id": "S2-SIMILAR",
+          "label": "1 for another situation with similar competencies or mistakes"
+        }
+      ]
+    },
+    {
+      "state": 3,
+      "criteria": [
+        {
+          "id": "S3-STARTING-POINT",
+          "label": "1 for clear starting point, problem/main idea introduction, or scene setting"
+        },
+        {
+          "id": "S3-MAIN-THEME",
+          "label": "1 for revolving around a main theme"
+        },
+        {
+          "id": "S3-CONNECTING",
+          "label": "1 for connecting to things learned before (apply to real world...)"
+        },
+        { "id": "S3-ACTION-PLAN", "label": "1 for action plan" }
+      ]
+    }
+  ]
+}
