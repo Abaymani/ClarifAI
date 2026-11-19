@@ -5,6 +5,8 @@ import {
   cachedAdminOverview,
   formatFetchedAt,
 } from "@/lib/admin/cached-research-data";
+import { maxReflectionScore } from "@/lib/admin/reflection-coding";
+import { loadReflectionCodingFramework } from "@/lib/admin/reflection-coding-framework";
 import { loadLessonOneCodes } from "@/lib/admin/store";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +23,16 @@ export default async function AdminOverviewPage() {
         <h1 className="font-heading text-3xl font-semibold">Översikt</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Se sessionsstatus, forskarnas kodningsarbete, AI-kodningen eller
-          studenternas bedömning per lektion.
+          studenternas bedömning per lektion, eller hur långt reflektionerna är
+          kodade.
         </p>
       </div>
       <ResearchDataFreshness fetchedAt={formatFetchedAt(overview.fetchedAt)} />
       <LessonOneCodesNotice state={lessonOneCodes} />
-      <OverviewTable participants={overview.data} />
+      <OverviewTable
+        participants={overview.data}
+        reflectionMaxScore={maxReflectionScore(loadReflectionCodingFramework())}
+      />
     </main>
   );
 }

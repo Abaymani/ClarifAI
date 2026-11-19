@@ -5,8 +5,10 @@ import { useState } from "react";
 import { ReflectionOverview } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/reflection-overview";
 import { TranscriptWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/transcript-workspace";
 import type { ResearcherId } from "@/lib/admin/auth";
+import type { ReflectionCodingFramework } from "@/lib/admin/reflection-coding";
 import type {
   AdminCodeOption,
+  ReflectionCodingByResearcher,
   ReflectionCommentsByResearcher,
   ResearcherCoding,
 } from "@/lib/admin/types";
@@ -30,6 +32,8 @@ export function SessionWorkspace({
   reflectionQuestions,
   reflectionResponses,
   reflectionComments,
+  reflectionCoding = { R1: [], R2: [] },
+  reflectionCodingFramework = null,
   transcriptEmptyText,
   initialView = "transcript",
   showReflection = true,
@@ -44,6 +48,8 @@ export function SessionWorkspace({
   reflectionQuestions: StoredReflectionQuestions | null;
   reflectionResponses: StoredReflectionResponses | null;
   reflectionComments: ReflectionCommentsByResearcher;
+  reflectionCoding?: ReflectionCodingByResearcher;
+  reflectionCodingFramework?: ReflectionCodingFramework | null;
   transcriptEmptyText: string | null;
   initialView?: View;
   showReflection?: boolean;
@@ -116,6 +122,8 @@ export function SessionWorkspace({
           messages={messages}
           coding={coding}
           comments={reflectionComments}
+          reflectionCoding={reflectionCoding}
+          reflectionCodingFramework={reflectionCodingFramework}
           currentResearcher={currentResearcher}
         />
       </div>

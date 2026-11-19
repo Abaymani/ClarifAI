@@ -34,14 +34,23 @@ import {
   studentDevelopment,
   type StudentDevelopment,
 } from "@/lib/admin/student-development";
+import {
+  criterionIds,
+  reflectionScore,
+  type MomentScores,
+} from "@/lib/admin/reflection-coding";
+import { loadReflectionCodingFramework } from "@/lib/admin/reflection-coding-framework";
 import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
 import type {
   AdminParticipantOverview,
   AdminReflectionAssessment,
+  AdminReflectionCodingSummary,
   AdminSession,
+  ReflectionCodingByResearcher,
   ReflectionCommentsByResearcher,
   ResearcherCoding,
   ResearcherPromptCoding,
+  ResearcherReflectionCoding,
   ResearcherReflectionComment,
   ResearcherSequenceCoding,
 } from "@/lib/admin/types";
@@ -55,6 +64,7 @@ const PARTICIPANTS = "participants";
 const SESSIONS = "sessions";
 const RESEARCHER_CODING = "researcherCoding";
 const RESEARCHER_REFLECTION_COMMENTS = "researcherReflectionComments";
+const RESEARCHER_REFLECTION_CODING = "researcherReflectionCoding";
 const ENTRIES = "entries";
 const CODER_AGREEMENT_COLLECTION = "coderAgreement";
 const CODER_AGREEMENT_DOC = "latest";
@@ -98,15 +108,45 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
     await Promise.all([
       db.collection(PARTICIPANTS).get(),
       db.collection(SESSIONS).get(),
-      db.collectionGroup(ENTRIES).select("researcherId").get(),
+      db
+        .collectionGroup(ENTRIES)
+        .select("researcherId", "criteria", "coded")
+        .get(),
       loadLessonOneCodes(),
     ]);
   const codes =
     lessonOneCodes.status === "applied" ? lessonOneCodes.codes : null;
   const levels = promptCodeLevels(loadFramework());
+  const reflectionFramework = loadReflectionCodingFramework();
 
   const codingBySession = new Map<string, Set<ResearcherId>>();
+  // Only each marked moment's total is kept, never which criteria were ticked.
+  const reflectionScoresBySession = new Map<
+    string,
+    Map<string, MomentScores>
+  >();
   for (const doc of codingEntries.docs) {
+    const reflectionOwner = reflectionCodingEntryOwner(doc.ref.path);
+    if (reflectionOwner) {
+      const data = doc.data();
+      if (data.coded !== true) continue;
+      const criteria = Array.isArray(data.criteria)
+        ? data.criteria.filter((id): id is string => typeof id === "string")
+        : [];
+      const moments =
+        reflectionScoresBySession.get(reflectionOwner.sessionId) ?? new Map();
+      const scores = moments.get(reflectionOwner.itemId) ?? {
+        R1: null,
+        R2: null,
+      };
+      scores[reflectionOwner.researcherId] = reflectionScore(
+        criteria,
+        reflectionFramework,
+      );
+      moments.set(reflectionOwner.itemId, scores);
+      reflectionScoresBySession.set(reflectionOwner.sessionId, moments);
+      continue;
+    }
     const owner = researcherCodingEntryOwner(doc.ref.path);
     if (!owner) continue;
     const { sessionId, researcherId } = owner;
@@ -147,6 +187,14 @@ export async function listAdminOverview(): Promise<AdminParticipantOverview[]> {
       ...(session.analysis
         ? { aiCodeCounts: icapCounts(session.analysis, levels) }
         : {}),
+      ...(session.lesson === 2 || session.lesson === 3
+        ? {
+            reflectionCoding: reflectionCodingSummary(
+              session,
+              reflectionScoresBySession.get(session.id),
+            ),
+          }
+        : {}),
     };
     byParticipant.set(participantCode, participant);
   }
@@ -174,6 +222,23 @@ function reflectionAssessment(session: Session): AdminReflectionAssessment {
     state: "submitted",
     agreements: items.map(
       (item) => responseByItem.get(item.id)?.agreement ?? null,
+    ),
+  };
+}
+
+function reflectionCodingSummary(
+  session: Session,
+  scores: Map<string, MomentScores> | undefined,
+): AdminReflectionCodingSummary {
+  const items = session.reflectionQuestions?.items ?? [];
+  if (items.length === 0) return { state: "unavailable" };
+  if (!session.reflectionResponses) {
+    return { state: "not_submitted", moments: items.length };
+  }
+  return {
+    state: "submitted",
+    moments: items.map(
+      (item) => scores?.get(item.id) ?? { R1: null, R2: null },
     ),
   };
 }
@@ -507,6 +572,80 @@ export async function saveReflectionComment(input: {
   };
 }
 
+export async function listReflectionCoding(
+  sessionId: string,
+): Promise<ReflectionCodingByResearcher> {
+  const [r1, r2] = await Promise.all([
+    reflectionCodingEntries(sessionId, "R1").get(),
+    reflectionCodingEntries(sessionId, "R2").get(),
+  ]);
+  return {
+    R1: r1.docs.flatMap((doc) =>
+      parseReflectionCoding(doc.id, doc.data(), "R1"),
+    ),
+    R2: r2.docs.flatMap((doc) =>
+      parseReflectionCoding(doc.id, doc.data(), "R2"),
+    ),
+  };
+}
+
+// The researcher's own record is the only document written (DL-083). It is saved
+// whole, so the latest save wins, as with prompt coding.
+export async function saveReflectionCoding(input: {
+  sessionId: string;
+  researcherId: ResearcherId;
+  itemId: string;
+  criteria: string[];
+  coded: boolean;
+  now?: Date;
+}): Promise<ResearcherReflectionCoding | null> {
+  const session = await requiredSession(input.sessionId);
+  if (session.lesson !== 2 && session.lesson !== 3) {
+    throw new AdminCodingError("INVALID_REFLECTION_ITEM");
+  }
+  const item = session.reflectionQuestions?.items.find(
+    (candidate) => candidate.id === input.itemId,
+  );
+  if (!item) throw new AdminCodingError("INVALID_REFLECTION_ITEM");
+  if (!session.reflectionResponses) {
+    throw new AdminCodingError("REFLECTION_NOT_SUBMITTED");
+  }
+
+  const framework = loadReflectionCodingFramework();
+  const known = criterionIds(framework);
+  const criteria = [...new Set(input.criteria)];
+  if (criteria.some((id) => !known.includes(id))) {
+    throw new AdminCodingError("INVALID_CODE");
+  }
+  criteria.sort((a, b) => known.indexOf(a) - known.indexOf(b));
+
+  const ref = reflectionCodingEntries(session.id, input.researcherId).doc(
+    item.id,
+  );
+  if (criteria.length === 0 && !input.coded) {
+    await ref.delete();
+    return null;
+  }
+
+  const now = input.now ?? new Date();
+  await ref.set({
+    researcherId: input.researcherId,
+    itemId: item.id,
+    criteria,
+    coded: input.coded,
+    frameworkVersion: framework.version,
+    updatedAt: Timestamp.fromDate(now),
+  });
+  return {
+    researcherId: input.researcherId,
+    itemId: item.id,
+    criteria,
+    coded: input.coded,
+    frameworkVersion: framework.version,
+    updatedAt: now.toISOString(),
+  };
+}
+
 export async function savePromptCoding(input: {
   sessionId: string;
   researcherId: ResearcherId;
@@ -655,6 +794,7 @@ export class AdminCodingError extends Error {
       | "INVALID_NOTE"
       | "INVALID_CODE"
       | "INVALID_REFLECTION_ITEM"
+      | "REFLECTION_NOT_SUBMITTED"
       | "INVALID_COMMENT",
   ) {
     super(code);
@@ -663,7 +803,7 @@ export class AdminCodingError extends Error {
 }
 
 // Every `entries` subcollection shares one collection group, so the researchers'
-// coding is told apart from reflection comments by its path.
+// coding is told apart from reflection comments and reflection coding by its path.
 function researcherCodingEntryOwner(
   path: string,
 ): { sessionId: string; researcherId: ResearcherId } | null {
@@ -672,6 +812,34 @@ function researcherCodingEntryOwner(
   return match
     ? { sessionId: match[1], researcherId: match[2] as ResearcherId }
     : null;
+}
+
+function reflectionCodingEntryOwner(
+  path: string,
+): { sessionId: string; researcherId: ResearcherId; itemId: string } | null {
+  const match =
+    /^sessions\/([^/]+)\/researcherReflectionCoding\/(R1|R2)\/entries\/([^/]+)$/.exec(
+      path,
+    );
+  return match
+    ? {
+        sessionId: match[1],
+        researcherId: match[2] as ResearcherId,
+        itemId: match[3],
+      }
+    : null;
+}
+
+function reflectionCodingEntries(
+  sessionId: string,
+  researcherId: ResearcherId,
+) {
+  return getDb()
+    .collection(SESSIONS)
+    .doc(sessionId)
+    .collection(RESEARCHER_REFLECTION_CODING)
+    .doc(researcherId)
+    .collection(ENTRIES);
 }
 
 function codingEntries(sessionId: string, researcherId: ResearcherId) {
@@ -804,6 +972,37 @@ function parseReflectionComment(
       researcherId,
       itemId: id,
       comment: data.comment,
+      updatedAt: data.updatedAt.toDate().toISOString(),
+    },
+  ];
+}
+
+function parseReflectionCoding(
+  id: string,
+  data: Record<string, unknown>,
+  researcherId: ResearcherId,
+): ResearcherReflectionCoding[] {
+  if (
+    data.researcherId !== researcherId ||
+    data.itemId !== id ||
+    !Array.isArray(data.criteria) ||
+    typeof data.coded !== "boolean" ||
+    !(data.updatedAt instanceof Timestamp)
+  ) {
+    return [];
+  }
+  return [
+    {
+      researcherId,
+      itemId: id,
+      criteria: data.criteria.filter(
+        (entry): entry is string => typeof entry === "string",
+      ),
+      coded: data.coded,
+      frameworkVersion:
+        typeof data.frameworkVersion === "string"
+          ? data.frameworkVersion
+          : "unknown",
       updatedAt: data.updatedAt.toDate().toISOString(),
     },
   ];

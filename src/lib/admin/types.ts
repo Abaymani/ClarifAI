@@ -1,5 +1,6 @@
 import type { ResearcherId } from "@/lib/admin/auth";
 import type { IcapCounts } from "@/lib/admin/icap-counts";
+import type { MomentScores } from "@/lib/admin/reflection-coding";
 import type { AnalysisAgreement } from "@/lib/session/types";
 import type { Lesson } from "@/lib/session/credentials";
 import type {
@@ -32,6 +33,12 @@ export type AdminReflectionAssessment =
       agreements: (AnalysisAgreement | null)[];
     };
 
+// Each moment's totals per researcher, null until they mark it coded (DL-084).
+export type AdminReflectionCodingSummary =
+  | { state: "unavailable" }
+  | { state: "not_submitted"; moments: number }
+  | { state: "submitted"; moments: MomentScores[] };
+
 export type AdminSessionSummary = {
   participantCode: string;
   // Set when a lesson 1 was handed in under the participant's earlier code (DL-072).
@@ -44,6 +51,8 @@ export type AdminSessionSummary = {
   reflectionAssessment: AdminReflectionAssessment;
   // The AI's codes per ICAP level; absent when the session has no AI coding (DL-074).
   aiCodeCounts?: IcapCounts;
+  // Only lessons 2 and 3, where students reflect.
+  reflectionCoding?: AdminReflectionCodingSummary;
 };
 
 export type AdminParticipantOverview = {
@@ -87,6 +96,20 @@ export type ResearcherReflectionComment = {
 export type ReflectionCommentsByResearcher = Record<
   ResearcherId,
   ResearcherReflectionComment[]
+>;
+
+export type ResearcherReflectionCoding = {
+  itemId: string;
+  researcherId: ResearcherId;
+  criteria: string[];
+  coded: boolean;
+  frameworkVersion: string;
+  updatedAt: string;
+};
+
+export type ReflectionCodingByResearcher = Record<
+  ResearcherId,
+  ResearcherReflectionCoding[]
 >;
 
 export type AdminCodeOption = {
