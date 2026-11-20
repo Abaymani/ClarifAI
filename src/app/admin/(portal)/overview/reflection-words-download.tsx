@@ -27,17 +27,13 @@ export function ReflectionWordsDownload({
       // The universal build needs no Web Worker, which the browser build would.
       const { default: writeXlsxFile } =
         await import("write-excel-file/universal");
-      const blob = await writeXlsxFile(reflectionWordsSheet(participants), {
+      const { data, columns } = reflectionWordsSheet(participants);
+      // The sheet is wide, so the header row and participant column stay put.
+      const blob = await writeXlsxFile(data, {
         sheet: "Reflektionslängd",
         stickyRowsCount: 1,
-        columns: [
-          { width: 11 },
-          { width: 8 },
-          { width: 16 },
-          { width: 13 },
-          { width: 11 },
-          { width: 21 },
-        ],
+        stickyColumnsCount: 1,
+        columns,
       }).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
