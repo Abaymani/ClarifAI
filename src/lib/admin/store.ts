@@ -188,7 +188,9 @@ function reflectionAssessment(session: Session): AdminReflectionAssessment {
 function reflectionWords(session: Session): AdminReflectionWords {
   const items = session.reflectionQuestions?.items ?? [];
   if (items.length === 0) return { state: "unavailable" };
-  if (!session.reflectionResponses) return { state: "not_submitted" };
+  if (!session.reflectionResponses) {
+    return { state: "not_submitted", moments: items.length };
+  }
 
   const answerByItem = new Map(
     session.reflectionResponses.items.map((response) => [

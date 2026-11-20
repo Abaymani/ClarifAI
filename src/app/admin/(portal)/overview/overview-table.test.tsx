@@ -359,7 +359,7 @@ describe("OverviewTable", () => {
     ).toHaveLength(4);
   });
 
-  test("lists each reflection moment's words and the session total for lessons 2 and 3", () => {
+  test("lists each reflection moment's words, the session total and the average for lessons 2 and 3", () => {
     const base = {
       state: "completed" as const,
       status: "completed" as const,
@@ -384,7 +384,7 @@ describe("OverviewTable", () => {
                 ...base,
                 participantCode: "12",
                 lesson: 3,
-                reflectionWords: { state: "not_submitted" },
+                reflectionWords: { state: "not_submitted", moments: 2 },
               },
             },
           },
@@ -432,6 +432,11 @@ describe("OverviewTable", () => {
     }
     expect(within(cell).getByText("Reflektionsmoment 3")).toBeTruthy();
     expect(within(cell).getByText("Totalt")).toBeTruthy();
+    expect(within(cell).getByText("Medel")).toBeTruthy();
+    expect(within(cell).getByText("414,0 ord")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Ladda ner Excel" }),
+    ).toBeTruthy();
     expect(screen.getByText("Ej inskickad")).toBeTruthy();
     expect(screen.getAllByText("Ingen reflektion")).toHaveLength(2);
 
