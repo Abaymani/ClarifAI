@@ -52,8 +52,11 @@ describe("ReflectionWordsDownload", () => {
 
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(writeXlsxFile).toHaveBeenCalledWith(
-      reflectionWordsSheet(participants),
-      expect.objectContaining({ sheet: "Reflektionslängd" }),
+      reflectionWordsSheet(participants).data,
+      expect.objectContaining({
+        sheet: "Reflektionslängd",
+        columns: reflectionWordsSheet(participants).columns,
+      }),
     );
     expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
     const link = click.mock.contexts[0] as HTMLAnchorElement;
