@@ -1,22 +1,20 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition } from "react";
 
 import {
   CodingSourceBadge,
   type CodingSourceBadgeData,
 } from "@/app/admin/(portal)/coding-source-badge";
-import { ReflectionCodingPanel } from "@/app/admin/(portal)/participant/[code]/lesson/[lesson]/reflection-coding-panel";
 import { saveReflectionCommentAction } from "@/app/admin/(portal)/reflection-actions";
 import { MessageContent } from "@/app/session/message-content";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ResearcherId } from "@/lib/admin/auth";
-import type { ReflectionCodingFramework } from "@/lib/admin/reflection-coding";
+import { countWords, formatWords } from "@/lib/admin/reflection-words";
 import { researcherName } from "@/lib/admin/researchers";
 import type {
-  ReflectionCodingByResearcher,
   ReflectionCommentsByResearcher,
   ResearcherCoding,
   ResearcherReflectionComment,
@@ -41,8 +39,6 @@ export function ReflectionOverview({
   messages,
   coding,
   comments,
-  reflectionCoding = { R1: [], R2: [] },
-  reflectionCodingFramework = null,
   currentResearcher,
 }: {
   sessionId: string;
@@ -51,8 +47,6 @@ export function ReflectionOverview({
   messages: TranscriptMessage[];
   coding: CodingByResearcher;
   comments: ReflectionCommentsByResearcher;
-  reflectionCoding?: ReflectionCodingByResearcher;
-  reflectionCodingFramework?: ReflectionCodingFramework | null;
   currentResearcher: ResearcherId;
 }) {
   if (!questions) {
@@ -169,8 +163,13 @@ export function ReflectionOverview({
                 </section>
 
                 <section>
-                  <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <p className="mb-1 flex items-baseline justify-between gap-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                     Studentens svar
+                    {response ? (
+                      <span className="font-medium tracking-normal normal-case tabular-nums">
+                        {formatWords(countWords(response.answer))}
+                      </span>
+                    ) : null}
                   </p>
                   <div className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
                     {response?.answer ||
@@ -182,27 +181,6 @@ export function ReflectionOverview({
               <ReflectionCommentPanel
                 sessionId={sessionId}
                 itemId={item.id}
-                codingPanel={
-                  reflectionCodingFramework ? (
-                    <ReflectionCodingPanel
-                      sessionId={sessionId}
-                      itemId={item.id}
-                      framework={reflectionCodingFramework}
-                      coding={{
-                        R1:
-                          reflectionCoding.R1.find(
-                            (entry) => entry.itemId === item.id,
-                          ) ?? null,
-                        R2:
-                          reflectionCoding.R2.find(
-                            (entry) => entry.itemId === item.id,
-                          ) ?? null,
-                      }}
-                      currentResearcher={currentResearcher}
-                      submitted={responses !== null}
-                    />
-                  ) : null
-                }
                 comments={{
                   R1:
                     comments.R1.find((comment) => comment.itemId === item.id) ??
@@ -289,13 +267,11 @@ function compactExcerpt(text: string, maxLength = 240): string {
 function ReflectionCommentPanel({
   sessionId,
   itemId,
-  codingPanel,
   comments: initialComments,
   currentResearcher,
 }: {
   sessionId: string;
   itemId: string;
-  codingPanel: ReactNode;
   comments: Record<ResearcherId, ResearcherReflectionComment | null>;
   currentResearcher: ResearcherId;
 }) {
@@ -328,54 +304,51 @@ function ReflectionCommentPanel({
   }
 
   return (
-    <aside className="flex flex-col gap-4 border-t bg-muted/20 p-4 xl:border-t-0 xl:border-l">
-      {codingPanel}
-      <div>
-        <h3 className="text-sm font-semibold">Forskarkommentarer</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Båda forskarnas kommentarer visas tillsammans.
-        </p>
+    <aside className="border-t bg-muted/20 p-4 xl:border-t-0 xl:border-l">
+      <h3 className="text-sm font-semibold">Forskarkommentarer</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Båda forskarnas kommentarer visas tillsammans.
+      </p>
 
-        <div className="mt-3 flex flex-col gap-2">
-          {(["R1", "R2"] as const).map((researcherId) => (
-            <div
-              key={researcherId}
-              className="rounded-lg border bg-background p-3"
-            >
-              <p className="text-xs font-semibold">
-                {researcherName(researcherId)}
-                {researcherId === currentResearcher ? " (du)" : ""}
-              </p>
-              <p className="mt-1 text-sm whitespace-pre-wrap text-muted-foreground">
-                {comments[researcherId]?.comment ?? "Ingen kommentar ännu."}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 border-t pt-4">
-          <Label htmlFor={`reflection-comment-${itemId}`}>
-            Din kommentar · {researcherName(currentResearcher)}
-          </Label>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Du kan bara skriva och ändra din egen kommentar.
-          </p>
-          <Textarea
-            id={`reflection-comment-${itemId}`}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            maxLength={MAX_REFLECTION_COMMENT_LENGTH}
-            placeholder="Skriv en kommentar om reflektionsmomentet…"
-            className="mt-2 min-h-24 bg-background"
-          />
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p aria-live="polite" className="text-xs text-muted-foreground">
-              {status}
+      <div className="mt-3 flex flex-col gap-2">
+        {(["R1", "R2"] as const).map((researcherId) => (
+          <div
+            key={researcherId}
+            className="rounded-lg border bg-background p-3"
+          >
+            <p className="text-xs font-semibold">
+              {researcherName(researcherId)}
+              {researcherId === currentResearcher ? " (du)" : ""}
             </p>
-            <Button type="button" onClick={save} disabled={pending}>
-              {pending ? "Sparar…" : "Spara min kommentar"}
-            </Button>
+            <p className="mt-1 text-sm whitespace-pre-wrap text-muted-foreground">
+              {comments[researcherId]?.comment ?? "Ingen kommentar ännu."}
+            </p>
           </div>
+        ))}
+      </div>
+
+      <div className="mt-4 border-t pt-4">
+        <Label htmlFor={`reflection-comment-${itemId}`}>
+          Din kommentar · {researcherName(currentResearcher)}
+        </Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Du kan bara skriva och ändra din egen kommentar.
+        </p>
+        <Textarea
+          id={`reflection-comment-${itemId}`}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          maxLength={MAX_REFLECTION_COMMENT_LENGTH}
+          placeholder="Skriv en kommentar om reflektionsmomentet…"
+          className="mt-2 min-h-24 bg-background"
+        />
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <p aria-live="polite" className="text-xs text-muted-foreground">
+            {status}
+          </p>
+          <Button type="button" onClick={save} disabled={pending}>
+            {pending ? "Sparar…" : "Spara min kommentar"}
+          </Button>
         </div>
       </div>
     </aside>

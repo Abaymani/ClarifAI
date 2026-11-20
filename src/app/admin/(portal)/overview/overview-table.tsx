@@ -15,16 +15,12 @@ import {
 import { Input } from "@/components/ui/input";
 import type { ResearcherId } from "@/lib/admin/auth";
 import type { IcapCounts, IcapLevel } from "@/lib/admin/icap-counts";
-import {
-  formatReflectionScore,
-  momentScore,
-  sessionReflectionAverage,
-} from "@/lib/admin/reflection-coding";
+import { formatWords, totalWords } from "@/lib/admin/reflection-words";
 import { researcherName } from "@/lib/admin/researchers";
 import type {
   AdminParticipantOverview,
   AdminReflectionAssessment,
-  AdminReflectionCodingSummary,
+  AdminReflectionWords,
   AdminSessionSummary,
 } from "@/lib/admin/types";
 import type { AnalysisAgreement } from "@/lib/session/types";
@@ -43,10 +39,8 @@ const ICAP_LEVELS: [IcapLevel, string][] = [
 
 export function OverviewTable({
   participants,
-  reflectionMaxScore = 9,
 }: {
   participants: AdminParticipantOverview[];
-  reflectionMaxScore?: number;
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<OverviewView>("status");
@@ -106,7 +100,7 @@ export function OverviewTable({
           selected={view === "reflection"}
           onSelect={setView}
         >
-          Reflektionskodning
+          Reflektionslängd
         </OverviewTab>
       </div>
 
@@ -165,10 +159,9 @@ export function OverviewTable({
 
       {view === "reflection" ? (
         <p className="text-sm text-muted-foreground">
-          Varje rad är ett reflektionsmoment med Armins och Fridas summa av{" "}
-          {reflectionMaxScore}, och momentets poäng, som är medelvärdet när båda
-          har kodat. Ett moment räknas som kodat när forskaren har markerat det.
-          Sessionens medelvärde gäller de kodade momenten.
+          Antal ord i studentens svar på varje reflektionsmoment och totalt för
+          sessionen. Ett ord är text mellan mellanslag som innehåller minst en
+          bokstav eller siffra.
         </p>
       ) : null}
 
@@ -222,11 +215,10 @@ export function OverviewTable({
                   return (
                     <td key={lesson} className="p-2 align-top">
                       {view === "reflection" ? (
-                        <ReflectionCodingLink
+                        <ReflectionWordsLink
                           participantCode={participant.participantCode}
                           lesson={lesson}
-                          summary={session?.reflectionCoding}
-                          maxScore={reflectionMaxScore}
+                          words={session?.reflectionWords}
                         />
                       ) : view === "assessment" ? (
                         <ReflectionAssessmentLink
@@ -283,117 +275,61 @@ function panelLabel(view: OverviewView) {
     coding: "Forskarkodning",
     ai: "AI-kodning",
     assessment: "Studentbedömning",
-    reflection: "Reflektionskodning",
+    reflection: "Reflektionslängd",
   }[view];
 }
 
 function hasReflection(participant: AdminParticipantOverview): boolean {
   return REFLECTION_LESSONS.some((lesson) => {
-    const state = participant.sessions[lesson]?.reflectionCoding?.state;
+    const state = participant.sessions[lesson]?.reflectionWords?.state;
     return state === "submitted" || state === "not_submitted";
   });
 }
 
-function ReflectionCodingLink({
+function ReflectionWordsLink({
   participantCode,
   lesson,
-  summary,
-  maxScore,
+  words,
 }: {
   participantCode: string;
   lesson: number;
-  summary: AdminReflectionCodingSummary | undefined;
-  maxScore: number;
+  words: AdminReflectionWords | undefined;
 }) {
-  if (!summary || summary.state === "unavailable") {
+  if (!words || words.state === "unavailable") {
     return <AssessmentEmptyState label="Ingen reflektion" />;
   }
-  if (summary.state === "not_submitted") {
+  if (words.state === "not_submitted") {
     return <AssessmentEmptyState label="Ej inskickad" />;
   }
 
-  const session = sessionReflectionAverage(summary.moments);
   return (
     <Link
       href={`/admin/participant/${participantCode}/lesson/${lesson}?view=reflection`}
       aria-label={`Öppna reflektionen för deltagare ${participantCode}, lektion ${lesson}`}
-      className="flex min-w-72 items-start justify-between gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+      className="flex min-w-44 items-start justify-between gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
     >
-      <span className="flex flex-col gap-1">
-        {summary.moments.map((scores, index) => {
-          const score = momentScore(scores);
-          return (
-            <span
-              key={index}
-              className="flex items-center gap-2 text-xs tabular-nums"
-            >
-              <span className="w-6 font-semibold">M{index + 1}</span>
-              {(["R1", "R2"] as const).map((researcherId) => (
-                <ReflectionScoreChip
-                  key={researcherId}
-                  researcherId={researcherId}
-                  score={scores[researcherId]}
-                  maxScore={maxScore}
-                />
-              ))}
-              <span
-                className={
-                  score === null ? "text-muted-foreground" : "font-semibold"
-                }
-              >
-                {score === null ? "–" : `= ${formatReflectionScore(score)}`}
-              </span>
-            </span>
-          );
-        })}
-        <span className="mt-1 text-xs">
-          <span className="font-semibold">
-            Medel{" "}
-            {session.average === null
-              ? "–"
-              : `${formatReflectionScore(session.average)}/${maxScore}`}
-          </span>
-          <span className="text-muted-foreground">
-            {" "}
-            · {session.coded} av {session.total} kodade
-          </span>
-        </span>
-      </span>
+      <dl className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-xs tabular-nums">
+        {words.moments.map((count, index) => (
+          <div key={index} className="contents">
+            <dt>
+              <span aria-hidden="true">M{index + 1}</span>
+              <span className="sr-only">Reflektionsmoment {index + 1}</span>
+            </dt>
+            <dd className="text-right">{formatWords(count)}</dd>
+          </div>
+        ))}
+        <div className="contents font-semibold">
+          <dt className="mt-1">Totalt</dt>
+          <dd className="mt-1 text-right">
+            {formatWords(totalWords(words.moments))}
+          </dd>
+        </div>
+      </dl>
       <ChevronRight
         aria-hidden="true"
         className="mt-0.5 size-4 shrink-0 text-muted-foreground"
       />
     </Link>
-  );
-}
-
-function ReflectionScoreChip({
-  researcherId,
-  score,
-  maxScore,
-}: {
-  researcherId: ResearcherId;
-  score: number | null;
-  maxScore: number;
-}) {
-  const name = researcherName(researcherId);
-  return (
-    <span
-      title={
-        score === null
-          ? `${name}: ej kodad`
-          : `${name}: ${score} av ${maxScore}`
-      }
-      className={`inline-flex min-w-12 items-center gap-1 rounded-md px-1.5 py-0.5 ${score === null ? "border border-dashed text-muted-foreground" : "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200"}`}
-    >
-      <span aria-hidden="true">{name[0]}</span>
-      <span aria-hidden="true">{score === null ? "–" : score}</span>
-      <span className="sr-only">
-        {score === null
-          ? `${name}: ej kodad`
-          : `${name}: ${score} av ${maxScore}`}
-      </span>
-    </span>
   );
 }
 
