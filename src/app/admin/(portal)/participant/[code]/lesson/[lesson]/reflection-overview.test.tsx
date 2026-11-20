@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@/app/admin/(portal)/reflection-actions", () => ({
   saveReflectionCommentAction: vi.fn(),
-  saveReflectionCodingAction: vi.fn(),
 }));
 
 import { saveReflectionCommentAction } from "@/app/admin/(portal)/reflection-actions";
@@ -150,6 +149,16 @@ describe("ReflectionOverview", () => {
     expect(screen.getByText("Frida · A6")).toBeTruthy();
   });
 
+  test("shows how many words each answer has once the reflection is submitted", () => {
+    const { rerender } = render(<ReflectionOverview {...props} />);
+
+    expect(screen.getByText("6 ord")).toBeTruthy();
+    expect(screen.getByText("4 ord")).toBeTruthy();
+
+    rerender(<ReflectionOverview {...props} responses={null} />);
+    expect(screen.queryByText(/\d ord$/)).toBeNull();
+  });
+
   test("toggles from the stored excerpt to the full student message", () => {
     render(<ReflectionOverview {...props} />);
 
@@ -201,40 +210,5 @@ describe("ReflectionOverview", () => {
     expect(screen.getAllByText("Uppdaterad av Armin").length).toBeGreaterThan(
       0,
     );
-  });
-
-  test("shows a reflection coding panel on every moment with both researchers' coding", () => {
-    render(
-      <ReflectionOverview
-        {...props}
-        reflectionCodingFramework={{
-          version: "test",
-          states: [
-            { state: 1, criteria: [{ id: "S1-A", label: "1 for why" }] },
-          ],
-        }}
-        reflectionCoding={{
-          R1: [
-            {
-              itemId: "q2",
-              researcherId: "R1",
-              criteria: ["S1-A"],
-              coded: true,
-              frameworkVersion: "test",
-              updatedAt: "2026-11-19T00:00:00.000Z",
-            },
-          ],
-          R2: [],
-        }}
-      />,
-    );
-
-    expect(
-      screen.getAllByRole("heading", { name: "Reflektionskodning" }),
-    ).toHaveLength(2);
-    // The signed-in researcher is Armin, whose record is on the second moment.
-    expect(screen.getByText("Armin · kodad")).toBeTruthy();
-    expect(screen.getByText("Armin · ej kodad")).toBeTruthy();
-    expect(screen.getAllByText("ingen kodning ännu")).toHaveLength(2);
   });
 });

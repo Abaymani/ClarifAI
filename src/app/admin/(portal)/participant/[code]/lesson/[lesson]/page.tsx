@@ -9,10 +9,8 @@ import { SessionWorkspace } from "@/app/admin/(portal)/participant/[code]/lesson
 import { Button } from "@/components/ui/button";
 import { adminCodeOptions } from "@/lib/admin/codes";
 import { getCurrentResearcher } from "@/lib/admin/auth";
-import { loadReflectionCodingFramework } from "@/lib/admin/reflection-coding-framework";
 import {
   getAdminParticipantLesson,
-  listReflectionCoding,
   listReflectionComments,
   listResearcherCoding,
 } from "@/lib/admin/store";
@@ -36,18 +34,15 @@ export default async function AdminTranscriptPage({
 
   const { session, submittedCode, shownUnder, lessonOneCodes } =
     await getAdminParticipantLesson(code, lesson);
-  const reflects = lesson === 2 || lesson === 3;
-  const [coding, codeOptions, reflectionComments, reflectionCoding] = session
+  const [coding, codeOptions, reflectionComments] = session
     ? await Promise.all([
         listResearcherCoding(session.id),
         Promise.resolve(adminCodeOptions(loadFramework())),
         listReflectionComments(session.id),
-        reflects ? listReflectionCoding(session.id) : { R1: [], R2: [] },
       ])
     : [
         { R1: [], R2: [] },
         adminCodeOptions(loadFramework()),
-        { R1: [], R2: [] },
         { R1: [], R2: [] },
       ];
   const previous = lesson > 1 ? ((lesson - 1) as Lesson) : null;
@@ -155,13 +150,9 @@ export default async function AdminTranscriptPage({
             reflectionQuestions={session.reflectionQuestions}
             reflectionResponses={session.reflectionResponses}
             reflectionComments={reflectionComments}
-            reflectionCoding={reflectionCoding}
-            reflectionCodingFramework={
-              reflects ? loadReflectionCodingFramework() : null
-            }
             initialView={view === "reflection" ? "reflection" : "transcript"}
             // Students only reflect in lessons 2 and 3 (DL-073).
-            showReflection={reflects}
+            showReflection={lesson === 2 || lesson === 3}
             transcriptEmptyText={
               session.transcriptSubmission === "no_gemini"
                 ? "Deltagaren uppgav att Gemini inte användes under den här lektionen."

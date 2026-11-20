@@ -359,7 +359,7 @@ describe("OverviewTable", () => {
     ).toHaveLength(4);
   });
 
-  test("shows each reflection moment's coding and the session average for lessons 2 and 3", () => {
+  test("lists each reflection moment's words and the session total for lessons 2 and 3", () => {
     const base = {
       state: "completed" as const,
       status: "completed" as const,
@@ -369,7 +369,6 @@ describe("OverviewTable", () => {
     };
     render(
       <OverviewTable
-        reflectionMaxScore={9}
         participants={[
           {
             participantCode: "12",
@@ -379,20 +378,13 @@ describe("OverviewTable", () => {
                 ...base,
                 participantCode: "12",
                 lesson: 2,
-                reflectionCoding: {
-                  state: "submitted",
-                  moments: [
-                    { R1: 6, R2: 5 },
-                    { R1: 3, R2: null },
-                    { R1: null, R2: null },
-                  ],
-                },
+                reflectionWords: { state: "submitted", moments: [42, 0, 1200] },
               },
               3: {
                 ...base,
                 participantCode: "12",
                 lesson: 3,
-                reflectionCoding: { state: "not_submitted", moments: 2 },
+                reflectionWords: { state: "not_submitted" },
               },
             },
           },
@@ -403,7 +395,7 @@ describe("OverviewTable", () => {
                 ...base,
                 participantCode: "13",
                 lesson: 2,
-                reflectionCoding: { state: "unavailable" },
+                reflectionWords: { state: "unavailable" },
               },
             },
           },
@@ -411,8 +403,11 @@ describe("OverviewTable", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "Reflektionskodning" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Reflektionslängd" }));
 
+    expect(
+      screen.queryByRole("tab", { name: "Reflektionskodning" }),
+    ).toBeNull();
     expect(
       screen.getByRole("columnheader", { name: "Lektion 2" }),
     ).toBeTruthy();
@@ -425,20 +420,20 @@ describe("OverviewTable", () => {
     expect(
       screen.queryByRole("columnheader", { name: "Lektion 4" }),
     ).toBeNull();
-    expect(screen.getByText("Armin: 6 av 9")).toBeTruthy();
-    expect(screen.getAllByText("Frida: ej kodad")).toHaveLength(2);
-    expect(screen.getByText("= 5,5")).toBeTruthy();
-    expect(screen.getByText("Medel 4,3/9")).toBeTruthy();
-    expect(screen.getByText(/2 av 3 kodade/)).toBeTruthy();
+    const cell = screen.getByRole("link", {
+      name: "Öppna reflektionen för deltagare 12, lektion 2",
+    });
+    expect(cell.getAttribute("href")).toBe(
+      "/admin/participant/12/lesson/2?view=reflection",
+    );
+    // The default text matcher turns the thousands separator into a plain space.
+    for (const words of ["42 ord", "0 ord", "1 200 ord", "1 242 ord"]) {
+      expect(within(cell).getByText(words)).toBeTruthy();
+    }
+    expect(within(cell).getByText("Reflektionsmoment 3")).toBeTruthy();
+    expect(within(cell).getByText("Totalt")).toBeTruthy();
     expect(screen.getByText("Ej inskickad")).toBeTruthy();
     expect(screen.getAllByText("Ingen reflektion")).toHaveLength(2);
-    expect(
-      screen
-        .getByRole("link", {
-          name: "Öppna reflektionen för deltagare 12, lektion 2",
-        })
-        .getAttribute("href"),
-    ).toBe("/admin/participant/12/lesson/2?view=reflection");
 
     fireEvent.click(screen.getByLabelText(/Dölj deltagare utan reflektion/));
     expect(screen.getByText("Deltagare 12")).toBeTruthy();
