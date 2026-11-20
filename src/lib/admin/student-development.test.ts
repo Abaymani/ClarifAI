@@ -133,6 +133,59 @@ describe("studentDevelopment", () => {
     ]);
   });
 
+  it("adds each participant's reflection word counts for lessons 2 and 3", () => {
+    const students = studentDevelopment(
+      [session("7", 2, {}), session("8", 3, {})],
+      framework,
+      null,
+      [
+        {
+          participantCode: "7",
+          lesson: 2,
+          words: { state: "submitted", moments: [3, 4] },
+        },
+        {
+          participantCode: "8",
+          lesson: 3,
+          words: { state: "not_submitted", moments: 2 },
+        },
+        // A reflection without a transcript still gives a card when submitted,
+        {
+          participantCode: "9",
+          lesson: 3,
+          words: { state: "submitted", moments: [5] },
+        },
+        // but not when it was never submitted.
+        {
+          participantCode: "10",
+          lesson: 2,
+          words: { state: "not_submitted", moments: 1 },
+        },
+      ],
+    );
+
+    expect(students.map((student) => student.participantCode)).toEqual([
+      "7",
+      "8",
+      "9",
+    ]);
+    expect(students[0].reflectionWords).toEqual({
+      2: { state: "submitted", moments: [3, 4] },
+    });
+    expect(students[1].reflectionWords).toEqual({
+      3: { state: "not_submitted", moments: 2 },
+    });
+    expect(students[2].reflectionWords).toEqual({
+      3: { state: "submitted", moments: [5] },
+    });
+    expect(students[2].lessons.AI).toEqual([
+      noTranscript,
+      noTranscript,
+      noTranscript,
+      noTranscript,
+    ]);
+  });
+
   it("sorts participants by code as numbers", () => {
     const students = studentDevelopment(
       [session("12", 2, {}), session("3", 2, {}), session("7", 2, {})],

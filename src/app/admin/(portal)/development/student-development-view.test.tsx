@@ -25,10 +25,12 @@ function student(
   participantCode: string,
   ai: DevelopmentLesson[],
   r2: DevelopmentLesson[] = [none, uncoded, uncoded, none],
+  reflectionWords: StudentDevelopment["reflectionWords"] = {},
 ): StudentDevelopment {
   return {
     participantCode,
     lessons: { AI: ai, R1: [none, uncoded, uncoded, none], R2: r2 },
+    reflectionWords,
   };
 }
 
@@ -50,6 +52,21 @@ const students = [
   student("12", [none, coded(1, 1, 1), none, none]),
 ];
 
+// 3 writes the most words in all, 12 the most per moment, 7 submitted nothing.
+const withWords = [
+  student("3", students[0].lessons.AI, undefined, {
+    2: { state: "submitted", moments: [51, 66, 16] },
+    3: { state: "submitted", moments: [9] },
+  }),
+  student("7", students[1].lessons.AI, undefined, {
+    2: { state: "not_submitted", moments: 2 },
+    3: { state: "unavailable" },
+  }),
+  student("12", students[2].lessons.AI, undefined, {
+    3: { state: "submitted", moments: [80] },
+  }),
+];
+
 function cardCodes() {
   return within(screen.getByRole("list", { name: "Deltagare" }))
     .getAllByRole("heading")
@@ -68,6 +85,49 @@ describe("StudentDevelopmentView", () => {
 
     expect(cardCodes()).toEqual(["Deltagare 3", "Deltagare 7", "Deltagare 12"]);
     expect(within(card("7")).getByText("2 av 4 kodade")).toBeTruthy();
+  });
+
+  test("shows each card's reflection words per lesson and pooled", () => {
+    render(<StudentDevelopmentView students={withWords} />);
+
+    const rows = (code: string) =>
+      within(within(card(code)).getByRole("table"))
+        .getAllByRole("row")
+        .map((row) => row.textContent);
+    expect(rows("3")).toEqual([
+      "ReflektionOrdMedel/moment",
+      "L213344,3",
+      "L399,0",
+      // Pooled over all four moments: 142 / 4.
+      "Totalt14235,5",
+    ]);
+    expect(rows("7")).toEqual([
+      "ReflektionOrdMedel/moment",
+      "L2Ej inskickad",
+      "L3Ingen reflektion",
+      "Totalt–",
+    ]);
+    expect(rows("12")[1]).toBe("L2–");
+  });
+
+  test("sorts by words in all or per moment, with no submitted reflection last", () => {
+    render(<StudentDevelopmentView students={withWords} />);
+
+    fireEvent.change(screen.getByLabelText("Sortera"), {
+      target: { value: "words" },
+    });
+    expect(cardCodes()).toEqual(["Deltagare 3", "Deltagare 12", "Deltagare 7"]);
+    expect(within(card("3")).getByText("142 ord totalt")).toBeTruthy();
+    expect(
+      within(card("7")).getByText("ingen inskickad reflektion"),
+    ).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Sortera"), {
+      target: { value: "average" },
+    });
+    expect(cardCodes()).toEqual(["Deltagare 12", "Deltagare 3", "Deltagare 7"]);
+    expect(within(card("12")).getByText("80,0 ord/moment")).toBeTruthy();
+    expect(within(card("3")).getByText("35,5 ord/moment")).toBeTruthy();
   });
 
   test("sorts by the change in a level and puts participants without one last", () => {

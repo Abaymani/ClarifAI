@@ -35,6 +35,7 @@ function student(
   return {
     participantCode,
     lessons: { AI: ai, R1: researcher, R2: researcher },
+    reflectionWords: {},
   };
 }
 

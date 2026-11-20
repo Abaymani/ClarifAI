@@ -33,6 +33,7 @@ import {
 import { countWords } from "@/lib/admin/reflection-words";
 import {
   studentDevelopment,
+  type ReflectionWordsInput,
   type StudentDevelopment,
 } from "@/lib/admin/student-development";
 import { MAX_REFLECTION_COMMENT_LENGTH } from "@/lib/admin/types";
@@ -257,20 +258,41 @@ export async function tryFrameworkChanges(
 
 // Only reads: the development page never changes a session or any coding (DL-079).
 export async function loadStudentDevelopment(): Promise<StudentDevelopment[]> {
-  const [sessions, lessonOneCodes] = await Promise.all([
-    loadAgreementInputs(),
+  const [{ inputs, sessions }, lessonOneCodes] = await Promise.all([
+    readAgreementInputs(),
     loadLessonOneCodes(),
   ]);
+  // Counted from the sessions already read for the coding, so the word counts
+  // cost no extra reads (DL-089).
+  const reflections = sessions.flatMap((session): ReflectionWordsInput[] =>
+    session.lesson === 2 || session.lesson === 3
+      ? [
+          {
+            participantCode: session.participantCode,
+            lesson: session.lesson,
+            words: reflectionWords(session),
+          },
+        ]
+      : [],
+  );
   return studentDevelopment(
-    sessions,
+    inputs,
     loadFramework(),
     lessonOneCodes.status === "applied" ? lessonOneCodes.codes : null,
+    reflections,
   );
 }
 
 // Every transcript's student prompts with Armin's, Frida's and the AI's prompt
 // codes, read without writing anything.
 export async function loadAgreementInputs(): Promise<AgreementSessionInput[]> {
+  return (await readAgreementInputs()).inputs;
+}
+
+async function readAgreementInputs(): Promise<{
+  inputs: AgreementSessionInput[];
+  sessions: Session[];
+}> {
   const db = getDb();
   const [sessions, entries] = await Promise.all([
     db.collection(SESSIONS).get(),
@@ -295,8 +317,10 @@ export async function loadAgreementInputs(): Promise<AgreementSessionInput[]> {
     }
   }
 
-  return sessions.docs.flatMap((doc): AgreementSessionInput[] => {
-    const session = sessionFromDocument(doc.id, doc.data());
+  const parsed = sessions.docs.map((doc) =>
+    sessionFromDocument(doc.id, doc.data()),
+  );
+  const inputs = parsed.flatMap((session): AgreementSessionInput[] => {
     const prompts =
       session.transcript?.messages
         .filter((message) => message.role === "student")
@@ -319,6 +343,7 @@ export async function loadAgreementInputs(): Promise<AgreementSessionInput[]> {
       },
     ];
   });
+  return { inputs, sessions: parsed };
 }
 
 // Null before the first run, or for a result stored in a shape this version

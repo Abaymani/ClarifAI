@@ -28,6 +28,7 @@ function student(code: string, ai: DevelopmentLesson[]): StudentDevelopment {
       R1: [none, none, none, none],
       R2: [none, none, none, none],
     },
+    reflectionWords: {},
   };
 }
 

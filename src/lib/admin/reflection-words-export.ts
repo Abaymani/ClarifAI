@@ -1,6 +1,10 @@
 import type { Cell, Row, SheetData } from "write-excel-file/universal";
 
-import { averageWords, totalWords } from "@/lib/admin/reflection-words";
+import {
+  averageWords,
+  pooledMoments,
+  totalWords,
+} from "@/lib/admin/reflection-words";
 import type { AdminParticipantOverview } from "@/lib/admin/types";
 
 // Students only reflect in lessons 2 and 3.
@@ -54,11 +58,9 @@ export function reflectionWordsSheet(
   ];
 
   const rows = participants.map((participant): Row => {
-    // Only submitted reflections add to the pooled figures.
-    const pooled = LESSONS.flatMap((lesson) => {
-      const words = participant.sessions[lesson]?.reflectionWords;
-      return words?.state === "submitted" ? words.moments : [];
-    });
+    const pooled = pooledMoments(
+      LESSONS.map((lesson) => participant.sessions[lesson]?.reflectionWords),
+    );
     return [
       participantCell(participant.participantCode),
       ...LESSONS.flatMap((lesson) =>
