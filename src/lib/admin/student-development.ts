@@ -13,6 +13,7 @@ import {
   studyParticipantCode,
   type LessonOneCodes,
 } from "@/lib/admin/lesson-one-codes";
+import type { AdminReflectionWords } from "@/lib/admin/types";
 import type { Framework } from "@/lib/analysis/framework";
 import { LESSONS } from "@/lib/session/credentials";
 
@@ -30,10 +31,21 @@ export type DevelopmentLesson =
       codedPrompts: number;
     };
 
+// Students only reflect in lessons 2 and 3.
+export type ReflectionLesson = 2 | 3;
+
+export type ReflectionWordsInput = {
+  participantCode: string;
+  lesson: ReflectionLesson;
+  words: AdminReflectionWords;
+};
+
 export type StudentDevelopment = {
   participantCode: string;
   // Lessons 1–4 in order, for each coder.
   lessons: Record<Coder, DevelopmentLesson[]>;
+  // Absent for a lesson without a session (DL-089).
+  reflectionWords: Partial<Record<ReflectionLesson, AdminReflectionWords>>;
 };
 
 export type DevelopmentScale = "share" | "count";
@@ -42,16 +54,11 @@ export function studentDevelopment(
   sessions: readonly AgreementSessionInput[],
   framework: Pick<Framework, "promptCodes">,
   lessonOneCodes: LessonOneCodes | null,
+  reflections: readonly ReflectionWordsInput[] = [],
 ): StudentDevelopment[] {
   const levels = promptCodeLevels(framework);
   const byParticipant = new Map<string, StudentDevelopment>();
-
-  for (const session of sessions) {
-    const participantCode = studyParticipantCode(
-      lessonOneCodes,
-      session.participantCode,
-      session.lesson,
-    );
+  const studentFor = (participantCode: string) => {
     const student = byParticipant.get(participantCode) ?? {
       participantCode,
       lessons: Object.fromEntries(
@@ -60,7 +67,20 @@ export function studentDevelopment(
           LESSONS.map((): DevelopmentLesson => ({ state: "noTranscript" })),
         ]),
       ) as Record<Coder, DevelopmentLesson[]>,
+      reflectionWords: {},
     };
+    byParticipant.set(participantCode, student);
+    return student;
+  };
+
+  for (const session of sessions) {
+    const student = studentFor(
+      studyParticipantCode(
+        lessonOneCodes,
+        session.participantCode,
+        session.lesson,
+      ),
+    );
     for (const coder of DEVELOPMENT_CODERS) {
       student.lessons[coder][session.lesson - 1] = lessonCounts(
         session,
@@ -68,7 +88,23 @@ export function studentDevelopment(
         levels,
       );
     }
-    byParticipant.set(participantCode, student);
+  }
+  for (const reflection of reflections) {
+    const participantCode = studyParticipantCode(
+      lessonOneCodes,
+      reflection.participantCode,
+      reflection.lesson,
+    );
+    // A submitted reflection gives a card even without a transcript, so sorting by
+    // words covers everyone who reflected (DL-089).
+    if (
+      !byParticipant.has(participantCode) &&
+      reflection.words.state !== "submitted"
+    ) {
+      continue;
+    }
+    studentFor(participantCode).reflectionWords[reflection.lesson] =
+      reflection.words;
   }
 
   return [...byParticipant.values()].sort((a, b) =>

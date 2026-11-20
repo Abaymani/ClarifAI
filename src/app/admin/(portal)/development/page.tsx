@@ -28,8 +28,9 @@ export default async function AdminDevelopmentPage() {
         <h1 className="font-heading text-3xl font-semibold">Utveckling</h1>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Hur varje deltagares promptkoder fördelar sig på ICAP-nivåerna P, A
-          och C från lektion 1 till 4, enligt AI:n, Armin eller Frida. Sidan
-          visar bara lagrad kodning och ändrar ingenting.
+          och C från lektion 1 till 4, enligt AI:n, Armin eller Frida, och hur
+          många ord deltagaren skrev i reflektionerna i lektion 2 och 3. Sidan
+          visar bara lagrad data och ändrar ingenting.
         </p>
       </div>
       <ResearchDataFreshness fetchedAt={formatFetchedAt(students.fetchedAt)} />

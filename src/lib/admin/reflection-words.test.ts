@@ -5,6 +5,7 @@ import {
   countWords,
   formatAverageWords,
   formatWords,
+  pooledMoments,
   totalWords,
 } from "@/lib/admin/reflection-words";
 
@@ -53,5 +54,19 @@ describe("formatAverageWords", () => {
   it("shows one decimal with a comma", () => {
     expect(formatAverageWords(133 / 3)).toBe("44,3 ord");
     expect(formatAverageWords(606)).toBe("606,0 ord");
+  });
+});
+
+describe("pooledMoments", () => {
+  it("joins the moments of submitted reflections only", () => {
+    expect(
+      pooledMoments([
+        { state: "submitted", moments: [51, 66, 16] },
+        { state: "not_submitted", moments: 2 },
+        { state: "unavailable" },
+        undefined,
+        { state: "submitted", moments: [9] },
+      ]),
+    ).toEqual([51, 66, 16, 9]);
   });
 });

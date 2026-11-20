@@ -14,21 +14,36 @@ import { SegmentedControl } from "@/app/admin/(portal)/segmented-control";
 import type { Coder } from "@/lib/admin/coder-agreement";
 import type { IcapLevel } from "@/lib/admin/icap-counts";
 import {
+  averageWords,
+  formatAverageNumber,
+  formatAverageWords,
+  formatWordNumber,
+  formatWords,
+  pooledMoments,
+  totalWords,
+} from "@/lib/admin/reflection-words";
+import {
   DEVELOPMENT_CODERS,
   DEVELOPMENT_LEVELS,
   levelChange,
   type DevelopmentScale,
+  type ReflectionLesson,
   type StudentDevelopment,
 } from "@/lib/admin/student-development";
+import type { AdminReflectionWords } from "@/lib/admin/types";
 
-type Sort = "code" | IcapLevel;
+type WordSort = "words" | "average";
+type Sort = "code" | IcapLevel | WordSort;
 
 const SORT_OPTIONS: [Sort, string][] = [
   ["code", "Deltagarkod"],
   ["P", "Störst minskning i P"],
   ["A", "Störst ökning i A"],
   ["C", "Störst ökning i C"],
+  ["words", "Flest ord totalt"],
+  ["average", "Högst medel ord per moment"],
 ];
+const REFLECTION_LESSONS: readonly ReflectionLesson[] = [2, 3];
 const POINTS = new Intl.NumberFormat("sv-SE", {
   maximumFractionDigits: 0,
   signDisplay: "exceptZero",
@@ -149,10 +164,10 @@ export function StudentDevelopmentView({
             className="rounded-xl border bg-card px-3 pt-2 pb-1"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold">
+              <h2 className="text-sm font-semibold whitespace-nowrap">
                 Deltagare {student.participantCode}
               </h2>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-right text-xs text-muted-foreground">
                 {cardNote(student, coder, scale, sort)}
               </span>
             </div>
@@ -162,6 +177,7 @@ export function StudentDevelopmentView({
               scale={scale}
               coderLabel={coderName(coder)}
             />
+            <ReflectionWordsTable student={student} />
           </li>
         ))}
       </ul>
@@ -213,6 +229,12 @@ function Legend({
         jämför kort med siffrorna på axeln. Förändringen räknas från den första
         till den sista kodade lektionen.
       </p>
+      <p className="text-xs">
+        Tabellen under diagrammet visar antal ord i reflektionen i lektion 2 och
+        3 och medel per reflektionsmoment. Totalt slår ihop de inskickade
+        reflektionerna, så varje moment väger lika. Källan påverkar inte
+        tabellen.
+      </p>
     </div>
   );
 }
@@ -224,6 +246,15 @@ function sortStudents(
   sort: Sort,
 ): StudentDevelopment[] {
   if (sort === "code") return [...students];
+  if (sort === "words" || sort === "average") {
+    return [...students].sort((a, b) => {
+      const first = wordValue(a, sort);
+      const second = wordValue(b, sort);
+      if (first === null) return second === null ? 0 : 1;
+      if (second === null) return -1;
+      return second - first;
+    });
+  }
   // P is sorted by its largest decrease, A and C by their largest increase.
   const direction = sort === "P" ? 1 : -1;
   return [...students].sort((a, b) => {
@@ -247,9 +278,102 @@ function cardNote(
     ).length;
     return `${coded} av 4 kodade`;
   }
+  if (sort === "words" || sort === "average") {
+    const value = wordValue(student, sort);
+    if (value === null) return "ingen inskickad reflektion";
+    return sort === "words"
+      ? `${formatWords(value)} totalt`
+      : `${formatAverageWords(value)}/moment`;
+  }
   const change = levelChange(student.lessons[coder], sort, scale);
   if (change === null) return "för få kodade lektioner";
   return scale === "share"
     ? `${POINTS.format(change * 100)} p.e. ${sort}`
     : `${POINTS.format(change)} ${sort}`;
+}
+
+// Lessons 2 and 3 pooled, as in the Reflektionslängd file (DL-088).
+function wordValue(student: StudentDevelopment, sort: WordSort): number | null {
+  const moments = pooledMoments(
+    REFLECTION_LESSONS.map((lesson) => student.reflectionWords[lesson]),
+  );
+  if (moments.length === 0) return null;
+  return sort === "words" ? totalWords(moments) : averageWords(moments);
+}
+
+function ReflectionWordsTable({ student }: { student: StudentDevelopment }) {
+  const pooled = pooledMoments(
+    REFLECTION_LESSONS.map((lesson) => student.reflectionWords[lesson]),
+  );
+  return (
+    <table className="mt-1 mb-1.5 w-full text-xs tabular-nums">
+      <caption className="sr-only">
+        Reflektionslängd för deltagare {student.participantCode}
+      </caption>
+      <thead className="text-muted-foreground">
+        <tr>
+          <th scope="col" className="text-left font-medium">
+            Reflektion
+          </th>
+          <th scope="col" className="text-right font-medium">
+            Ord
+          </th>
+          <th scope="col" className="text-right font-medium">
+            Medel/moment
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {REFLECTION_LESSONS.map((lesson) => (
+          <tr key={lesson}>
+            <th scope="row" className="text-left font-normal">
+              L{lesson}
+            </th>
+            <LessonWordCells words={student.reflectionWords[lesson]} />
+          </tr>
+        ))}
+        <tr className="font-semibold">
+          <th scope="row" className="text-left">
+            Totalt
+          </th>
+          <WordCells moments={pooled} />
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function LessonWordCells({
+  words,
+}: {
+  words: AdminReflectionWords | undefined;
+}) {
+  if (words?.state === "submitted")
+    return <WordCells moments={words.moments} />;
+  return (
+    <td colSpan={2} className="text-right text-muted-foreground">
+      {!words
+        ? "–"
+        : words.state === "not_submitted"
+          ? "Ej inskickad"
+          : "Ingen reflektion"}
+    </td>
+  );
+}
+
+function WordCells({ moments }: { moments: readonly number[] }) {
+  const average = averageWords(moments);
+  if (average === null) {
+    return (
+      <td colSpan={2} className="text-right text-muted-foreground">
+        –
+      </td>
+    );
+  }
+  return (
+    <>
+      <td className="text-right">{formatWordNumber(totalWords(moments))}</td>
+      <td className="text-right">{formatAverageNumber(average)}</td>
+    </>
+  );
 }

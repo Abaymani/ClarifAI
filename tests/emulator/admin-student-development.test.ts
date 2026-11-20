@@ -152,4 +152,77 @@ describe("student development", () => {
       codedPrompts: 0,
     });
   });
+
+  test("adds reflection word counts, with a card for a reflection without a transcript", async () => {
+    const db = getDb();
+    const questions = {
+      frameworkVersion: "test",
+      frameworkStatus: "ACTIVE",
+      analyser: "fake",
+      model: null,
+      reasoningEffort: null,
+      createdAt: "2026-11-20T00:00:00.000Z",
+      durationMs: 1,
+      usage: null,
+      outcome: "observations",
+      items: ["q1", "q2"].map((id) => ({
+        id,
+        group: "R0",
+        groupKind: "general",
+        basedOn: null,
+        excerpt: null,
+        intro: "Reflektera.",
+        questions: ["Vad tar du med dig?"],
+        tip: null,
+        template: { intro: "Reflektera.", questions: ["Vad tar du med dig?"] },
+      })),
+    };
+    const responses = {
+      submittedAt: new Date(),
+      items: [
+        { itemId: "q1", answer: "Det gick bra.", agreement: null },
+        { itemId: "q2", answer: "Nästa gång planerar jag.", agreement: null },
+      ],
+    };
+    const seeds: [string, boolean, boolean][] = [
+      // id, has a transcript, reflection submitted
+      ["945_2", true, true],
+      ["945_3", true, false],
+      ["946_2", false, true],
+      ["947_3", false, false],
+    ];
+    for (const [id, withTranscript, submitted] of seeds) {
+      const [participantCode, lesson] = id.split("_");
+      await db
+        .collection("sessions")
+        .doc(id)
+        .set({
+          participantCode,
+          lesson: Number(lesson),
+          status: submitted ? "completed" : "awaiting_reflection",
+          transcriptSubmission: withTranscript ? "transcript" : "no_gemini",
+          ...(withTranscript
+            ? { transcript, analysis: analysis([["P1"], ["C3"]]) }
+            : {}),
+          reflectionQuestions: questions,
+          ...(submitted ? { reflectionResponses: responses } : {}),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+    }
+
+    const students = await loadStudentDevelopment();
+    const byCode = (code: string) =>
+      students.find((student) => student.participantCode === code);
+
+    expect(byCode("945")?.reflectionWords).toEqual({
+      2: { state: "submitted", moments: [3, 4] },
+      3: { state: "not_submitted", moments: 2 },
+    });
+    expect(byCode("946")?.reflectionWords).toEqual({
+      2: { state: "submitted", moments: [3, 4] },
+    });
+    expect(byCode("946")?.lessons.AI[1]).toEqual({ state: "noTranscript" });
+    expect(byCode("947")).toBeUndefined();
+  });
 });
