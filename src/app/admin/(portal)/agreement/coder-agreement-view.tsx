@@ -15,6 +15,7 @@ import {
   formatAlpha,
   formatDifference,
   formatInterval,
+  formatShortfall,
   pairName,
 } from "@/app/admin/(portal)/agreement/agreement-format";
 import { FrameworkChangesPanel } from "@/app/admin/(portal)/agreement/framework-changes-panel";
@@ -226,7 +227,10 @@ function RunPanel({
               : "Beräkningen jämför Armins, Fridas och AI:ns promptkoder i alla kodade transkript. Resultatet sparas och visas för er båda."}
             {agreement && !agreement.bootstrap
               ? " Det här resultatet saknar intervall; beräkna igen för att få dem."
-              : null}
+              : agreement &&
+                  agreement.variants[0]?.pairs[0]?.codes.q === undefined
+                ? " Det här resultatet saknar q; beräkna igen för att få det."
+                : null}
           </p>
         </div>
         <Button type="button" onClick={run} disabled={pending}>
@@ -276,6 +280,11 @@ function Method() {
         än {UNCERTAIN_BELOW} transkript är intervallen osäkra och markeras så.
       </li>
       <li>
+        q är andelen av omdragningarna där α hamnar under 0,800, Krippendorffs
+        krav för att lita på data, och under 0,667, kravet för preliminära
+        slutsatser: risken att α inte når kravet.
+      </li>
+      <li>
         Med ”Bara de som alla tre kodat” visar AI:ns kort skillnaden mot Armin –
         Frida. Ligger hela intervallet under 0 är AI:n tydligt mindre överens
         med er än ni är med varandra. Innehåller det 0 går skillnaden inte att
@@ -316,6 +325,11 @@ function PairCards({
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm tabular-nums">
                 {formatInterval(result.interval, "95 % KI")}
                 <Uncertain transcripts={pair.transcripts} long />
+              </p>
+            ) : null}
+            {pair.prompts > 0 && result.q ? (
+              <p className="mt-0.5 text-sm tabular-nums">
+                {formatShortfall(result.q)}
               </p>
             ) : null}
             {pair.versusResearchers ? (
@@ -463,6 +477,11 @@ function CategoryCell({
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs tabular-nums">
           {formatInterval(result.interval, "KI")}
           <Uncertain transcripts={pair.transcripts} />
+        </span>
+      ) : null}
+      {result?.q && pair.prompts > 0 ? (
+        <span className="block text-xs tabular-nums">
+          {formatShortfall(result.q)}
         </span>
       ) : null}
       <span className="block text-xs text-muted-foreground tabular-nums">

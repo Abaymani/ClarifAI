@@ -301,4 +301,39 @@ describe("CoderAgreementView", () => {
       ),
     ).toBeNull();
   });
+
+  test("shows Krippendorff's q on the cards and the ICAP rows", () => {
+    renderView(larger);
+    const q = /^q: (< |> )?\d,\d\d under 0,800 · (< |> )?\d,\d\d under 0,667$/;
+
+    expect(card("Promptkoder", "Armin – Frida").getByText(q)).toBeTruthy();
+    expect(card("ICAP-nivåer", "AI – Frida").getByText(q)).toBeTruthy();
+    // Wherever a level has an interval it has q; where no draw-based interval
+    // can be calculated, neither can q.
+    const levels = within(
+      screen.getByRole("table", { name: "Överensstämmelse per ICAP-nivå" }),
+    );
+    expect(levels.getAllByText(q).length).toBeGreaterThan(0);
+    expect(levels.getAllByText(q)).toHaveLength(
+      levels.getAllByText(/^KI (?!kan inte)/).length,
+    );
+    expect(
+      within(
+        screen.getByRole("table", { name: "Överensstämmelse per kod" }),
+      ).queryAllByText(/^q:/),
+    ).toHaveLength(0);
+  });
+
+  test("asks for a new run when the stored result has no q", () => {
+    // As stored before q was calculated (DL-090).
+    const old = JSON.parse(
+      JSON.stringify(larger, (key, value) => (key === "q" ? undefined : value)),
+    ) as StoredCoderAgreement;
+    renderView(old);
+
+    expect(
+      screen.getByText(/saknar q; beräkna igen för att få det\./),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^q:/)).toBeNull();
+  });
 });
