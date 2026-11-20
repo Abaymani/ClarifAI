@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import { bootstrapIntervals, quantile } from "@/lib/admin/bootstrap";
+import {
+  bootstrapDraws,
+  bootstrapIntervals,
+  percentileInterval,
+  quantile,
+  shareBelow,
+} from "@/lib/admin/bootstrap";
 
 const options = { resamples: 2000, seed: 76 };
 
@@ -70,5 +76,24 @@ describe("bootstrapIntervals", () => {
       null,
     ]);
     expect(bootstrapIntervals(0, () => [null], options)).toEqual([null]);
+  });
+});
+
+describe("bootstrapDraws", () => {
+  test("gives the draws the intervals come from", () => {
+    const statistic = mean([0.2, 0.9, 0.4, 0.7, 0.1]);
+    const [draws] = bootstrapDraws(5, statistic, options);
+
+    expect(draws).toHaveLength(2000);
+    expect(bootstrapIntervals(5, statistic, options)).toEqual([
+      percentileInterval(draws!),
+    ]);
+  });
+});
+
+describe("shareBelow", () => {
+  test("is the share of draws strictly below the minimum", () => {
+    expect(shareBelow([0.5, 0.7, 0.8, 0.9], 0.8)).toBe(0.5);
+    expect(shareBelow([0.5, 0.7, 0.8, 0.9], 0.4)).toBe(0);
   });
 });

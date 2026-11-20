@@ -1,10 +1,12 @@
 import type {
+  AlphaShortfall,
   Coder,
   CoderPair,
   Difference,
   Interval,
 } from "@/lib/admin/coder-agreement";
 import type { IcapLevel } from "@/lib/admin/icap-counts";
+import { ALPHA_MINIMUMS } from "@/lib/admin/krippendorff-alpha";
 import { researcherName } from "@/lib/admin/researchers";
 
 export type AgreementCode = { code: string; name: string; level: IcapLevel };
@@ -62,6 +64,25 @@ export function formatChange(difference: Difference | null): string {
 
 export function formatDifference(difference: Difference | null): string {
   return `Jämfört med ${pairName("R1-R2")}: ${formatChange(difference)}`;
+}
+
+const MINIMUM = new Intl.NumberFormat("sv-SE", {
+  minimumFractionDigits: 3,
+  maximumFractionDigits: 3,
+});
+
+// Krippendorff's q for both minimums, such as "q: 0,03 under 0,800 · 0,00 under
+// 0,667" (DL-090).
+export function formatShortfall(q: AlphaShortfall): string {
+  return `q: ${formatShare(q.reliable)} under ${MINIMUM.format(ALPHA_MINIMUMS.reliable)} · ${formatShare(q.tentative)} under ${MINIMUM.format(ALPHA_MINIMUMS.tentative)}`;
+}
+
+// A share that rounds to 0 or 1 without being it would claim more certainty than
+// 2,000 draws give.
+function formatShare(share: number): string {
+  if (share > 0 && share < 0.005) return "< 0,01";
+  if (share < 1 && share > 0.995) return "> 0,99";
+  return ALPHA.format(share);
 }
 
 export function Uncertain({

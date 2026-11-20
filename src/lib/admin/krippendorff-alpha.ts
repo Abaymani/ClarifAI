@@ -5,6 +5,10 @@
 // check that both give the same values.
 export type Rating = string | number;
 
+// Krippendorff's smallest acceptable alphas: 0.800 to rely on data, 0.667 for
+// tentative conclusions.
+export const ALPHA_MINIMUMS = { reliable: 0.8, tentative: 0.667 } as const;
+
 // Each row holds one coder's values, one per unit; undefined where the coder has
 // none.
 export type RatingMatrix<R extends Rating> = readonly (readonly (

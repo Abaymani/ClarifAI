@@ -3,9 +3,16 @@
 // code, NA included; their other prompts in it then have no applicable code. NA
 // codes are left out of the comparison, and the order of codes does not matter.
 import type { ResearcherId } from "@/lib/admin/auth";
-import { bootstrapIntervals, type Interval } from "@/lib/admin/bootstrap";
+import {
+  bootstrapDraws,
+  bootstrapIntervals,
+  percentileInterval,
+  shareBelow,
+  type Interval,
+} from "@/lib/admin/bootstrap";
 import { promptCodeLevels, type IcapLevel } from "@/lib/admin/icap-counts";
 import {
+  ALPHA_MINIMUMS,
   alphaGroups,
   groupedAlpha,
   krippendorffAlpha,
@@ -35,11 +42,17 @@ export type AgreementSessionInput = {
 
 // Intervals are 95 % bootstrap intervals over transcripts, null when they cannot be
 // calculated (DL-077). Results stored before then have none.
+// Krippendorff's q: the share of draws in which alpha falls below 0.800 and below
+// 0.667 (ALPHA_MINIMUMS), null like the interval (DL-090). Results stored before
+// then have none.
+export type AlphaShortfall = { reliable: number; tentative: number };
+
 export type CategoryAgreement = {
   category: string;
   alpha: number | null;
   // Only for ICAP levels; codes are mostly too rare for a useful interval.
   interval?: Interval | null;
+  q?: AlphaShortfall | null;
   both: number;
   onlyFirst: number;
   onlySecond: number;
@@ -48,6 +61,7 @@ export type CategoryAgreement = {
 export type SetAgreement = {
   alpha: number | null;
   interval?: Interval | null;
+  q?: AlphaShortfall | null;
   identical: number;
   // Codes, or levels, given over all compared prompts.
   firstTotal: number;
@@ -316,7 +330,7 @@ function comparePairs(
   const estimates = inputs.map((input) => pairStatistics(input));
   const together =
     base === "allThree"
-      ? bootstrapIntervals(
+      ? bootstrapDraws(
           pool.length,
           (weights) =>
             withDifferences(
@@ -331,15 +345,15 @@ function comparePairs(
   const levelDifferences = codeDifferences + PAIRS.length - 1;
 
   return pairs.map(({ pair, first, second, shared }, p) => {
-    const intervals =
+    const draws =
       together?.slice(STATISTICS * p, STATISTICS * (p + 1)) ??
-      bootstrapIntervals(
+      bootstrapDraws(
         shared.length,
         (weights) => pairStatistics(inputs[p], weights),
         { resamples: BOOTSTRAP.resamples, seed: seed + 1 + p },
       );
     const [codesAlpha, levelsAlpha, ...levelAlphas] = estimates[p];
-    const [codesInterval, levelsInterval, ...levelIntervals] = intervals;
+    const [codesDraws, levelsDraws, ...levelDraws] = draws;
     const a = shared.flatMap((transcript) => transcript.codeSets[first]!);
     const b = shared.flatMap((transcript) => transcript.codeSets[second]!);
     const levelsA = shared.flatMap(
@@ -356,10 +370,14 @@ function comparePairs(
       promptsWithoutCodes: a.filter(
         (set, i) => set.length === 0 && b[i].length === 0,
       ).length,
-      codes: { alpha: codesAlpha, interval: codesInterval, ...setCounts(a, b) },
+      codes: {
+        alpha: codesAlpha,
+        ...uncertainty(codesDraws),
+        ...setCounts(a, b),
+      },
       levels: {
         alpha: levelsAlpha,
-        interval: levelsInterval,
+        ...uncertainty(levelsDraws),
         ...setCounts(levelsA, levelsB),
       },
       perCode: comparedCodes.map((code) =>
@@ -372,7 +390,7 @@ function comparePairs(
       ),
       perLevel: LEVELS.map((level, k) => ({
         ...categoryAgreement(level, levelsA, levelsB, levelAlphas[k]),
-        interval: levelIntervals[k],
+        ...uncertainty(levelDraws[k]),
       })),
       ...(together && first === "AI"
         ? {
@@ -380,12 +398,12 @@ function comparePairs(
               codes: difference(
                 codesAlpha,
                 estimates[0][0],
-                together[codeDifferences + p],
+                intervalOf(together[codeDifferences + p]),
               ),
               levels: difference(
                 levelsAlpha,
                 estimates[0][1],
-                together[levelDifferences + p],
+                intervalOf(together[levelDifferences + p]),
               ),
             },
           }
@@ -449,6 +467,25 @@ function withDifferences(perPair: (number | null)[][]): (number | null)[] {
 
 function minus(a: number | null, b: number | null): number | null {
   return a === null || b === null ? null : a - b;
+}
+
+// The interval and Krippendorff's q from one alpha's draws.
+function uncertainty(draws: number[] | null): {
+  interval: Interval | null;
+  q: AlphaShortfall | null;
+} {
+  if (!draws) return { interval: null, q: null };
+  return {
+    interval: percentileInterval(draws),
+    q: {
+      reliable: shareBelow(draws, ALPHA_MINIMUMS.reliable),
+      tentative: shareBelow(draws, ALPHA_MINIMUMS.tentative),
+    },
+  };
+}
+
+function intervalOf(draws: number[] | null): Interval | null {
+  return draws ? percentileInterval(draws) : null;
 }
 
 function difference(

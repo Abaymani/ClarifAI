@@ -225,6 +225,7 @@ describe("calculateCoderAgreement", () => {
         category: "P",
         alpha: 0,
         interval: null,
+        q: null,
         both: 0,
         onlyFirst: 1,
         onlySecond: 0,
@@ -233,6 +234,7 @@ describe("calculateCoderAgreement", () => {
         category: "A",
         alpha: null,
         interval: null,
+        q: null,
         both: 0,
         onlyFirst: 0,
         onlySecond: 0,
@@ -241,6 +243,7 @@ describe("calculateCoderAgreement", () => {
         category: "C",
         alpha: 1,
         interval: null,
+        q: null,
         both: 1,
         onlyFirst: 0,
         onlySecond: 0,
@@ -355,6 +358,33 @@ describe("calculateCoderAgreement", () => {
     );
     expect(agreement.bootstrap).toEqual({ resamples: 2000, seed: 76 });
     expect(calculateCoderAgreement(sessions, framework)).toEqual(agreement);
+  });
+
+  test("gives Krippendorff's q from the same draws as the interval", () => {
+    const agreement = calculateCoderAgreement(randomSessions(12), framework);
+
+    for (const variant of agreement.variants) {
+      for (const pair of variant.pairs) {
+        for (const result of [pair.codes, pair.levels, ...pair.perLevel]) {
+          if (!result.interval) {
+            expect(result.q).toBeNull();
+            continue;
+          }
+          const [low, high] = result.interval;
+          const { reliable, tentative } = result.q!;
+          // Alpha falls short of the lower minimum at most as often.
+          expect(tentative).toBeLessThanOrEqual(reliable);
+          for (const [minimum, q] of [
+            [0.8, reliable],
+            [0.667, tentative],
+          ]) {
+            if (minimum < low) expect(q).toBeLessThanOrEqual(0.025);
+            if (minimum > high) expect(q).toBeGreaterThanOrEqual(0.975);
+          }
+        }
+        expect(pair.perCode.some((code) => code.q !== undefined)).toBe(false);
+      }
+    }
   });
 
   test("compares the AI with Armin–Frida only on the transcripts all three coded", () => {

@@ -391,10 +391,16 @@ const intervalSchema = boundsSchema.nullable().optional();
 const differenceSchema = z
   .object({ estimate: z.number(), interval: boundsSchema.nullable() })
   .nullable();
+// Optional: results stored before DL-090 have no q.
+const shortfallSchema = z
+  .object({ reliable: z.number(), tentative: z.number() })
+  .nullable()
+  .optional();
 const categorySchema = z.object({
   category: z.string(),
   alpha: z.number().nullable(),
   interval: intervalSchema,
+  q: shortfallSchema,
   both: z.number(),
   onlyFirst: z.number(),
   onlySecond: z.number(),
@@ -402,6 +408,7 @@ const categorySchema = z.object({
 const setSchema = z.object({
   alpha: z.number().nullable(),
   interval: intervalSchema,
+  q: shortfallSchema,
   identical: z.number(),
   firstTotal: z.number(),
   secondTotal: z.number(),
