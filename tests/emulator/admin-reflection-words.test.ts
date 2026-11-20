@@ -88,6 +88,7 @@ describe("reflection word counts", () => {
     });
     expect(first?.sessions[3]?.reflectionWords).toEqual({
       state: "not_submitted",
+      moments: 3,
     });
     expect(first?.sessions[4]?.reflectionWords).toBeUndefined();
     expect(second?.sessions[2]?.reflectionWords).toEqual({

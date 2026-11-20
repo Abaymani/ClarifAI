@@ -12,10 +12,16 @@ import {
   Search,
 } from "lucide-react";
 
+import { ReflectionWordsDownload } from "@/app/admin/(portal)/overview/reflection-words-download";
 import { Input } from "@/components/ui/input";
 import type { ResearcherId } from "@/lib/admin/auth";
 import type { IcapCounts, IcapLevel } from "@/lib/admin/icap-counts";
-import { formatWords, totalWords } from "@/lib/admin/reflection-words";
+import {
+  averageWords,
+  formatAverageWords,
+  formatWords,
+  totalWords,
+} from "@/lib/admin/reflection-words";
 import { researcherName } from "@/lib/admin/researchers";
 import type {
   AdminParticipantOverview,
@@ -158,11 +164,14 @@ export function OverviewTable({
       </div>
 
       {view === "reflection" ? (
-        <p className="text-sm text-muted-foreground">
-          Antal ord i studentens svar på varje reflektionsmoment och totalt för
-          sessionen. Ett ord är text mellan mellanslag som innehåller minst en
-          bokstav eller siffra.
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Antal ord i studentens svar på varje reflektionsmoment, totalt för
+            sessionen och i medel per moment. Ett ord är text mellan mellanslag
+            som innehåller minst en bokstav eller siffra.
+          </p>
+          <ReflectionWordsDownload participants={participants} />
+        </div>
       ) : null}
 
       {view === "coding" ? (
@@ -302,6 +311,7 @@ function ReflectionWordsLink({
     return <AssessmentEmptyState label="Ej inskickad" />;
   }
 
+  const average = averageWords(words.moments);
   return (
     <Link
       href={`/admin/participant/${participantCode}/lesson/${lesson}?view=reflection`}
@@ -324,6 +334,12 @@ function ReflectionWordsLink({
             {formatWords(totalWords(words.moments))}
           </dd>
         </div>
+        {average === null ? null : (
+          <div className="contents">
+            <dt>Medel</dt>
+            <dd className="text-right">{formatAverageWords(average)}</dd>
+          </div>
+        )}
       </dl>
       <ChevronRight
         aria-hidden="true"

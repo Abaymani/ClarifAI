@@ -35,7 +35,7 @@ export type AdminReflectionAssessment =
 // Words in the student's answer to each reflection moment (DL-085).
 export type AdminReflectionWords =
   | { state: "unavailable" }
-  | { state: "not_submitted" }
+  | { state: "not_submitted"; moments: number }
   | { state: "submitted"; moments: number[] };
 
 export type AdminSessionSummary = {
