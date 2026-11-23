@@ -144,6 +144,11 @@ describe("passiveShare", () => {
       up: 0,
     });
     expect(result.statistics.change.mean).toBeCloseTo(-0.2);
+    // Student 4 has no post codes, so no pair, and no participant codes leak out.
+    expect(result.pairedCodes).toEqual([
+      { pre: { passive: 14, total: 20 }, post: { passive: 6, total: 20 } },
+      { pre: { passive: 0, total: 2 }, post: { passive: 0, total: 2 } },
+    ]);
   });
 
   it("clusters the pooled figure's interval by student", () => {
@@ -171,5 +176,6 @@ describe("passiveShare", () => {
       studentCodes: [],
     });
     expect(result.change).toBeNull();
+    expect(result.pairedCodes).toEqual([]);
   });
 });

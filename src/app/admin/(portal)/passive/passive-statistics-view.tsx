@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 import { CopyTextButton } from "@/app/admin/(portal)/passive/copy-text-button";
 
-import { passiveScatterLatex } from "@/lib/admin/passive-scatter-latex";
+import {
+  passivePrePostScatterLatex,
+  passiveScatterLatex,
+} from "@/lib/admin/passive-scatter-latex";
 import type {
   PassiveAggregation,
   PassiveFigure,
@@ -208,6 +211,21 @@ export function PassiveStatistics({
           Wilcoxon utan elever som inte förändrats, med normalapproximation och
           korrektion för lika rangtal men utan kontinuitetskorrektion, som SPSS.
         </p>
+        {change.students > 0 ? (
+          <div className="flex flex-col gap-1">
+            <CopyTextButton
+              text={passivePrePostScatterLatex(result.pairedCodes, selection)}
+            >
+              Kopiera spridningsdiagram för pre och post (LaTeX)
+            </CopyTextButton>
+            <p className="max-w-3xl text-xs text-muted-foreground">
+              En pgfplots-figur med samma elever, där varje elevs andel passivt
+              pre och post står mot antalet P-, A- och C-koder i respektive
+              period och en linje förbinder elevens två punkter. Bara antal,
+              inga deltagarkoder.
+            </p>
+          </div>
+        ) : null}
       </div>
     </section>
   );

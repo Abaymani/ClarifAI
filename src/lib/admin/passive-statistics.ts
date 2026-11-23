@@ -7,6 +7,8 @@ import type { PassiveAggregation } from "@/lib/admin/passive-share";
 
 // One student's P codes and P + A + C codes over a period.
 export type StudentCodes = { passive: number; total: number };
+// One student's codes before and after the interaction.
+export type StudentPair = { pre: StudentCodes; post: StudentCodes };
 
 export type Interval = [lower: number, upper: number];
 
@@ -91,9 +93,7 @@ export function shareStatistics(
   return statistics;
 }
 
-export function pairedChange(
-  pairs: readonly { pre: StudentCodes; post: StudentCodes }[],
-): PairedChange {
+export function pairedChange(pairs: readonly StudentPair[]): PairedChange {
   // Kept as fractions so that equal changes tie exactly in the Wilcoxon ranks.
   const changes = pairs.map(({ pre, post }) => ({
     numerator: post.passive * pre.total - pre.passive * post.total,
