@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { LEVEL_COLOURS } from "@/app/admin/(portal)/development/development-chart";
+import { PassiveStatistics } from "@/app/admin/(portal)/passive/passive-statistics-view";
 import { SegmentedControl } from "@/app/admin/(portal)/segmented-control";
 import {
   passiveShare,
@@ -95,6 +96,8 @@ export function PassiveShareView({
           }
         />
       </div>
+
+      <PassiveStatistics result={result} aggregation={aggregation} />
 
       <figure className="flex flex-col gap-1">
         <PassiveChart lessons={result.lessons} />

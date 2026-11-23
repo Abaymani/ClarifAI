@@ -3,6 +3,13 @@
 // and C counts as one P and one C, and NA codes are left out, as in DL-074.
 import type { IcapCounts } from "@/lib/admin/icap-counts";
 import {
+  pairedChange,
+  shareStatistics,
+  type PairedChange,
+  type ShareStatistics,
+  type StudentCodes,
+} from "@/lib/admin/passive-statistics";
+import {
   totalCodes,
   type StudentDevelopment,
 } from "@/lib/admin/student-development";
@@ -34,6 +41,13 @@ export type PassiveShare = {
   post: PassiveFigure;
   // Post minus pre; null when either is missing.
   change: number | null;
+  // For reporting the pre and post figures (DL-091).
+  statistics: {
+    pre: ShareStatistics;
+    post: ShareStatistics;
+    // Each student against themself, so only students with codes in both.
+    change: PairedChange;
+  };
 };
 
 export const PRE_LESSONS = [1, 2] as const;
@@ -51,27 +65,44 @@ export function passiveShare(
         )
       : students;
 
-  const pre = figure(included, PRE_LESSONS, aggregation);
-  const post = figure(included, POST_LESSONS, aggregation);
+  const preStudents = periodCodes(included, PRE_LESSONS);
+  const postStudents = periodCodes(included, POST_LESSONS);
+  const pre = figure(preStudents, aggregation);
+  const post = figure(postStudents, aggregation);
+  const postByStudent = new Map(
+    postStudents.map((student) => [student.participantCode, student]),
+  );
   return {
     lessons: [1, 2, 3, 4].map((lesson) =>
-      figure(included, [lesson], aggregation),
+      figure(periodCodes(included, [lesson]), aggregation),
     ),
     pre,
     post,
     change:
       pre.share === null || post.share === null ? null : post.share - pre.share,
+    statistics: {
+      pre: shareStatistics(preStudents, aggregation),
+      post: shareStatistics(postStudents, aggregation),
+      change: pairedChange(
+        preStudents.flatMap((student) => {
+          const after = postByStudent.get(student.participantCode);
+          return after ? [{ pre: student, post: after }] : [];
+        }),
+      ),
+    },
   };
 }
 
-function figure(
+type PeriodCodes = StudentCodes & { participantCode: string; prompts: number };
+
+// Each student's codes from every lesson of the period, pooled before their share
+// is taken; a student with coding in only one of the lessons still counts.
+// Students with no P, A or C code in the period are left out.
+function periodCodes(
   students: readonly StudentDevelopment[],
   lessons: readonly number[],
-  aggregation: PassiveAggregation,
-): PassiveFigure {
-  // A student's codes from every lesson of the period, pooled before their share
-  // is taken; a student with coding in only one of the lessons still counts.
-  const perStudent = students.flatMap((student) => {
+): PeriodCodes[] {
+  return students.flatMap((student) => {
     const counts: IcapCounts = { P: 0, A: 0, C: 0 };
     let prompts = 0;
     for (const lesson of lessons) {
@@ -83,9 +114,23 @@ function figure(
       prompts += coded.codedPrompts;
     }
     const total = totalCodes(counts);
-    return total === 0 ? [] : [{ passive: counts.P, total, prompts }];
+    return total === 0
+      ? []
+      : [
+          {
+            participantCode: student.participantCode,
+            passive: counts.P,
+            total,
+            prompts,
+          },
+        ];
   });
+}
 
+function figure(
+  perStudent: readonly PeriodCodes[],
+  aggregation: PassiveAggregation,
+): PassiveFigure {
   const codes = perStudent.reduce((sum, student) => sum + student.total, 0);
   const prompts = perStudent.reduce((sum, student) => sum + student.prompts, 0);
   const studentShares = perStudent.map(

@@ -52,14 +52,24 @@ function tile(label: string) {
   return screen.getByText(label).parentElement as HTMLElement;
 }
 
-function row(label: string) {
-  return within(screen.getByRole("table"))
+function row(label: string, table = "Andel passiva koder per lektion") {
+  return within(screen.getByRole("table", { name: table }))
     .getByRole("rowheader", { name: label })
     .closest("tr") as HTMLElement;
 }
 
-function cells(label: string) {
-  return within(row(label)).getAllByRole("cell").map(text);
+function cells(label: string, table?: string) {
+  return within(row(label, table)).getAllByRole("cell").map(text);
+}
+
+const statistics = (label: string) =>
+  cells(label, "Statistik för pre och post");
+
+function figure(label: string) {
+  const change = screen.getByRole("heading", {
+    name: "Förändring per elev, pre till post",
+  }).parentElement as HTMLElement;
+  return text(within(change).getByText(label).parentElement as HTMLElement);
 }
 
 describe("PassiveShareView", () => {
@@ -133,5 +143,61 @@ describe("PassiveShareView", () => {
     expect(text(tile("Pre-interaktion"))).toContain("–");
     expect(text(tile("Förändring"))).toContain("–");
     expect(cells("Elever")).toEqual(["0", "0", "0", "0", "0", "0"]);
+    expect(statistics("Standardavvikelse (SD)")).toEqual(["–", "–"]);
+    expect(figure("Parat t-test")).toContain("t–");
+  });
+
+  test("gives the spread and intervals of pre and post", () => {
+    render(<PassiveShareView students={students} />);
+
+    // Pre shares 70 % and 0 %, post 30 % and 0 %.
+    expect(statistics("Andel passivt")).toEqual(["35,0 %", "15,0 %"]);
+    expect(statistics("Standardavvikelse (SD)")).toEqual([
+      "49,5 p.e.",
+      "21,2 p.e.",
+    ]);
+    expect(statistics("Standardfel (SE)")).toEqual(["35,0 p.e.", "15,0 p.e."]);
+    expect(statistics("Median")).toEqual(["35,0 %", "15,0 %"]);
+    expect(statistics("Kvartiler (Q1; Q3)")).toEqual([
+      "[17,5 %; 52,5 %]",
+      "[7,5 %; 22,5 %]",
+    ]);
+    expect(statistics("Elever (n)")).toEqual(["2", "2"]);
+    expect(screen.getByText(/bygger på t-fördelningen/)).toBeTruthy();
+  });
+
+  test("compares each student's pre and post", () => {
+    render(<PassiveShareView students={students} />);
+
+    // Student 1 went from 70 % to 30 % and student 2 stayed at 0 %.
+    expect(figure("Medelförändring")).toContain("−20,0 p.e.");
+    expect(figure("Parat t-test")).toContain("t(1) = −1,00");
+    expect(figure("Parat t-test")).toContain("p = 0,500");
+    expect(figure("Parat t-test")).toContain("Cohens dz = −0,71");
+    expect(figure("Wilcoxons teckenrangtest")).toContain("z = −1,00");
+    expect(figure("Wilcoxons teckenrangtest")).toContain("p = 0,317");
+    expect(figure("Wilcoxons teckenrangtest")).toContain("rrb = −1,00");
+    expect(figure("Elever")).toContain("1 ned · 1 lika · 0 upp");
+    expect(
+      screen.getByText(/utan kontinuitetskorrektion, som SPSS/),
+    ).toBeTruthy();
+  });
+
+  test("clusters the pooled share's interval and says so", () => {
+    render(<PassiveShareView students={students} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Alla koder sammanslagna" }),
+    );
+
+    expect(statistics("Andel passivt")).toEqual(["63,6 %", "27,3 %"]);
+    // The spread among students does not depend on how the group is counted.
+    expect(statistics("Standardavvikelse (SD)")).toEqual([
+      "49,5 p.e.",
+      "21,2 p.e.",
+    ]);
+    expect(screen.getByText(/klustrade per elev/)).toBeTruthy();
+    expect(
+      screen.getByText(/också när koderna räknas sammanslagna/),
+    ).toBeTruthy();
   });
 });

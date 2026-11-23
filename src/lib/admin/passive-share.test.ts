@@ -116,6 +116,45 @@ describe("passiveShare", () => {
     expect(result.pre).toMatchObject({ students: 2, codes: 7, prompts: 5 });
   });
 
+  it("gives statistics for pre and post and pairs each student with themself", () => {
+    const result = passiveShare(
+      [
+        ...students,
+        // Only pre, so in the pre figures but not in the paired change.
+        student("4", [coded(1, 1, 0), none, none, none]),
+      ],
+      "mean",
+      "all",
+    );
+
+    // Pre shares 0.7, 0 and 0.5.
+    expect(result.statistics.pre.median).toBeCloseTo(0.5);
+    expect(result.statistics.pre.sd).toBeCloseTo(0.360555, 5);
+    // Post shares 0.3 and 0.
+    expect(result.statistics.post.median).toBeCloseTo(0.15);
+    // Student 1 went from 70 % to 30 %; student 2 stayed at 0 %.
+    expect(result.statistics.change).toMatchObject({
+      students: 2,
+      down: 1,
+      same: 1,
+      up: 0,
+    });
+    expect(result.statistics.change.mean).toBeCloseTo(-0.2);
+  });
+
+  it("clusters the pooled figure's interval by student", () => {
+    const mean = passiveShare(students, "mean", "all").statistics.pre;
+    const pooled = passiveShare(students, "pooled", "all").statistics.pre;
+
+    // The spread among students is the same; the interval is not.
+    expect(pooled.sd).toBe(mean.sd);
+    expect(pooled.se).not.toBeCloseTo(mean.se ?? 0);
+    const share = 14 / 22;
+    const centre =
+      ((pooled.interval?.[0] ?? 0) + (pooled.interval?.[1] ?? 0)) / 2;
+    expect(centre).toBeCloseTo(share);
+  });
+
   it("has no share or change without P, A or C codes", () => {
     const result = passiveShare([students[2]], "mean", "all");
 
