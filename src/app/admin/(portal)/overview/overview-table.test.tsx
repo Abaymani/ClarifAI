@@ -1,7 +1,17 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { OverviewTable } from "@/app/admin/(portal)/overview/overview-table";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("OverviewTable", () => {
   test("shows the three session states and links every lesson cell", () => {
@@ -443,5 +453,59 @@ describe("OverviewTable", () => {
     fireEvent.click(screen.getByLabelText(/Dölj deltagare utan reflektion/));
     expect(screen.getByText("Deltagare 12")).toBeTruthy();
     expect(screen.queryByText("Deltagare 13")).toBeNull();
+  });
+  test("copies a LaTeX table of mean reflection lengths for every participant", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const base = {
+      state: "completed" as const,
+      status: "completed" as const,
+      transcriptSubmission: "transcript" as const,
+      codedBy: [],
+      reflectionAssessment: { state: "unavailable" as const },
+    };
+    render(
+      <OverviewTable
+        participants={[
+          {
+            participantCode: "12",
+            sessions: {
+              2: {
+                ...base,
+                participantCode: "12",
+                lesson: 2,
+                reflectionWords: { state: "submitted", moments: [42, 0, 1200] },
+              },
+            },
+          },
+          {
+            participantCode: "13",
+            sessions: {
+              2: {
+                ...base,
+                participantCode: "13",
+                lesson: 2,
+                reflectionWords: { state: "submitted", moments: [8] },
+              },
+            },
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Reflektionslängd" }));
+    // The table ignores the search, like the Excel file.
+    fireEvent.change(screen.getByPlaceholderText("Sök deltagarkod"), {
+      target: { value: "12" },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kopiera medelvärden (LaTeX)" }),
+    );
+
+    await waitFor(() => expect(screen.getByText("Kopierat")).toBeTruthy());
+    // Totals 1242 and 8 words; 414 and 8 words per moment.
+    expect(writeText.mock.calls[0][0]).toContain(
+      String.raw`    Lesson 2 & 2 & 625.0 (872.6) & 211.0 (287.1) \\`,
+    );
   });
 });

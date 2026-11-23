@@ -1,4 +1,4 @@
-// jStat ships no types; only the functions the passive-share statistics use.
+// jStat ships no types; only the functions the portal's statistics use.
 declare module "jstat" {
   export const jStat: {
     mean(values: readonly number[]): number;
