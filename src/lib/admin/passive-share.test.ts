@@ -79,6 +79,10 @@ describe("passiveShare", () => {
 
     // Pre: student 1 has 14 P of 20, student 2 has 0 of 2.
     expect(result.pre.studentShares).toEqual([0.7, 0]);
+    expect(result.pre.studentCodes).toEqual([
+      { passive: 14, total: 20 },
+      { passive: 0, total: 2 },
+    ]);
     expect(result.pre.share).toBeCloseTo(0.35);
     expect(result.pre.codes).toBe(22);
     // Post: student 1 has 6 P of 20, student 2 has 0 of 2.
@@ -164,6 +168,7 @@ describe("passiveShare", () => {
       codes: 0,
       prompts: 0,
       studentShares: [],
+      studentCodes: [],
     });
     expect(result.change).toBeNull();
   });

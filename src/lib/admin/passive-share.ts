@@ -31,6 +31,9 @@ export type PassiveFigure = {
   prompts: number;
   // Each included student's own share, for the dots in the chart.
   studentShares: number[];
+  // Each included student's P and P + A + C codes, without participant codes, for
+  // the LaTeX scatter plot (DL-092).
+  studentCodes: StudentCodes[];
 };
 
 export type PassiveShare = {
@@ -144,5 +147,12 @@ function figure(
           studentShares.length
         : perStudent.reduce((sum, student) => sum + student.passive, 0) / codes;
   }
-  return { share, students: perStudent.length, codes, prompts, studentShares };
+  return {
+    share,
+    students: perStudent.length,
+    codes,
+    prompts,
+    studentShares,
+    studentCodes: perStudent.map(({ passive, total }) => ({ passive, total })),
+  };
 }
