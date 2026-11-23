@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
 
+import { CopyTextButton } from "@/app/admin/(portal)/passive/copy-text-button";
+
+import { passiveScatterLatex } from "@/lib/admin/passive-scatter-latex";
 import type {
   PassiveAggregation,
   PassiveFigure,
   PassiveShare,
+  PassiveStudents,
 } from "@/lib/admin/passive-share";
 import type { Interval, ShareStatistics } from "@/lib/admin/passive-statistics";
 
@@ -37,9 +41,11 @@ const DASH = "–";
 export function PassiveStatistics({
   result,
   aggregation,
+  selection,
 }: {
   result: PassiveShare;
   aggregation: PassiveAggregation;
+  selection: PassiveStudents;
 }) {
   const { change } = result.statistics;
   const columns: [PassiveFigure, ShareStatistics][] = [
@@ -113,6 +119,21 @@ export function PassiveStatistics({
             : "SE och konfidensintervallet gäller den sammanslagna andelen och är klustrade per elev, eftersom en elevs koder inte är oberoende av varandra."}
         </p>
       </div>
+
+      {result.pre.students > 0 ? (
+        <div className="flex flex-col gap-1">
+          <CopyTextButton
+            text={passiveScatterLatex(result.pre.studentCodes, selection)}
+          >
+            Kopiera spridningsdiagram för pre (LaTeX)
+          </CopyTextButton>
+          <p className="max-w-3xl text-xs text-muted-foreground">
+            En pgfplots-figur med varje elevs andel passivt mot antalet P-, A-
+            och C-koder i lektion 1 och 2, för eleverna som valts ovan. Bara
+            antal, inga deltagarkoder.
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2 rounded-xl border bg-card px-4 py-3">
         <h3 className="text-sm font-medium">

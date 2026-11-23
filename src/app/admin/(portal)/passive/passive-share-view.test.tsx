@@ -1,5 +1,11 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { PassiveShareView } from "@/app/admin/(portal)/passive/passive-share-view";
 import type {
@@ -71,6 +77,18 @@ function figure(label: string) {
   }).parentElement as HTMLElement;
   return text(within(change).getByText(label).parentElement as HTMLElement);
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function stubClipboard() {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+  return writeText;
+}
+
+const COPY = { name: /Kopiera spridningsdiagram för pre/ };
 
 describe("PassiveShareView", () => {
   test("shows pre, post and the change, averaged per student", () => {
@@ -199,5 +217,56 @@ describe("PassiveShareView", () => {
     expect(
       screen.getByText(/också när koderna räknas sammanslagna/),
     ).toBeTruthy();
+  });
+
+  test("copies a LaTeX scatter plot of pre with counts only", async () => {
+    const writeText = stubClipboard();
+    render(<PassiveShareView students={students} />);
+
+    fireEvent.click(screen.getByRole("button", COPY));
+
+    await waitFor(() => expect(screen.getByText("Kopierat")).toBeTruthy());
+    const latex = writeText.mock.calls[0][0] as string;
+    // Student 2 has 0 P of 2 codes and student 1 14 P of 20.
+    expect(latex).toContain(
+      [String.raw`      2 0 0.00 \\`, String.raw`      20 14 70.00 \\`].join(
+        "\n",
+      ),
+    );
+    expect(latex).toContain("% n = 2: all students");
+  });
+
+  test("copies only the students chosen under Elever", async () => {
+    const writeText = stubClipboard();
+    render(<PassiveShareView students={students} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Bara alla fyra lektioner" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", COPY));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const latex = writeText.mock.calls[0][0] as string;
+    expect(latex).toContain("% n = 1: students with AI coding in all four");
+    expect(latex).not.toContain("      2 0 0.00");
+  });
+
+  test("says so when the clipboard is blocked", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("blocked")) },
+    });
+    render(<PassiveShareView students={students} />);
+
+    fireEvent.click(screen.getByRole("button", COPY));
+
+    await waitFor(() =>
+      expect(screen.getByText("Kunde inte kopiera")).toBeTruthy(),
+    );
+  });
+
+  test("offers no scatter plot without students before the interaction", () => {
+    render(<PassiveShareView students={[]} />);
+
+    expect(screen.queryByRole("button", COPY)).toBeNull();
   });
 });

@@ -97,7 +97,11 @@ export function PassiveShareView({
         />
       </div>
 
-      <PassiveStatistics result={result} aggregation={aggregation} />
+      <PassiveStatistics
+        result={result}
+        aggregation={aggregation}
+        selection={selection}
+      />
 
       <figure className="flex flex-col gap-1">
         <PassiveChart lessons={result.lessons} />
