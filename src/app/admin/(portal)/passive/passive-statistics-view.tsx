@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { CopyTextButton } from "@/app/admin/(portal)/passive/copy-text-button";
+import { CopyTextButton } from "@/app/admin/(portal)/copy-text-button";
 
 import {
   passivePrePostScatterLatex,

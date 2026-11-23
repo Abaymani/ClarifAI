@@ -12,10 +12,12 @@ import {
   Search,
 } from "lucide-react";
 
+import { CopyTextButton } from "@/app/admin/(portal)/copy-text-button";
 import { ReflectionWordsDownload } from "@/app/admin/(portal)/overview/reflection-words-download";
 import { Input } from "@/components/ui/input";
 import type { ResearcherId } from "@/lib/admin/auth";
 import type { IcapCounts, IcapLevel } from "@/lib/admin/icap-counts";
+import { reflectionLengthLatex } from "@/lib/admin/reflection-length-latex";
 import {
   averageWords,
   formatAverageWords,
@@ -170,7 +172,12 @@ export function OverviewTable({
             sessionen och i medel per moment. Ett ord är text mellan mellanslag
             som innehåller minst en bokstav eller siffra.
           </p>
-          <ReflectionWordsDownload participants={participants} />
+          <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
+            <ReflectionWordsDownload participants={participants} />
+            <CopyTextButton text={reflectionLengthLatex(participants)}>
+              Kopiera medelvärden (LaTeX)
+            </CopyTextButton>
+          </div>
         </div>
       ) : null}
 
