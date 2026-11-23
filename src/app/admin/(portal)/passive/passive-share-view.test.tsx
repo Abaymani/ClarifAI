@@ -88,7 +88,10 @@ function stubClipboard() {
   return writeText;
 }
 
-const COPY = { name: /Kopiera spridningsdiagram för pre/ };
+const COPY = { name: /Kopiera spridningsdiagram för pre \(LaTeX\)/ };
+const COPY_PAIRED = {
+  name: /Kopiera spridningsdiagram för pre och post/,
+};
 
 describe("PassiveShareView", () => {
   test("shows pre, post and the change, averaged per student", () => {
@@ -268,5 +271,32 @@ describe("PassiveShareView", () => {
     render(<PassiveShareView students={[]} />);
 
     expect(screen.queryByRole("button", COPY)).toBeNull();
+    expect(screen.queryByRole("button", COPY_PAIRED)).toBeNull();
+  });
+
+  test("copies a LaTeX scatter plot joining each student's pre and post", async () => {
+    const writeText = stubClipboard();
+    render(
+      <PassiveShareView
+        students={[
+          ...students,
+          // Only pre, so left out of the plot that joins pre and post.
+          student("3", [coded(1, 1, 0), none, none, none]),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", COPY_PAIRED));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const latex = writeText.mock.calls[0][0] as string;
+    expect(latex).toContain(
+      [
+        String.raw`    2 0 0.00 2 0 0.00 \\`,
+        String.raw`    20 14 70.00 20 6 30.00 \\`,
+        String.raw`  }\passiveprepost`,
+      ].join("\n"),
+    );
+    expect(latex).toContain("% n = 2: all students with P, A or C codes both");
   });
 });

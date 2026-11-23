@@ -8,6 +8,7 @@ import {
   type PairedChange,
   type ShareStatistics,
   type StudentCodes,
+  type StudentPair,
 } from "@/lib/admin/passive-statistics";
 import {
   totalCodes,
@@ -44,6 +45,9 @@ export type PassiveShare = {
   post: PassiveFigure;
   // Post minus pre; null when either is missing.
   change: number | null;
+  // Each student with codes both pre and post, without participant codes, for the
+  // LaTeX scatter plot of pre and post (DL-093).
+  pairedCodes: StudentPair[];
   // For reporting the pre and post figures (DL-091).
   statistics: {
     pre: ShareStatistics;
@@ -75,6 +79,10 @@ export function passiveShare(
   const postByStudent = new Map(
     postStudents.map((student) => [student.participantCode, student]),
   );
+  const pairs = preStudents.flatMap((student) => {
+    const after = postByStudent.get(student.participantCode);
+    return after ? [{ pre: student, post: after }] : [];
+  });
   return {
     lessons: [1, 2, 3, 4].map((lesson) =>
       figure(periodCodes(included, [lesson]), aggregation),
@@ -83,15 +91,14 @@ export function passiveShare(
     post,
     change:
       pre.share === null || post.share === null ? null : post.share - pre.share,
+    pairedCodes: pairs.map(({ pre, post }) => ({
+      pre: { passive: pre.passive, total: pre.total },
+      post: { passive: post.passive, total: post.total },
+    })),
     statistics: {
       pre: shareStatistics(preStudents, aggregation),
       post: shareStatistics(postStudents, aggregation),
-      change: pairedChange(
-        preStudents.flatMap((student) => {
-          const after = postByStudent.get(student.participantCode);
-          return after ? [{ pre: student, post: after }] : [];
-        }),
-      ),
+      change: pairedChange(pairs),
     },
   };
 }
